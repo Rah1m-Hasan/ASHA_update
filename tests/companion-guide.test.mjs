@@ -1,8 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { CompanionGuide, responsePlan, confirmationMatches } from "../app/companion-guide.js";
-import { RequestGate } from "../app/signals.js";
-import { RAPID_BLINK, CONFIRM_BLINK } from "../app/blink-intent.js";
+import { CompanionGuide, responsePlan, confirmationMatches } from "../public/engine/companion-guide.js";
+import { RequestGate } from "../public/engine/signals.js";
+import { RAPID_BLINK, CONFIRM_BLINK } from "../public/engine/blink-intent.js";
 
 const head = { head: "reliable", lips: "reliable", eyes: "reliable" };
 const allHead = ["NOD_COMPLETED", "LEFT_TURN_COMPLETED", "RIGHT_TURN_COMPLETED", "BLINK_COMPLETED"];

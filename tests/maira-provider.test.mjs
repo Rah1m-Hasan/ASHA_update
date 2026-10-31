@@ -3,7 +3,7 @@ import { test } from "node:test";
 import {
   createMairaProvider,
   MairaProviderError,
-} from "../server/maira-provider.js";
+} from "../src/server/lib/maira-provider.js";
 
 const env = {
   MAIRA_API_KEY: "private-api-key",

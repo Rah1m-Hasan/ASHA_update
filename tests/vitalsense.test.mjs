@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { VitalSense, resampleVitals, vitalROIs } from "../app/vitalsense.js";
+import { VitalSense, resampleVitals, vitalROIs } from "../public/engine/vitalsense.js";
 
 function sample(t, bpm = 78, overrides = {}) {
   const wave = Math.sin(2 * Math.PI * bpm / 60 * t / 1000);

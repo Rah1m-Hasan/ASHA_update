@@ -16,7 +16,7 @@ const {
 } = vm.runInThisContext(
   "(function(module){" +
     fs.readFileSync(
-      new URL("../neuroface/src/fingerspeak-signal.js", import.meta.url),
+      new URL("../public/neuroface/src/fingerspeak-signal.js", import.meta.url),
       "utf8",
     ) +
     ";return module.exports;})",

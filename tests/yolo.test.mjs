@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { decodePose, yoloPosture } from "../app/yolo-codec.js";
+import { decodePose, yoloPosture } from "../public/engine/yolo-codec.js";
 test("pinned YOLO exporter keypoint scaling is correctly decoded", () => {
   const a = new Float32Array(57);
   a[4] = 0.9;

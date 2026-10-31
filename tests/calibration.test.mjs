@@ -2,11 +2,11 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import vm from "node:vm";
 import fs from "node:fs";
-import { GuidedCalibration } from "../app/calibration.js";
+import { GuidedCalibration } from "../public/engine/calibration.js";
 for (const name of ["engine", "calibration"])
   vm.runInThisContext(
     fs.readFileSync(
-      new URL("../neuroface/src/" + name + ".js", import.meta.url),
+      new URL("../public/neuroface/src/" + name + ".js", import.meta.url),
       "utf8",
     ),
   );

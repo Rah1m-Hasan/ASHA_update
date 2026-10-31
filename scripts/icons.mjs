@@ -5,7 +5,7 @@ const require = createRequire(import.meta.url);
 const {
   chromium,
 } = require("C:/Users/user/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright");
-const svg = await fs.readFile("app/icon.svg", "utf8");
+const svg = await fs.readFile("public/engine/icon.svg", "utf8");
 const browser = await chromium.launch({
   headless: true,
   executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe",

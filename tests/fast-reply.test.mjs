@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { instantGreeting } from "../app/fast-reply.js";
+import { instantGreeting } from "../public/engine/fast-reply.js";
 
 test("simple greetings return an immediate contextual reply", () => {
   assert.match(

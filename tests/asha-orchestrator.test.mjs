@@ -4,7 +4,7 @@ import {
   createAshaOrchestrator,
   resolveLanguage,
   selectAshaTask,
-} from "../server/asha-orchestrator.js";
+} from "../src/server/lib/asha-orchestrator.js";
 
 const profile = {
   assessment: { eyes: "reliable", head: "limited", speech: "limited" },

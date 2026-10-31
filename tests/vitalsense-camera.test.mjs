@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { Perception } from "../app/perception.js";
-import { VitalSense } from "../app/vitalsense.js";
+import { Perception } from "../public/engine/perception.js";
+import { VitalSense } from "../public/engine/vitalsense.js";
 
 test("shared video samples VitalSense at 30fps with 3fps landmarks and no second camera", async (t) => {
   // Exercise the real Perception loop and ROI sampler without loading vision

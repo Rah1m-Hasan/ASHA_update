@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import vm from "node:vm";
 import fs from "node:fs";
-import { FaceAnalysis } from "../app/face-analysis.js";
+import { FaceAnalysis } from "../public/engine/face-analysis.js";
 globalThis.window = globalThis;
 for (const file of [
   "utils/landmarks",
@@ -13,7 +13,7 @@ for (const file of [
 ])
   vm.runInThisContext(
     fs.readFileSync(
-      new URL("../neuroface/" + file + ".js", import.meta.url),
+      new URL("../public/neuroface/" + file + ".js", import.meta.url),
       "utf8",
     ),
   );
