@@ -5,7 +5,7 @@ import fs from "node:fs/promises";
 const require = createRequire(import.meta.url);
 const {
   chromium,
-} = require("C:/Users/user/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright");
+} = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 const BASE = process.env.EVERYDAY_TEST_URL || "http://127.0.0.1:4180";
 const origin = new URL(BASE);
 assert.ok(
@@ -15,7 +15,7 @@ assert.ok(
 await fs.mkdir("artifacts", { recursive: true });
 await fs.mkdir("artifacts/everyday-downloads", { recursive: true });
 const browser = await chromium.launch({
-  executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  executablePath: process.env.CHROME_PATH || undefined,
   downloadsPath: new URL(
     "../artifacts/everyday-downloads",
     import.meta.url,
@@ -86,6 +86,10 @@ async function noOverflow(page, name) {
     width: innerWidth,
     scroll: document.documentElement.scrollWidth,
     height: innerHeight,
+    offenders: [...document.querySelectorAll("body *")]
+      .filter((el) => el.getBoundingClientRect().width > innerWidth + 2 || el.scrollWidth > el.clientWidth + 2 && getComputedStyle(el).overflowX === "visible")
+      .slice(-6)
+      .map((el) => `${el.tagName.toLowerCase()}${el.id ? "#" + el.id : ""}.${[...el.classList].join(".")} ${Math.round(el.getBoundingClientRect().right)}px: ${(el.textContent || "").trim().slice(0, 50)}`),
   }));
   assert.ok(
     value.scroll <= value.width + 2,

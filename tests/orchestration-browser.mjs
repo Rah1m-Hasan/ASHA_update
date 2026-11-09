@@ -5,7 +5,7 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const {
   chromium,
-} = require("C:/Users/user/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright");
+} = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 const base = process.env.ASHA_TEST_BASE || "http://127.0.0.1:4180/";
 const patientId = "0123456789abcdef01234567";
 const profile = {
@@ -33,7 +33,7 @@ const profile = {
 const poison = '<img src=x onerror="window.__sourceExecuted=true">';
 const browser = await chromium.launch({
   headless: true,
-  executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  executablePath: process.env.CHROME_PATH || undefined,
 });
 const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
 const errors = [],

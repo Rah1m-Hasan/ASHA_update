@@ -3,10 +3,10 @@ import fs from "node:fs/promises";
 const require = createRequire(import.meta.url);
 const {
   chromium,
-} = require("C:/Users/user/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright");
+} = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 await fs.mkdir("artifacts", { recursive: true });
 const browser = await chromium.launch({
-  executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  executablePath: process.env.CHROME_PATH || undefined,
   headless: true,
   args: [
     "--use-fake-ui-for-media-stream",

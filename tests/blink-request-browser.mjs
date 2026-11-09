@@ -3,8 +3,8 @@
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 const require = createRequire(import.meta.url);
-const { chromium } = require("C:/Users/user/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright");
-const browser = await chromium.launch({ headless: true, executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe" });
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
+const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROME_PATH || undefined });
 const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
 const base = process.env.ASHA_TEST_BASE || "http://127.0.0.1:4180/";
 const errors = [], sent = [];
@@ -17,7 +17,7 @@ try {
     await route.fulfill({ json: { profile, events: [], role: "patient", status: null } });
   });
   await page.route("**/api/health", (route) => route.fulfill({ json: { cloudConfigured: true } }));
-  await page.route("**/app/main.js", async (route) => {
+  await page.route("**/engine/main.js", async (route) => {
     const response = await route.fetch();
     await route.fulfill({ response, body: (await response.text()) + "\nwindow.__blinkTest = { perception, gate };" });
   });

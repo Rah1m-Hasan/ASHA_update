@@ -4,11 +4,11 @@ import fs from "node:fs/promises";
 const require = createRequire(import.meta.url);
 const {
   chromium,
-} = require("C:/Users/user/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright");
+} = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 const svg = await fs.readFile("public/engine/icon.svg", "utf8");
 const browser = await chromium.launch({
   headless: true,
-  executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  executablePath: process.env.CHROME_PATH || undefined,
 });
 const p = await browser.newPage();
 for (const size of [192, 512]) {

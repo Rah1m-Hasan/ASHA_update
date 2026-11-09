@@ -5,11 +5,11 @@ import fs from "node:fs/promises";
 const require = createRequire(import.meta.url);
 const {
   chromium,
-} = require("C:/Users/user/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright");
+} = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 await fs.mkdir("artifacts", { recursive: true });
 const browser = await chromium.launch({
   headless: true,
-  executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  executablePath: process.env.CHROME_PATH || undefined,
 });
 const profile = {
   patientId: "studio-ui-test",
@@ -62,7 +62,7 @@ try {
         },
       });
     });
-    await page.goto("http://127.0.0.1:4180/");
+    await page.goto("http://127.0.0.1:4180/assistive.html");
     await page.locator("#patient:not([hidden])").waitFor();
     await page.locator("#detailsButton").click();
     for (const theme of ["light", "dark"]) {

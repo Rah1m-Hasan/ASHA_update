@@ -3,11 +3,11 @@ import assert from "node:assert/strict";
 const require = createRequire(import.meta.url);
 const {
   chromium,
-} = require("C:/Users/user/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright");
+} = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 const base = process.env.EVERYDAY_TEST_URL || "http://127.0.0.1:4180";
 assert.ok(["127.0.0.1", "localhost"].includes(new URL(base).hostname));
 const browser = await chromium.launch({
-  executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  executablePath: process.env.CHROME_PATH || undefined,
   headless: true,
   args: ["--no-sandbox"],
 });
