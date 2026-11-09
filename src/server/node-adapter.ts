@@ -16,18 +16,27 @@ interface NodeLikeResponse {
   end(text?: string): void;
 }
 
-export function toRouteHandler(handler: NodeHandler) {
+export function toRouteHandler(
+  handler: NodeHandler,
+  { maxBodyLength = 20000 }: { maxBodyLength?: number } = {},
+) {
   return async function route(request: Request): Promise<Response> {
     const url = new URL(request.url);
     let body: unknown = undefined;
     if (!["GET", "HEAD", "OPTIONS"].includes(request.method)) {
       const text = await request.text();
-      if (text.length > 20000)
-        return Response.json({ error: "Request too large" }, { status: 413 });
+      if (text.length > maxBodyLength)
+        return Response.json(
+          { error: "Request too large" },
+          { status: 413, headers: { "Cache-Control": "no-store" } },
+        );
       try {
         body = text ? JSON.parse(text) : {};
       } catch {
-        return Response.json({ error: "Invalid JSON" }, { status: 400 });
+        return Response.json(
+          { error: "Invalid JSON" },
+          { status: 400, headers: { "Cache-Control": "no-store" } },
+        );
       }
     }
     const req: NodeLikeRequest = {

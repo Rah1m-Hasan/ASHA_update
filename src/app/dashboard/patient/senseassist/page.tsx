@@ -36,11 +36,10 @@ export default function SenseAssistPage() {
     const heard = speech.text.trim();
     if (!heard) return;
     setError("");
-    if (!cred) return setError("Link a caregiver first — clarification uses your private care circle.");
-    if (!settings.cloud) return setError("Turn on cloud assistance in Settings to use clarification.");
+    speech.stop();
     setBusy(true);
     try {
-      const r = await askAsha(cred, { text: heard, mode: "interpret", module: "senseassist", context, language: settings.language });
+      const r = await askAsha(cred, { text: heard, cloud: settings.cloud, mode: "interpret", module: "senseassist", context, language: settings.language });
       setResult(r);
       setChosen(r.candidate);
       speak(r.question);
@@ -52,6 +51,7 @@ export default function SenseAssistPage() {
   }
 
   function confirmMeaning() {
+    if (result?.safety?.level === "emergency") return;
     speak(chosen);
     const key = "speech_" + (cred?.patientId ?? "local-demo");
     const memory = readLocal<unknown[]>(key, []);
@@ -118,6 +118,8 @@ export default function SenseAssistPage() {
         <Panel title="2. Confirm your meaning">
           {!result ? (
             <p className="py-10 text-center text-sm text-muted">Asha’s suggestion appears here.</p>
+          ) : result.safety?.level === "emergency" ? (
+            <p className="rounded-xl bg-red-50 p-4 text-lg text-danger" role="alert">{result.question}</p>
           ) : (
             <>
               <p className="text-sm text-muted">{result.question}</p>

@@ -20,6 +20,7 @@ const p = await browser.newPage({
 });
 const errors = [];
 p.on("pageerror", (e) => errors.push(e.message));
+p.on('dialog', (dialog) => dialog.accept());
 await p.goto("http://127.0.0.1:4180/app");
 await p.screenshot({ path: "artifacts/welcome-desktop.png", fullPage: true });
 await p.locator("#beginSetup").click();
@@ -95,7 +96,7 @@ await p.waitForFunction(
   () =>
     document.getElementById("speechResult").textContent.includes("Is this") ||
     document.getElementById("speakCandidate") ||
-    document.getElementById("speechResult").textContent.includes("unavailable"),
+    /unavailable|not configured|cloud assistance is off/i.test(document.getElementById("speechResult").textContent),
   {},
   { timeout: 40000 },
 );

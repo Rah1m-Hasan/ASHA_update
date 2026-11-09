@@ -2,17 +2,17 @@ import type { Metadata } from "next";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { RegisterForm } from "@/features/auth/RegisterForm";
 
-export const metadata: Metadata = { title: "Create account · Asha" };
+export const metadata: Metadata = { title: "Start using Asha · Asha" };
 
 export default function RegisterPage() {
   return (
     <AuthLayout
-      title="Create your account"
-      subtitle="Set up Asha for yourself or someone you care for."
+      title="Start using Asha"
+      subtitle="Choose a demo workspace for yourself or someone you care for. No account is needed."
       showcase={{
-        eyebrow: "A little support. A lot more independence.",
+        eyebrow: "A little support. Your way, every day.",
         title: "A blink, a gesture, a word — becomes a message.",
-        text: "Asha turns the movements someone can comfortably make into confirmed requests, and keeps caregivers in the loop.",
+        text: "Practise comfortable movements and confirmed messages. A caregiver can set up a private care circle from the app.",
       }}
     >
       <RegisterForm />

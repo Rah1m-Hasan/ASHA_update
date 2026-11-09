@@ -2,17 +2,17 @@ import type { Metadata } from "next";
 import { AuthLayout } from "@/components/auth/AuthLayout";
 import { LoginForm } from "@/features/auth/LoginForm";
 
-export const metadata: Metadata = { title: "Log in · Asha" };
+export const metadata: Metadata = { title: "Choose a workspace · Asha" };
 
 export default function LoginPage() {
   return (
     <AuthLayout
-      title="Welcome back"
-      subtitle="Log in to continue with Asha."
+      title="Choose your workspace"
+      subtitle="Explore Asha without an account, or connect with your private care-circle link."
       showcase={{
         eyebrow: "Here with you",
         title: "Every small signal, heard.",
-        text: "Pick up where you left off — calibrated gestures, confirmed phrases and your care circle are ready.",
+        text: "Explore communication tools at your own pace. Use a private access link to connect with your care circle.",
       }}
     >
       <LoginForm />

@@ -10,7 +10,10 @@ import { StatusPill } from "@/components/dashboard/StatusPill";
 import { Button } from "@/components/ui/Button";
 import { useCalibrationData } from "@/features/calibration/useCalibrationData";
 import { CameraView } from "@/features/perception/CameraView";
-import { useActiveModule, usePerception } from "@/features/perception/PerceptionProvider";
+import {
+  useActiveModule,
+  usePerception,
+} from "@/features/perception/PerceptionProvider";
 import { useSignalHistory } from "@/features/perception/useSignalHistory";
 
 const deg = (v?: number) => (v == null ? "—" : `${Math.round(v)}°`);
@@ -31,10 +34,24 @@ export default function FaceSpeakPage() {
         description="Deliberate blinks, smiles and head movements become messages. Ordinary blinks never send anything."
         actions={
           <>
-            <Button variant="secondary" size="sm" onClick={() => instance()?.resetFaceReference()} disabled={state !== "on"}>
+            <a
+              href="/assistive.html?module=facespeak"
+              className="inline-flex min-h-9 items-center rounded-full bg-brand-soft px-3 py-2 text-sm font-medium text-brand hover:bg-brand-mint"
+            >
+              Full FaceSpeak studio ↗
+            </a>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => instance()?.resetFaceReference()}
+              disabled={state !== "on"}
+            >
               Reset face reference
             </Button>
-            <Link href="/dashboard/patient/calibration" className="inline-flex h-9 items-center rounded-full bg-brand px-3 text-sm font-medium text-white hover:bg-brand-hover">
+            <Link
+              href="/dashboard/patient/calibration"
+              className="inline-flex h-9 items-center rounded-full bg-brand px-3 text-sm font-medium text-white hover:bg-brand-hover"
+            >
               {trained ? "Recalibrate" : "Calibrate"}
             </Link>
           </>
@@ -44,32 +61,74 @@ export default function FaceSpeakPage() {
         <div className="space-y-4">
           <CameraView />
           <div className="flex flex-wrap gap-2">
-            <StatusPill tone={a?.valid ? "good" : state === "on" ? "warn" : "neutral"}>{a?.valid ? "Face tracked" : state === "on" ? "Looking for your face" : "Camera off"}</StatusPill>
-            <StatusPill tone={trained ? "good" : "warn"}>{trained ? `Calibrated · ${trained.enabled.length} signals` : "Not calibrated yet"}</StatusPill>
+            <StatusPill
+              tone={a?.valid ? "good" : state === "on" ? "warn" : "neutral"}
+            >
+              {a?.valid
+                ? "Face tracked"
+                : state === "on"
+                  ? "Looking for your face"
+                  : "Camera off"}
+            </StatusPill>
+            <StatusPill tone={trained ? "good" : "warn"}>
+              {trained
+                ? `Calibrated · ${trained.enabled.length} signals`
+                : "Not calibrated yet"}
+            </StatusPill>
             {a?.reason && state === "on" && <StatusPill>{a.reason}</StatusPill>}
           </div>
         </div>
 
         <div className="space-y-6">
           <div className="grid grid-cols-3 gap-3">
-            <Stat label="Blinks seen" value={s.blinks ?? "—"} hint="Counted only" />
-            <Stat label="Smile" value={a?.smile?.intensity == null ? "—" : Math.round(a.smile.intensity * 100)} unit="%" />
+            <Stat
+              label="Blinks seen"
+              value={s.blinks ?? "—"}
+              hint="Counted only"
+            />
+            <Stat
+              label="Smile"
+              value={
+                a?.smile?.intensity == null
+                  ? "—"
+                  : Math.round(a.smile.intensity * 100)
+              }
+              unit="%"
+            />
             <Stat label="Latency" value={s.latency ?? "—"} unit="ms" />
           </div>
-          <Panel title="Head movement" description="Relative to your neutral position">
+          <Panel
+            title="Head movement"
+            description="Relative to your neutral position"
+          >
             <div className="grid grid-cols-3 gap-3">
               <Stat label="Turn" value={deg(a?.head?.yaw)} />
               <Stat label="Nod" value={deg(a?.head?.pitch)} />
               <Stat label="Tilt" value={deg(a?.head?.roll)} />
             </div>
           </Panel>
-          <Panel title="Expression signals" description="Model signals, not a measure of ability">
+          <Panel
+            title="Expression signals"
+            description="Model signals, not a measure of ability"
+          >
             <div className="space-y-3">
               <Meter label="Smile symmetry" value={a?.smile?.symmetry} />
-              <Meter label="Brow raise (AU1)" value={au.AU1 != null ? au.AU1 / 100 : null} />
-              <Meter label="Brow lower (AU4)" value={au.AU4 != null ? au.AU4 / 100 : null} />
-              <Meter label="Cheek raise (AU6)" value={au.AU6 != null ? au.AU6 / 100 : null} />
-              <Meter label="Lip stretch (AU20)" value={au.AU20 != null ? au.AU20 / 100 : null} />
+              <Meter
+                label="Brow raise (AU1)"
+                value={au.AU1 != null ? au.AU1 / 100 : null}
+              />
+              <Meter
+                label="Brow lower (AU4)"
+                value={au.AU4 != null ? au.AU4 / 100 : null}
+              />
+              <Meter
+                label="Cheek raise (AU6)"
+                value={au.AU6 != null ? au.AU6 / 100 : null}
+              />
+              <Meter
+                label="Lip stretch (AU20)"
+                value={au.AU20 != null ? au.AU20 / 100 : null}
+              />
             </div>
           </Panel>
         </div>

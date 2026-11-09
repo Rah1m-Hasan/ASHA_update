@@ -40,12 +40,11 @@ export default function AssistantPage() {
     setInput("");
     const history = messages.slice(-6).map(({ role, text }) => ({ role, text }));
     setMessages((m) => [...m, { role: "user", text }]);
-    if (!cred) return setMessages((m) => [...m, { role: "assistant", text: "Link a caregiver first — Asha’s cloud replies use your private care circle." }]);
-    if (!settings.cloud) return setMessages((m) => [...m, { role: "assistant", text: "Turn on cloud assistance above so I can reply." }]);
     setBusy(true);
     try {
       const reply = await askAsha(cred, {
         text,
+        cloud: settings.cloud,
         history,
         language: settings.language,
         context: `Camera ${state === "on" ? "on" : "off"}; posture ${snapshot.posture?.label ?? "unavailable"}`,

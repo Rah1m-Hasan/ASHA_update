@@ -1,10 +1,14 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useCalibrationData } from "@/features/calibration/useCalibrationData";
-import { usePerception, usePerceptionEvent } from "@/features/perception/PerceptionProvider";
+import {
+  usePerception,
+  usePerceptionEvent,
+} from "@/features/perception/PerceptionProvider";
 import { usePatientProfile } from "@/features/session/usePatientProfile";
 import { useSession } from "@/features/session/store";
+import { isSpeaking, speak } from "@/features/speech/speak";
 import { api } from "@/lib/api";
 import { engineModule } from "@/lib/engine/load";
 import { readLocal } from "@/lib/storage";
@@ -12,74 +16,250 @@ import type { FrameSnapshot } from "@/lib/engine/types";
 import { EVENT_TEXT } from "./needs";
 import { useRequests } from "./RequestProvider";
 
-type BlinkIntentCtor = new (profile?: unknown) => { update(eye: unknown, t?: number, valid?: boolean): string | null; reset(): void };
-type BlinkModule = { BlinkIntent: BlinkIntentCtor; RAPID_BLINK: string; CONFIRM_BLINK: string };
+type BlinkIntent = {
+  update(eye: unknown, t?: number, valid?: boolean): string | null;
+  reset(): void;
+  waitForQuestion(): void;
+  questionFinished(t: number): void;
+};
+type BlinkModule = {
+  BlinkIntent: new (profile?: unknown) => BlinkIntent;
+  RAPID_BLINK: string;
+  CONFIRM_BLINK: string;
+};
+type Guide = {
+  pending: unknown;
+  lastPrompt: number;
+  clear(): void;
+  due(t: number): boolean;
+  ask(
+    input: {
+      assessment: unknown;
+      enabled: string[];
+      handMapped: boolean;
+      reason: string;
+    },
+    t: number,
+  ): string;
+  accept(type: string, t: number): string | null;
+};
+type GuideModule = {
+  CompanionGuide: new () => Guide;
+  confirmationMatches(
+    type: string,
+    assessment: unknown,
+    enabled?: string[],
+  ): boolean;
+};
 
-/**
- * Background wiring for the patient side (renders nothing):
- * applies saved calibration, turns a practiced triple blink or sustained cues into proposals,
- * and sends a heartbeat so the caregiver sees live status.
- */
 export function SignalTriggers() {
-  const { instance, state, snapshot } = usePerception();
-  const { propose, pending, confirm } = useRequests();
+  const { instance, state, snapshot, calibrating } = usePerception();
+  const { propose, pending, confirm, confirmationReadyAt } = useRequests();
   const { profile } = usePatientProfile();
   const trained = useCalibrationData();
   const cred = useSession((s) => s.patient);
-  const blink = useRef<{ intent: InstanceType<BlinkIntentCtor>; mod: BlinkModule } | null>(null);
+  const proactive = useSession((s) => s.settings.proactive);
+  const blink = useRef<{ intent: BlinkIntent; mod: BlinkModule } | null>(null);
+  const guide = useRef<{ value: Guide; mod: GuideModule } | null>(null);
+  const [loaded, setLoaded] = useState(0);
+  const lastCue = useRef(-Infinity);
 
-  // Apply saved calibration whenever the engine is (re)started.
+  // Never reset the gesture engine on every frame; only on a real calibration/start change.
   useEffect(() => {
     const p = instance();
-    if (p && trained && state === "on") p.setCalibration(trained.baseline, trained.enabled);
-  }, [instance, state, trained]);
+    if (p && state === "on" && !calibrating)
+      p.setCalibration(trained?.baseline ?? undefined, trained?.enabled ?? []);
+  }, [instance, state, trained, calibrating]);
 
   useEffect(() => {
-    void engineModule<BlinkModule>("blink-intent").then((mod) => {
-      const b = trained?.baseline as { blinkIntent?: unknown } | undefined;
-      blink.current = { mod, intent: new mod.BlinkIntent(b?.blinkIntent) };
-    });
-  }, [trained]);
+    let active = true;
+    void Promise.all([
+      engineModule<BlinkModule>("blink-intent"),
+      engineModule<GuideModule>("companion-guide"),
+    ])
+      .then(([mod, guideMod]) => {
+        if (!active) return;
+        const b = trained?.baseline as { blinkIntent?: unknown } | undefined;
+        blink.current = { mod, intent: new mod.BlinkIntent(b?.blinkIntent) };
+        guide.current = { mod: guideMod, value: new guideMod.CompanionGuide() };
+        setLoaded((v) => v + 1);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [trained, cred?.patientId]);
 
   const blinkEnabled =
-    !!profile && profile.assessment.eyes !== "none" && !!trained?.enabled.includes("RAPID_BLINK_REQUEST") && !!trained?.enabled.includes("BLINK_CONFIRM");
+    !!profile &&
+    profile.assessment.eyes !== "none" &&
+    !!trained?.enabled.includes("RAPID_BLINK_REQUEST") &&
+    !!trained?.enabled.includes("BLINK_CONFIRM");
+
+  // The long yes blink is armed only after this particular question has finished.
+  useEffect(() => {
+    const b = blink.current;
+    if (!b) return;
+    if (!pending || !blinkEnabled || calibrating || state !== "on")
+      b.intent.reset();
+    else {
+      b.intent.waitForQuestion();
+      if (confirmationReadyAt !== null)
+        b.intent.questionFinished(confirmationReadyAt);
+    }
+  }, [pending, confirmationReadyAt, blinkEnabled, calibrating, state, loaded]);
+
+  const checkIn = useCallback(
+    (reason = "routine") => {
+      const g = guide.current?.value;
+      const now = performance.now();
+      if (
+        !g ||
+        !profile ||
+        !proactive ||
+        state !== "on" ||
+        calibrating ||
+        pending ||
+        document.hidden ||
+        isSpeaking()
+      )
+        return;
+      if (!g.due(now)) return;
+      const maps = readLocal<Record<string, { trained: boolean }>>(
+        "handmap_" + (cred?.patientId ?? "local-demo"),
+        {},
+      );
+      speak(
+        g.ask(
+          {
+            assessment: profile.assessment,
+            enabled: trained?.enabled ?? [],
+            handMapped: Object.values(maps).some((m) => m?.trained),
+            reason,
+          },
+          now,
+        ),
+      );
+    },
+    [profile, proactive, state, calibrating, pending, cred?.patientId, trained],
+  );
+
+  useEffect(() => {
+    if (calibrating || state !== "on") {
+      guide.current?.value.clear();
+      if (guide.current) guide.current.value.lastPrompt = -Infinity;
+      return;
+    }
+    checkIn("start");
+    const timer = setInterval(() => checkIn(), 10000);
+    return () => clearInterval(timer);
+  }, [calibrating, state, checkIn, loaded]);
 
   usePerceptionEvent<FrameSnapshot>(
     "frame",
     (s) => {
       const b = blink.current;
-      if (!b || document.hidden) return;
+      if (!b || document.hidden || calibrating || state !== "on") return;
       const signal = b.intent.update(s.analysis?.eye, s.t, s.analysis?.valid);
-      if (signal === b.mod.RAPID_BLINK && !pending) propose("help", EVENT_TEXT.help, "deliberate blink");
-      else if (signal === b.mod.CONFIRM_BLINK && pending) void confirm();
+      if (signal === b.mod.RAPID_BLINK && !pending) {
+        const selected =
+          guide.current?.value.accept(signal, performance.now()) || "water";
+        if (
+          !propose(
+            selected,
+            EVENT_TEXT[selected] ?? selected,
+            "deliberate blink",
+          )
+        )
+          b.intent.reset();
+      } else if (
+        signal === b.mod.CONFIRM_BLINK &&
+        pending &&
+        (pending.source === "deliberate blink" ||
+          guide.current?.mod.confirmationMatches(
+            signal,
+            profile?.assessment,
+            trained?.enabled,
+          ))
+      ) {
+        void confirm();
+      }
     },
-    blinkEnabled,
+    blinkEnabled && !calibrating && state === "on",
   );
 
-  // Sustained changes lead to a gentle check-in, which still needs the patient's confirmation.
-  const proactive = useSession((s) => s.settings.proactive);
-  const lastCue = useRef(-Infinity);
+  // Face movements answer an offered question. Unprompted observations do not send requests.
+  usePerceptionEvent<{ type: string }>(
+    "gesture",
+    (e) => {
+      if (!trained || pending || document.hidden || isSpeaking()) return;
+      const selected = guide.current?.value.accept(e.type, performance.now());
+      if (selected)
+        propose(selected, EVENT_TEXT[selected] ?? selected, "guided face");
+      else if (e.type === "SMILE_COMPLETED") checkIn("smile");
+    },
+    !calibrating && state === "on",
+  );
+
+  usePerceptionEvent<{ command: string }>(
+    "facecommand",
+    (c) => {
+      if (
+        c.command === "okay" &&
+        !pending &&
+        !guide.current?.value.pending &&
+        !document.hidden &&
+        !isSpeaking() &&
+        trained?.enabled.includes("NOD_COMPLETED") &&
+        trained.enabled.includes("SMILE_COMPLETED")
+      )
+        speak("I am okay, thank you.");
+    },
+    !calibrating && state === "on",
+  );
+
+  // These cues are already sustained by the engine; they offer a check-in, never an automatic alert.
   usePerceptionEvent<string>(
     "cue",
     (cue) => {
-      if (pending || performance.now() - lastCue.current < 120000) return;
-      if (cue !== "posture" && cue !== "face_change") return;
-      lastCue.current = performance.now();
-      propose(cue, EVENT_TEXT[cue], "monitor");
+      const now = performance.now();
+      if (
+        now - lastCue.current < 120000 ||
+        !["posture", "face_change", "possible_wake"].includes(cue)
+      )
+        return;
+      if (
+        pending ||
+        guide.current?.value.pending ||
+        document.hidden ||
+        isSpeaking()
+      )
+        return;
+      lastCue.current = now;
+      checkIn(cue === "possible_wake" ? "wake" : "change");
     },
-    proactive,
+    proactive && !calibrating && state === "on",
   );
 
-  // Practised hand poses (saved in FingerSpeak) propose their request, or confirm a pending one.
-  usePerceptionEvent<{ pose: string }>("hand", (h) => {
-    const maps = readLocal<Record<string, { kind: string; trained: boolean }>>("handmap_" + (cred?.patientId ?? "local-demo"), {});
-    const m = maps[h.pose];
-    if (!m?.trained) return;
-    if (pending) void confirm();
-    else propose(m.kind, EVENT_TEXT[m.kind] ?? m.kind, "hand");
-  });
+  usePerceptionEvent<{ pose: string }>(
+    "hand",
+    (h) => {
+      if (document.hidden || instance()?.neuralHandActive) return;
+      const maps = readLocal<
+        Record<string, { kind: string; trained: boolean }>
+      >("handmap_" + (cred?.patientId ?? "local-demo"), {});
+      const m = maps[h.pose];
+      if (!m?.trained) {
+        if (h.pose === "Open palm") checkIn();
+        return;
+      }
+      if (pending) {
+        if (confirmationReadyAt !== null) void confirm();
+      } else propose(m.kind, EVENT_TEXT[m.kind] ?? m.kind, "hand");
+    },
+    !calibrating && state === "on",
+  );
 
-  // Heartbeat every 15 s while a patient credential exists.
   const latest = useRef(snapshot);
   latest.current = snapshot;
   useEffect(() => {
@@ -92,7 +272,7 @@ export function SignalTriggers() {
           action: "heartbeat",
           status: {
             module: "companion",
-            camera: state === "on",
+            camera: state === "on" && !document.hidden,
             face: !!s.analysis?.valid,
             hands: s.hands?.length ?? 0,
             posture: s.posture?.label ?? "",

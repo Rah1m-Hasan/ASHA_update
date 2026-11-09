@@ -1,8 +1,20 @@
 "use client";
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { engineModule, loadClassicScripts } from "@/lib/engine/load";
-import type { FrameSnapshot, PerceptionInstance, PulseValue } from "@/lib/engine/types";
+import type {
+  FrameSnapshot,
+  PerceptionInstance,
+  PulseValue,
+} from "@/lib/engine/types";
 
 type CameraState = "off" | "starting" | "on" | "error";
 
@@ -11,6 +23,8 @@ type PerceptionContextValue = {
   status: string;
   snapshot: FrameSnapshot;
   pulse: PulseValue | null;
+  calibrating: boolean;
+  setCalibrating: (value: boolean) => void;
   start: () => Promise<void>;
   stop: () => void;
   setModule: (name: string) => void;
@@ -29,14 +43,19 @@ function parking() {
     el = document.createElement("div");
     el.id = "camera-parking";
     el.setAttribute("aria-hidden", "true");
-    el.style.cssText = "position:fixed;width:2px;height:2px;overflow:hidden;opacity:0;pointer-events:none;left:-9999px";
+    el.style.cssText =
+      "position:fixed;width:2px;height:2px;overflow:hidden;opacity:0;pointer-events:none;left:-9999px";
     document.body.append(el);
   }
   return el;
 }
 
 /** One camera, one engine for every patient page. Survives client-side navigation. */
-export function PerceptionProvider({ children }: { children: React.ReactNode }) {
+export function PerceptionProvider({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const engine = useRef<PerceptionInstance | null>(null);
   const stageEl = useRef<HTMLDivElement | null>(null);
   const moduleName = useRef("companion");
@@ -45,6 +64,10 @@ export function PerceptionProvider({ children }: { children: React.ReactNode }) 
   const [status, setStatus] = useState("Camera is off");
   const [snapshot, setSnapshot] = useState<FrameSnapshot>({});
   const [pulse, setPulse] = useState<PulseValue | null>(null);
+  const [calibrating, setCalibrating] = useState(false);
+  const instance = useCallback(() => engine.current, []);
+  const starting = useRef<Promise<void> | null>(null);
+  const generation = useRef(0);
 
   // Build the shared stage once on the client.
   const stage = useCallback(() => {
@@ -87,9 +110,17 @@ export function PerceptionProvider({ children }: { children: React.ReactNode }) 
   const ensureEngine = useCallback(async () => {
     if (engine.current) return engine.current;
     await loadClassicScripts();
-    const { Perception } = await engineModule<{ Perception: new (v: HTMLVideoElement, c: HTMLCanvasElement) => PerceptionInstance }>("perception");
+    const { Perception } = await engineModule<{
+      Perception: new (
+        v: HTMLVideoElement,
+        c: HTMLCanvasElement,
+      ) => PerceptionInstance;
+    }>("perception");
     const el = stage()!;
-    const p = new Perception(el.querySelector("video")!, el.querySelector("canvas")!);
+    const p = new Perception(
+      el.querySelector("video")!,
+      el.querySelector("canvas")!,
+    );
     p.setActiveModule(moduleName.current);
     // Throttle UI updates to ~8 fps; the engine itself runs at camera rate.
     let last = 0;
@@ -99,33 +130,58 @@ export function PerceptionProvider({ children }: { children: React.ReactNode }) 
       last = now;
       setSnapshot({ ...(e as CustomEvent<FrameSnapshot>).detail });
     });
-    p.addEventListener("vitals", (e) => setPulse({ ...(e as CustomEvent<PulseValue>).detail }));
-    p.addEventListener("status", (e) => setStatus(String((e as CustomEvent).detail)));
+    p.addEventListener("vitals", (e) =>
+      setPulse({ ...(e as CustomEvent<PulseValue>).detail }),
+    );
+    p.addEventListener("status", (e) =>
+      setStatus(String((e as CustomEvent).detail)),
+    );
     engine.current = p;
     return p;
   }, [stage]);
 
   const start = useCallback(async () => {
+    if (starting.current) return starting.current;
+    if (engine.current?.running) return;
+    const current = ++generation.current;
     setState("starting");
+    const task = (async () => {
+      try {
+        const p = await ensureEngine();
+        place();
+        await p.start();
+        if (current !== generation.current) {
+          p.stop();
+          return;
+        }
+        setState("on");
+      } catch (err) {
+        engine.current?.stop();
+        if (current !== generation.current) return;
+        setState("error");
+        setStatus(
+          (err as Error).name === "NotAllowedError"
+            ? "Camera permission was blocked. Allow camera access in your browser settings."
+            : `Camera could not start: ${(err as Error).message}`,
+        );
+      }
+    })();
+    starting.current = task;
     try {
-      const p = await ensureEngine();
-      await p.start();
-      setState("on");
-    } catch (err) {
-      setState("error");
-      setStatus(
-        (err as Error).name === "NotAllowedError"
-          ? "Camera permission was blocked. Allow camera access in your browser settings."
-          : `Camera could not start: ${(err as Error).message}`,
-      );
+      await task;
+    } finally {
+      if (starting.current === task) starting.current = null;
     }
-  }, [ensureEngine]);
+  }, [ensureEngine, place]);
 
   const stop = useCallback(() => {
+    generation.current++;
     engine.current?.stop();
     setState("off");
     setStatus("Camera is off");
     setSnapshot({});
+    setPulse(null);
+    setCalibrating(false);
   }, []);
 
   const setModule = useCallback((name: string) => {
@@ -133,23 +189,68 @@ export function PerceptionProvider({ children }: { children: React.ReactNode }) 
     engine.current?.setActiveModule(name);
   }, []);
 
-  useEffect(() => () => engine.current?.stop(), []);
+  useEffect(() => {
+    const hidden = () => {
+      if (document.hidden) setCalibrating(false);
+    };
+    window.addEventListener("pagehide", stop);
+    document.addEventListener("visibilitychange", hidden);
+    return () => {
+      generation.current++;
+      engine.current?.stop();
+      stageEl.current?.remove();
+      window.removeEventListener("pagehide", stop);
+      document.removeEventListener("visibilitychange", hidden);
+    };
+  }, [stop]);
 
   const value = useMemo(
-    () => ({ state, status, snapshot, pulse, start, stop, setModule, instance: () => engine.current, attach }),
-    [state, status, snapshot, pulse, start, stop, setModule, attach],
+    () => ({
+      state,
+      status,
+      snapshot,
+      pulse,
+      calibrating,
+      setCalibrating,
+      start,
+      stop,
+      setModule,
+      instance,
+      attach,
+    }),
+    [
+      state,
+      status,
+      snapshot,
+      pulse,
+      calibrating,
+      start,
+      stop,
+      setModule,
+      instance,
+      attach,
+    ],
   );
-  return <PerceptionContext.Provider value={value}>{children}</PerceptionContext.Provider>;
+  return (
+    <PerceptionContext.Provider value={value}>
+      {children}
+    </PerceptionContext.Provider>
+  );
 }
 
 export function usePerception() {
   const ctx = useContext(PerceptionContext);
-  if (!ctx) throw new Error("usePerception must be used inside PerceptionProvider");
+  if (!ctx)
+    throw new Error("usePerception must be used inside PerceptionProvider");
   return ctx;
 }
 
 /** Subscribe to a raw engine event (gesture, facecommand, hand, cue). */
-export function usePerceptionEvent<T>(type: string, handler: (detail: T) => void, enabled = true) {
+export function usePerceptionEvent<T>(
+  type: string,
+  handler: (detail: T) => void,
+  enabled = true,
+) {
   const { instance, state } = usePerception();
   const ref = useRef(handler);
   useEffect(() => {

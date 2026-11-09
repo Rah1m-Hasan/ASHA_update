@@ -9,6 +9,8 @@
     "start": "next start",
     "test": "node --test tests/*.test.mjs",
     "test:browser": "node tests/browser.mjs",
+    "test:everyday": "node tests/everyday-browser.mjs && node tests/everyday-offline.mjs",
+    "benchmark:everyday": "node scripts/everyday-benchmark.mjs --browser",
     "okf": "node okf/compile.mjs"
   },
   "dependencies": {
