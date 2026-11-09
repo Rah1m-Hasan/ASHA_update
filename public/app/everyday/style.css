@@ -877,3 +877,8 @@ progress {
     animation: none !important;
   }
 }
+.clinic-workspace p,
+.clinic-workspace label,
+.clinic-workspace li {
+  overflow-wrap: anywhere;
+}

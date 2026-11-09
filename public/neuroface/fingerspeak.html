@@ -403,7 +403,7 @@ document.getElementById('backToFace').onclick = () => {
   else location.href = "/dashboard/patient/facespeak";
 };
 if (!EMBEDDED) location.replace("/dashboard/patient/fingerspeak");
-window.ashaSetTheme = () => { document.documentElement.dataset.theme = "light"; };
+window.ashaSetTheme = (theme) => { document.documentElement.dataset.theme = theme === 'dark' ? 'dark' : 'light'; };
 
 // ================= config =================
 const SEQ_LEN = 20;

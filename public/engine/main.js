@@ -134,7 +134,7 @@ window.addEventListener("message", (e) => {
     return;
   const d = e.data || {};
   if (d.type === "asha-hand-ready") {
-    e.source.ashaSetTheme?.("light");
+    e.source.ashaSetTheme?.(settings.theme);
     $("fingerStudio").dataset.ready = "true";
     $("fingerStudio").style.visibility = "visible";
     $("fingerLoading")?.remove();
@@ -168,6 +168,9 @@ window.addEventListener("message", (e) => {
   }
 });
 let settings = read("settings", {
+    theme: matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light",
     cloud: false,
     proactive: true,
     scan: false,
@@ -202,8 +205,22 @@ function toast(t) {
   clearTimeout(toast.timer);
   toast.timer = setTimeout(() => ($("toast").hidden = true), 5500);
 }
-// Light theme only.
-document.documentElement.dataset.theme = "light";
+// The assistive shell keeps its own light/dark toggle (the Next.js dashboard is light-only).
+function theme() {
+  if (settings.theme !== "dark") settings.theme = "light";
+  document.documentElement.dataset.theme = settings.theme;
+  const button = $("themeButton");
+  if (button) {
+    const next = settings.theme === "dark" ? "light" : "dark";
+    button.innerHTML = icon(settings.theme === "dark" ? "sun" : "moon");
+    button.setAttribute("aria-pressed", String(settings.theme === "dark"));
+    button.setAttribute("aria-label", `Switch to ${next} theme`);
+    button.title = `Switch to ${next} theme`;
+  }
+  save("settings", settings);
+  $("fingerStudio")?.contentWindow?.ashaSetTheme?.(settings.theme);
+}
+theme();
 function show(id) {
   if (!$(id)) return;
   if (view === "details" && id !== "details") speechCapture?.stop("page-change");
@@ -255,6 +272,10 @@ function show(id) {
 document
   .querySelectorAll("[data-view]")
   .forEach((b) => (b.onclick = () => show(b.dataset.view)));
+$("themeButton")?.addEventListener("click", () => {
+  settings.theme = settings.theme === "dark" ? "light" : "dark";
+  theme();
+});
 $("settingsButton")?.addEventListener("click", () => show("settings"));
 $("landingMenuToggle")?.addEventListener("click", () => show("settings"));
 $("settingsBack").onclick = () =>
