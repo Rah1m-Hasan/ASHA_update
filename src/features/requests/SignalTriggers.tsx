@@ -53,7 +53,7 @@ type GuideModule = {
 };
 
 export function SignalTriggers() {
-  const { instance, state, snapshot, calibrating } = usePerception();
+  const { instance, state, snapshot, calibrating, exercising } = usePerception();
   const { propose, pending, confirm, confirmationReadyAt } = useRequests();
   const { profile } = usePatientProfile();
   const trained = useCalibrationData();
@@ -119,6 +119,7 @@ export function SignalTriggers() {
         !proactive ||
         state !== "on" ||
         calibrating ||
+        exercising ||
         pending ||
         document.hidden ||
         isSpeaking()
@@ -141,11 +142,11 @@ export function SignalTriggers() {
         ),
       );
     },
-    [profile, proactive, state, calibrating, pending, cred?.patientId, trained],
+    [profile, proactive, state, calibrating, exercising, pending, cred?.patientId, trained],
   );
 
   useEffect(() => {
-    if (calibrating || state !== "on") {
+    if (calibrating || exercising || state !== "on") {
       guide.current?.value.clear();
       if (guide.current) guide.current.value.lastPrompt = -Infinity;
       return;
@@ -153,7 +154,7 @@ export function SignalTriggers() {
     checkIn("start");
     const timer = setInterval(() => checkIn(), 10000);
     return () => clearInterval(timer);
-  }, [calibrating, state, checkIn, loaded]);
+  }, [calibrating, exercising, state, checkIn, loaded]);
 
   usePerceptionEvent<FrameSnapshot>(
     "frame",
@@ -198,7 +199,8 @@ export function SignalTriggers() {
         propose(selected, EVENT_TEXT[selected] ?? selected, "guided face");
       else if (e.type === "SMILE_COMPLETED") checkIn("smile");
     },
-    !calibrating && state === "on",
+    // A smile or eyebrow raise during a Move workout is exercise, not an answer.
+    !calibrating && !exercising && state === "on",
   );
 
   usePerceptionEvent<{ command: string }>(
@@ -215,7 +217,7 @@ export function SignalTriggers() {
       )
         speak("I am okay, thank you.");
     },
-    !calibrating && state === "on",
+    !calibrating && !exercising && state === "on",
   );
 
   // These cues are already sustained by the engine; they offer a check-in, never an automatic alert.
@@ -238,7 +240,7 @@ export function SignalTriggers() {
       lastCue.current = now;
       checkIn(cue === "possible_wake" ? "wake" : "change");
     },
-    proactive && !calibrating && state === "on",
+    proactive && !calibrating && !exercising && state === "on",
   );
 
   usePerceptionEvent<{ pose: string }>(
@@ -257,7 +259,8 @@ export function SignalTriggers() {
         if (confirmationReadyAt !== null) void confirm();
       } else propose(m.kind, EVENT_TEXT[m.kind] ?? m.kind, "hand");
     },
-    !calibrating && state === "on",
+    // Arm exercises show open palms; during a workout only the blink request and on-screen buttons ask for help.
+    !calibrating && !exercising && state === "on",
   );
 
   const latest = useRef(snapshot);

@@ -59,9 +59,12 @@ export class Perception extends EventTarget {
   setActiveModule(name) {
     this.activeModule = name;
     this.handsPriority = name === "fingerspeak" || !!this.neuralHandActive;
+    // Move counts repetitions from consecutive pose frames, so pose runs near camera rate there.
+    this.posePeriod = name === "move" ? 50 : 500;
     this.worker?.postMessage({
       type: "schedule",
       handsPriority: this.handsPriority,
+      posePeriod: this.posePeriod,
     });
   }
   async start() {
@@ -258,7 +261,7 @@ export class Perception extends EventTarget {
           let hand = null,
             pose = null;
           const handDue = (t - this.lastHand) / (this.handsPriority ? 1 : 250),
-            poseDue = (t - this.lastPose) / 500;
+            poseDue = (t - this.lastPose) / (this.posePeriod || 500);
           if (
             handDue >= 1 &&
             (this.handsPriority ? poseDue < 1 : handDue >= poseDue)
@@ -328,6 +331,13 @@ export class Perception extends EventTarget {
       this.poseResult = d.pose;
       this.posture = poseFeatures(d.pose.landmarks?.[0], this.posture);
       this.poseAt = d.t;
+      this.emit("pose", {
+        landmarks: d.pose.landmarks?.[0] ?? null,
+        personCount: d.pose.landmarks?.length ?? 0,
+        timestamp: d.t,
+        width: this.video.videoWidth || 1,
+        height: this.video.videoHeight || 1,
+      });
     }
     if (d.hand) this.consumeHands(d.hand, d.t);
     for (const e of r.events) {

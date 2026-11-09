@@ -57,3 +57,28 @@ These checks use generated angles and landmark trajectories to test geometry, st
 - Report the proportion of frames and complete attempts rejected for quality alongside accuracy on accepted observations.
 - Measure cold/warm startup, p50/p95 frame latency, FPS, memory, battery and thermal behavior on physical low-cost Android phones, then supported iOS and desktop browsers.
 - Have a qualified clinician define rehabilitation limits and review the intended workflow before rehabilitation use. Pose-derived movement does not establish pain, muscle force, bone health or recovery.
+
+## Move V2 in the Next.js dashboard (`/dashboard/patient/move`)
+
+Move V2 is a goal-based, sequential exercise module in the patient dashboard. The Everyday Move workspace above is unchanged.
+
+**Structure.** Explore (8 categories and a searchable library), a one-question-at-a-time goal wizard, My plan (editable plan, weekly schedule, clinician tasks), Live session, Progress, Settings & safety, and Clinician programs. Code lives in `src/features/move/`:
+
+| File | Role |
+| --- | --- |
+| `catalog.js` | Versioned exercise library (`CATALOG_VERSION`), categories, goals with honest clarifications (facial fat, jawline, belly fat, rapid weight loss), templates, `recommendProgram`, `validateProgram`, `importClinicianProgram` |
+| `detectors.js` | Deterministic rep detectors. Pose: squat, chair squat, sit to stand, wall push-up, arm raise, plus clinician-angle knee extension, elbow flexion and shoulder flexion. Face: smile, eyebrow raise, cheek puff (experimental), each calibrated to the person's neutral face |
+| `safety.js` | Rule-based safety screen, English/Bangla/Banglish symptom rules (chest, breathing, fainting, stroke signs, palpitations, dizziness, pain), lockouts, clinician clearance and attestation |
+| `session.js` | Workout state machine: `NOT_STARTED → PRECHECK → CAMERA_SETUP → WARM_UP → EXERCISE → REST → NEXT_EXERCISE → COOL_DOWN → SUMMARY → COMPLETED`, with `PAUSED`, `TRACKING_LOST`, `SAFETY_STOP`, `CANCELLED` |
+
+**Counting rules.** A repetition is one observed start → target (held) → return cycle with dwell, hysteresis, a 20 s maximum and a 700 ms gap reset. Shallow movements are reported as partial and not counted. Squats need hip descent and sit to stand needs hip rise. Pose landmarks need visibility ≥ 0.6 and must be inside the frame; more than one person is rejected. Face counting pauses when the face is lost or head yaw/pitch exceeds 20°. Nothing is counted before a usable view has been seen for 1 s, nor during warm-up, rest or cool-down. After 1 s without a usable view the session enters `TRACKING_LOST` and announces "Can't see your movement; reposition camera." Clinician plans supply their own angles and side. Manual counting is always available and is recorded as manual.
+
+**Shared camera.** On the Live session page the engine runs pose every 50 ms (module `move`) instead of every 500 ms, and emits a `pose` event. Leaving the page returns it to the companion cadence. While a workout runs, smiles, face commands, hand poses and cues are not read as AAC requests; the deliberate blink request and on-screen buttons still work.
+
+**Safety.** Before every workout the "right now" symptom question is asked; other conditions are asked unless the person chose to remember them. Warning symptoms (or "not sure") stop the session with urgent guidance (call 999 in Bangladesh) and lock Move for 12 hours. The lock can be lifted early only by recording a named clinician assessment, no sooner than 30 minutes after the stop, and the record is kept. Dizziness or palpitations stop and rest with a 15-minute pause. Known heart conditions, clinician limits, recent surgery/injury/falls and pregnancy require a recorded (self-reported) clinician clearance; with clearance, workouts are beginner level with at least 2-minute warm-up and cool-down. No message says people with heart conditions should not exercise. Symptom rules ignore any other input, so no model output can override them.
+
+**Clinician programs.** Plans are read from `/api/clinic` with the patient's private invitation. The server enforces role, tenant and the patient's `move` sharing consent on each read. Clinician plans are locked from patient editing. Local files are not accepted as clinician plans.
+
+**Data.** Plans, schedule, history, clearance, lockout and consent audit are stored on the device under `asha_live_move_v2`, with JSON export and delete. A running workout is saved and comes back paused after a reload. Summaries contain counts, holds, sets, active minutes, effort (0–10) and how the person felt. No calories, body-fat or vital-sign values are produced.
+
+**Checks run.** `node --test tests/move-*.test.mjs` (detectors, safety, catalog, session) and `node tests/move-browser.mjs` against `next dev` (wizard, honest goal note, camera setup gate, counted and shallow reps, tracking loss and announcement, reload resume, chest-pain stop and lockout, face routine to summary, Bangla dizziness text, 390 px layout). Detector inputs are generated landmark and blendshape sequences, not recorded video. Rep accuracy against reference video, hold timing error, facial-matching sensitivity/specificity and on-phone FPS/battery have not been measured. No licensed demonstration media is bundled yet.

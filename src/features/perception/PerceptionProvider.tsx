@@ -25,6 +25,9 @@ type PerceptionContextValue = {
   pulse: PulseValue | null;
   calibrating: boolean;
   setCalibrating: (value: boolean) => void;
+  /** True while a Move workout is running: exercise movements must not be read as requests. */
+  exercising: boolean;
+  setExercising: (value: boolean) => void;
   start: () => Promise<void>;
   stop: () => void;
   setModule: (name: string) => void;
@@ -65,6 +68,7 @@ export function PerceptionProvider({
   const [snapshot, setSnapshot] = useState<FrameSnapshot>({});
   const [pulse, setPulse] = useState<PulseValue | null>(null);
   const [calibrating, setCalibrating] = useState(false);
+  const [exercising, setExercising] = useState(false);
   const instance = useCallback(() => engine.current, []);
   const starting = useRef<Promise<void> | null>(null);
   const generation = useRef(0);
@@ -212,6 +216,8 @@ export function PerceptionProvider({
       pulse,
       calibrating,
       setCalibrating,
+      exercising,
+      setExercising,
       start,
       stop,
       setModule,
@@ -224,6 +230,7 @@ export function PerceptionProvider({
       snapshot,
       pulse,
       calibrating,
+      exercising,
       start,
       stop,
       setModule,
