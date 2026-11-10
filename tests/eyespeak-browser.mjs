@@ -33,18 +33,25 @@ export class Perception extends EventTarget {
 
 // Runs in the page: a face whose irises turn toward window.__look (screen fractions), or toward the
 // calibration dot on screen. Gaussian noise of window.__noise (image fractions) on each iris.
+// Real-world options: window.__frameMs (time between face results) with window.__lateMs extra random
+// delay, and window.__blinkEvery (ms) for a 200 ms blink with the eyes closed.
 const eyesScript = () => {
   const gauss = () => Math.sqrt(-2 * Math.log(1 - Math.random())) * Math.cos(2 * Math.PI * Math.random());
   window.__look = { x: 0.5, y: 0.5 };
   window.__noise = window.__noise ?? 0.0002;
-  window.__eyes = setInterval(() => {
+  const started = performance.now();
+  const tick = () => {
+    window.__eyes = setTimeout(tick, (window.__frameMs ?? 33) + Math.random() * (window.__lateMs ?? 0));
     if (!window.__perception?.running) return;
     const dot = document.querySelector("[data-testid=gaze-target]");
     const g = dot ? { x: Number(dot.dataset.x), y: Number(dot.dataset.y) } : window.__look;
+    const t = performance.now();
+    const blinking = window.__blinkEvery && (t - started) % window.__blinkEvery < 200;
+    const lid = blinking ? 0.0005 : 0.01;
     const face = Array.from({ length: 478 }, () => ({ x: 0.5, y: 0.5, z: 0 }));
     const put = (i, x, y) => (face[i] = { x, y, z: 0 });
-    put(33, 0.4, 0.4), put(133, 0.46, 0.4), put(159, 0.43, 0.39), put(145, 0.43, 0.41);
-    put(362, 0.54, 0.4), put(263, 0.6, 0.4), put(386, 0.57, 0.39), put(374, 0.57, 0.41);
+    put(33, 0.4, 0.4), put(133, 0.46, 0.4), put(159, 0.43, 0.4 - lid), put(145, 0.43, 0.4 + lid);
+    put(362, 0.54, 0.4), put(263, 0.6, 0.4), put(386, 0.57, 0.4 - lid), put(374, 0.57, 0.4 + lid);
     put(1, 0.5, 0.5);
     // Looking toward the left of the screen moves the irises toward the right of the camera image.
     const dx = (0.5 - g.x) * 0.012, dy = (g.y - 0.5) * 0.008;
@@ -53,17 +60,18 @@ const eyesScript = () => {
       put(c, x, y);
       [[0.008, 0], [0, 0.008], [-0.008, 0], [0, -0.008]].forEach(([ox, oy], k) => put(c + 1 + k, x + ox, y + oy));
     }
-    const t = performance.now();
     window.__perception.emit("landmarks", { timestampMs: t, videoSize: { width: 640, height: 480 }, pose: null, poseAt: null, personCount: 0, face, faceAt: t, faceValid: true, head: { yaw: 0, pitch: 0 }, blendshapes: {}, hands: [], handsAt: null, processingMs: 4, luma: 0.5, models: { pose: "slow", hands: "slow", face: "on" } });
-  }, 33);
+  };
+  tick();
 };
 
-async function setup({ viewport = { width: 1280, height: 860 }, noise = 0.0002 } = {}) {
+async function setup({ viewport = { width: 1280, height: 860 }, noise = 0.0002, eyes = {} } = {}) {
   const context = await browser.newContext({ viewport, serviceWorkers: "block" });
   await context.route("**/engine/perception.js", (r) => r.fulfill({ contentType: "text/javascript", body: fakePerception }));
   await context.route("**/api/session**", (r) => r.fulfill({ contentType: "application/json", body: JSON.stringify({ ok: true, events: [], status: null }) }));
-  await context.addInitScript((noise) => {
+  await context.addInitScript(({ noise, eyes }) => {
     window.__noise = noise;
+    Object.assign(window, eyes);
     window.__utterances = [];
     window.SpeechSynthesisUtterance = class {
       constructor(text) {
@@ -71,7 +79,7 @@ async function setup({ viewport = { width: 1280, height: 860 }, noise = 0.0002 }
       }
     };
     Object.defineProperty(window, "speechSynthesis", { configurable: true, value: { getVoices: () => [], cancel() {}, speak(u) { window.__utterances.push(u.text); u.onend?.(); } } });
-  }, noise);
+  }, { noise, eyes });
   const page = await context.newPage();
   page.setDefaultTimeout(20000);
   page.on("pageerror", (e) => errors.push(e.message));
@@ -151,6 +159,32 @@ async function startEyes(page) {
   await page.reload();
   await page.getByText("A calibration from an earlier visit is saved on this device").waitFor();
   assert.equal(await page.getByTestId("open-board").isDisabled(), true, "a saved calibration needs the check first");
+  await context.close();
+}
+
+// ---------- 1b. Real-world eyes on the board: slow and late face results, blinks, jitter ----------
+// A slower computer delivers a face result every 120-450 ms; eyes blink and the estimate wobbles.
+// Looking at Water must still fill it, and looking at "Yes, send" must still confirm.
+{
+  const { context, page } = await setup({ noise: 0.0005 });
+  await startEyes(page);
+  await page.getByRole("button", { name: "Start calibration" }).click();
+  await page.getByTestId("accuracy").waitFor({ timeout: 60000 });
+  const board = await page.getByTestId("board-size").textContent();
+  assert.ok(["9 tiles", "6 large tiles"].includes(board), `a board with Water (${board})`);
+  await page.evaluate(() => Object.assign(window, { __noise: 0.0009, __frameMs: 120, __lateMs: 330, __blinkEvery: 2000 }));
+  await page.getByTestId("open-board").click();
+  await page.getByTestId("gaze-board").waitFor();
+  await page.waitForTimeout(800);
+  const started = Date.now();
+  await lookAtTile(page, "water");
+  await page.getByTestId("board-note").getByText("Send to your caregiver: “I need water”?").waitFor({ timeout: 10000 });
+  const waterMs = Date.now() - started;
+  await page.locator("[data-testid=gaze-board][data-size='2']").waitFor();
+  const yesAt = Date.now();
+  await lookAtTile(page, "confirm-yes");
+  await page.getByTestId("board-note").getByText("Recognised on this device").waitFor({ timeout: 10000 });
+  console.log(`  slow, blinking, jittery eyes (${board}): Water chosen after ${(waterMs / 1000).toFixed(1)} s, confirmed after ${((Date.now() - yesAt) / 1000).toFixed(1)} s`);
   await context.close();
 }
 

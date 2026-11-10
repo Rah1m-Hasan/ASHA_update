@@ -21,9 +21,11 @@ export type EyeSpeakState = {
   showDot: boolean;
   /** The look-to-choose board is on screen; it answers its own confirmations by gaze. */
   boardOpen: boolean;
+  /** Calibration or the board fills the screen; Asha's check-ins and face/blink questions wait. */
+  inUse: boolean;
 };
 
-const initial: EyeSpeakState = { model: null, screen: null, checked: false, remember: false, dwellMs: 1200, showDot: true, boardOpen: false };
+const initial: EyeSpeakState = { model: null, screen: null, checked: false, remember: false, dwellMs: 1200, showDot: true, boardOpen: false, inUse: false };
 let state = initial;
 let loaded = false;
 const listeners = new Set<() => void>();

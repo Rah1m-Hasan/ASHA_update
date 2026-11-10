@@ -63,10 +63,14 @@ export class Perception extends EventTarget {
     // Move counts repetitions from consecutive frames, so the model an exercise needs runs near
     // camera rate there; the others keep their slow default cadence (model router).
     this.posePeriod = move?.pose ? 50 : 500;
+    // EyeSpeak needs only the face model, as often as the device allows: a pose or hand pass on the
+    // same frame delays the next face result, and gaze dwell needs steady results.
+    this.faceOnly = name === "eyespeak";
     this.worker?.postMessage({
       type: "schedule",
       handsPriority: this.handsPriority,
       posePeriod: this.posePeriod,
+      faceOnly: this.faceOnly,
     });
   }
   /** Move's model router: which landmark models the current exercise needs at full rate. */
@@ -259,6 +263,7 @@ export class Perception extends EventTarget {
     }
     if (
       this.handWorker &&
+      !this.faceOnly &&
       !document.hidden &&
       !this.handBusy &&
       this.video.readyState >= 2 &&
@@ -300,7 +305,9 @@ export class Perception extends EventTarget {
             pose = null;
           const handDue = (t - this.lastHand) / (this.handsPriority ? 1 : 250),
             poseDue = (t - this.lastPose) / (this.posePeriod || 500);
-          if (
+          if (this.faceOnly) {
+            // Face only (EyeSpeak).
+          } else if (
             handDue >= 1 &&
             (this.handsPriority ? poseDue < 1 : handDue >= poseDue)
           ) {

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useCalibrationData } from "@/features/calibration/useCalibrationData";
+import { useEyeSpeak } from "@/features/eyespeak/store";
 import {
   usePerception,
   usePerceptionEvent,
@@ -53,7 +54,11 @@ type GuideModule = {
 };
 
 export function SignalTriggers() {
-  const { instance, state, snapshot, calibrating, exercising } = usePerception();
+  const { instance, state, snapshot, calibrating, exercising: workout } = usePerception();
+  // EyeSpeak's calibration and board fill the screen and take answers by gaze. Check-ins and
+  // face, blink or hand questions wait, so nothing talks over the board or covers it with a dialog.
+  const gazeInUse = useEyeSpeak().inUse;
+  const exercising = workout || gazeInUse;
   const { propose, pending, confirm, confirmationReadyAt } = useRequests();
   const { profile } = usePatientProfile();
   const trained = useCalibrationData();
@@ -186,7 +191,7 @@ export function SignalTriggers() {
         void confirm();
       }
     },
-    blinkEnabled && !calibrating && state === "on",
+    blinkEnabled && !calibrating && !gazeInUse && state === "on",
   );
 
   // Face movements answer an offered question. Unprompted observations do not send requests.

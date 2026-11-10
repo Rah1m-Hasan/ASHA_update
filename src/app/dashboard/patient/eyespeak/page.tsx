@@ -36,18 +36,28 @@ export default function EyeSpeakPage() {
   }, []);
   const [live, setLive] = useState<{ valid: boolean; reason: string; x: number; y: number } | null>(null);
   const lastUi = useRef(0);
+  // Face results per second, shown so a slow device is visible (gaze selection needs steady results).
+  const rate = useRef({ last: 0, fps: 0 });
+  const [fps, setFps] = useState(0);
   const [overlay, setOverlay] = useState<null | "full" | "check" | "board">(null);
   const [result, setResult] = useState<CalibrationResult | null>(null);
   const [problem, setProblem] = useState("");
-  useEffect(() => () => eyeSpeakStore.set({ boardOpen: false }), []);
+  useEffect(() => () => eyeSpeakStore.set({ boardOpen: false, inUse: false }), []);
+  useEffect(() => {
+    if (eyeSpeakStore.get().inUse !== (overlay !== null)) eyeSpeakStore.set({ inUse: overlay !== null });
+  }, [overlay]);
 
   usePerceptionEvent<FrameLandmarks>("landmarks", (f) => {
     const features = extractGazeFeatures(f.face, f.videoSize.width, f.videoSize.height) as Features;
     const t = f.faceAt ?? f.timestampMs;
     consumer.current?.(features, t);
+    const r = rate.current;
+    if (r.last && t > r.last) r.fps = r.fps ? r.fps * 0.9 + (1000 / (t - r.last)) * 0.1 : 1000 / (t - r.last);
+    r.last = t;
     const now = performance.now();
     if (now - lastUi.current < 100) return;
     lastUi.current = now;
+    setFps(Math.round(r.fps));
     if (features.valid) {
       const [rx, ry, lx, ly] = features.values;
       // Looking toward the left of the screen moves both irises toward the image's right.
@@ -103,7 +113,14 @@ export default function EyeSpeakPage() {
         <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-3">
           <p className="flex min-w-0 basis-full items-center gap-2 text-sm sm:basis-0 sm:flex-1" role="status" data-testid="eye-status">
             <span className={`size-2 shrink-0 rounded-full ${tracking ? "bg-emerald-500" : camera === "on" ? "bg-amber-500" : "bg-line"}`} />
-            {camera !== "on" ? "Camera off" : !live ? "Looking for your face…" : live.valid ? "Both eyes and irises tracked" : live.reason}
+            <span>
+              {camera !== "on" ? "Camera off" : !live ? "Looking for your face…" : live.valid ? "Both eyes and irises tracked" : live.reason}
+              {camera === "on" && live && fps > 0 && (
+                <span className={fps < 5 ? "text-amber-700" : "text-muted"} data-testid="eye-rate" data-fps={fps}>
+                  {" "}· {fps} per second{fps < 5 ? ". Slow: close other apps for steadier selection." : ""}
+                </span>
+              )}
+            </span>
           </p>
           <div className="flex items-center gap-3">
             <div className="relative h-14 w-24 rounded-lg bg-wash ring-1 ring-line" aria-hidden="true">

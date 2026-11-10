@@ -55,9 +55,12 @@ for (const viewport of [{ width: 1280, height: 900 }, { width: 390, height: 844 
     await page.waitForTimeout(100);
   }
   assert.ok(tracked >= 18, `both irises in ${tracked} of 20 samples`);
+  // EyeSpeak runs the face model alone, so results come steadily enough for a gaze dwell.
+  const fps = Number(await page.getByTestId("eye-rate").getAttribute("data-fps"));
+  assert.ok(fps >= 4, `face results per second shown on the page (${fps})`);
   assert.equal(await page.getByRole("button", { name: "Start calibration" }).isDisabled(), false, "calibration opens once the eyes are tracked");
   assert.ok((await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)) <= 1, "no sideways scrolling");
-  console.log(`  ${viewport.width}px: first irises after ${firstMs} ms, both irises in ${tracked}/20 samples`);
+  console.log(`  ${viewport.width}px: first irises after ${firstMs} ms, both irises in ${tracked}/20 samples, ${fps} face results per second`);
   await context.close();
 }
 await browser.close();

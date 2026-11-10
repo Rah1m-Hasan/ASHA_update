@@ -7,11 +7,13 @@ let face,
   delegate = "GPU";
 let handsPriority = false;
 let posePeriod = 500;
+let faceOnly = false;
 let role = "all";
 self.onmessage = async ({ data: d }) => {
   if (d.type === "schedule") {
     handsPriority = !!d.handsPriority;
     if (Number.isFinite(d.posePeriod)) posePeriod = d.posePeriod;
+    faceOnly = !!d.faceOnly;
     return;
   }
   if (d.type === "init") {
@@ -102,7 +104,9 @@ self.onmessage = async ({ data: d }) => {
       // Dedicated hands never wait for face/pose. "all" is the compatibility path.
       const handDue = (d.t - lastHand) / (handsPriority ? 1 : 250),
         poseDue = (d.t - lastPose) / posePeriod;
-      if (
+      if (faceOnly && role !== "hand") {
+        // Face only (EyeSpeak): no pose or hand pass delays the next face result.
+      } else if (
         role === "hand" ||
         (hand &&
           handDue >= 1 &&

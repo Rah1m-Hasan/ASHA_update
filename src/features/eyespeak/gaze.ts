@@ -75,6 +75,58 @@ export function tileAt(point: { x: number; y: number } | null, rects: { id: stri
   return null;
 }
 
+type Rect = { id: string; x: number; y: number; w: number; h: number };
+const inside = (p: { x: number; y: number }, r: Rect) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
+
+/**
+ * Which tile the person is looking at, steady through normal jitter. A tile is taken when the point
+ * lands well inside it (tileAt), and kept while the point stays anywhere on it, crosses a gap, or
+ * briefly lands elsewhere (graceMs). Another tile takes over only after the point has been well
+ * inside it for switchMs. Without this, a webcam estimate that wobbles by a few percent keeps
+ * restarting the selection timer and nothing is ever chosen.
+ */
+export class TileTracker {
+  current: string | null = null;
+  private candidate: string | null = null;
+  private candidateSince = 0;
+  private lastOn = 0;
+  constructor(private readonly opts = { switchMs: 220, graceMs: 450 }) {}
+  reset() {
+    this.current = this.candidate = null;
+  }
+  update(point: { x: number; y: number }, rects: Rect[], t: number): string | null {
+    const core = tileAt(point, rects);
+    const mine = this.current ? rects.find((r) => r.id === this.current) : undefined;
+    if (mine && inside(point, mine)) {
+      this.lastOn = t;
+      this.candidate = null;
+      return this.current;
+    }
+    if (core) {
+      if (this.candidate !== core) {
+        this.candidate = core;
+        this.candidateSince = t;
+      }
+      if (!this.current || t - this.candidateSince >= this.opts.switchMs) {
+        this.current = core;
+        this.lastOn = t;
+        this.candidate = null;
+        return core;
+      }
+    } else this.candidate = null;
+    if (this.current && t - this.lastOn <= this.opts.graceMs) return this.current;
+    this.current = null;
+    return null;
+  }
+}
+
+/** Smooths the gaze point over time (not per frame), so slow and fast cameras feel the same. */
+export function smoothPoint(prev: { x: number; y: number; t: number } | null, p: { x: number; y: number }, t: number, tauMs = 150) {
+  if (!prev || t - prev.t > 1000 || t < prev.t) return { x: p.x, y: p.y, t };
+  const a = 1 - Math.exp(-(t - prev.t) / tauMs);
+  return { x: prev.x + (p.x - prev.x) * a, y: prev.y + (p.y - prev.y) * a, t };
+}
+
 /** Per-point capture rule from the engine docs: eight valid observations over at least 900 ms. */
 export const CAPTURE = { settleMs: 700, minMs: 900, maxMs: 3200, minFrames: 8, retries: 2 };
 export const CHECK_CAPTURE = { settleMs: 700, minMs: 900, maxMs: 3200, minFrames: 6, retries: 2 };
