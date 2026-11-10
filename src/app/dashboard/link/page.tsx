@@ -27,7 +27,7 @@ export default function LinkPage() {
           href="/"
           className="text-sm font-medium text-brand hover:underline"
         >
-          ← Asha workspaces
+          ← About Asha
         </Link>
         <h1 className="mt-6 text-3xl font-semibold tracking-tight text-heading">
           Connect your care circle
@@ -56,12 +56,9 @@ export default function LinkPage() {
           aria-label="Other workspaces"
           className="mt-5 flex flex-wrap gap-x-5 gap-y-2 border-t border-line pt-5 text-sm font-medium text-brand"
         >
-          <Link href="/login" className="rounded-sm hover:underline">
-            Explore a demo view
+          <Link href="/dashboard/patient" className="rounded-sm hover:underline">
+            Try Asha without a link
           </Link>
-          <a href="/everyday.html" className="rounded-sm hover:underline">
-            Everyday companion ↗
-          </a>
         </nav>
       </section>
     </main>

@@ -66,17 +66,11 @@ try {
           .getAttribute("href"),
         "/dashboard/link",
       );
+      // One app: the sign-in views no longer send people to the older Everyday and assistive apps.
       assert.equal(
-        await page
-          .getByRole("link", { name: "Everyday companion" })
-          .getAttribute("href"),
-        "/everyday.html",
-      );
-      assert.equal(
-        await page
-          .getByRole("link", { name: "Full assistive app" })
-          .getAttribute("href"),
-        "/assistive.html",
+        await page.locator('a[href^="/everyday.html"], a[href^="/assistive.html"]').count(),
+        0,
+        "No links to the older apps",
       );
       assert.equal(
         await page.evaluate(

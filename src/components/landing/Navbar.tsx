@@ -37,13 +37,13 @@ export function Navbar() {
               {item.label}
             </a>
           ))}
-          <ButtonLink href={site.registerUrl} size="sm">
+          <ButtonLink href={site.appUrl} size="sm">
             Try Asha
           </ButtonLink>
         </nav>
 
         <div className="flex items-center gap-2 md:hidden">
-          <ButtonLink href={site.registerUrl} size="sm">
+          <ButtonLink href={site.appUrl} size="sm">
             Try Asha
           </ButtonLink>
           <button

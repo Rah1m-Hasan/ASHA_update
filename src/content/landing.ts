@@ -21,7 +21,7 @@ export const hero = {
   badge: "Assistive communication, reimagined",
   title: "A little support. A lot more independence.",
   lead: "When words are hard, connection shouldn’t be. Meet Asha — the companion that helps people express their needs in their own way.",
-  primary: { label: "Experience Asha", href: site.appUrl },
+  primary: { label: "Try Asha", href: site.appUrl },
   secondary: { label: "Book a guided demo", href: "#contact" },
   video: {
     // Add the demo video URL here when it is ready, e.g. "/videos/asha-demo.mp4".
@@ -55,13 +55,15 @@ export const modulesIntro = {
   video: { src: "", poster: undefined, posterAlt: "Asha modules in use", label: "See the modules", duration: "" },
 };
 
-export type ModuleKey = "facespeak" | "fingerspeak" | "senseassist" | "vitalsense" | "posture";
+export type ModuleKey = "facespeak" | "fingerspeak" | "senseassist" | "vitalsense" | "posture" | "move" | "nutrition";
 export const modules: { key: ModuleKey; name: string; title: string; text: string }[] = [
   { key: "facespeak", name: "FaceSpeak", title: "A movement can become a message.", text: "Guided calibration learns a personal baseline for deliberate blinks, smiles and head movements. A separate confirmation keeps ordinary movement from becoming an unintended request." },
   { key: "fingerspeak", name: "FingerSpeak", title: "Hands and fingers, understood.", text: "Practise comfortable gestures and map them to phrases. Asha speaks the phrase and can send it to the caregiver after confirmation." },
   { key: "senseassist", name: "SenseAssist", title: "Clearer speech, together.", text: "Asha suggests a meaning for unclear speech in Bangla or English. The person confirms before anything is spoken or sent." },
   { key: "vitalsense", name: "VitalSense", title: "A gentle signal check.", text: "Experimental camera-based pulse estimates for awareness only — not a clinical measurement." },
   { key: "posture", name: "Posture", title: "Comfort at a glance.", text: "On-device posture sensing helps caregivers notice when someone may need repositioning." },
+  { key: "move", name: "Move", title: "Movement, at your own pace.", text: "Short guided routines with a demonstration and a practice try first. The camera counts only what it can see, and fixed safety rules stop a workout when warning signs appear." },
+  { key: "nutrition", name: "Nutrition", title: "Meals, honestly estimated.", text: "Choose what you ate, or try the experimental photo suggestion for a few fruits. Asha asks a few short questions and gives a sourced calorie estimate, and says so when it can\u2019t tell." },
 ];
 
 export const steps = [
@@ -176,7 +178,7 @@ export const team: { name: string; role: string; photo: string; socials: Partial
 ];
 
 export const faqs = [
-  { q: "Can I try it without setting up a patient?", a: "Yes. Explore all five modules in the live demo. Create a private care circle only to test delivery between patient and caregiver devices." },
+  { q: "Can I try it without setting up a patient?", a: "Yes. Try every module in the live demo. Create a private care circle only to test delivery between patient and caregiver devices." },
   { q: "Does Asha diagnose health conditions?", a: "No. Asha is an assistive communication prototype, not a diagnostic or emergency service. VitalSense produces experimental camera estimates, not clinical measurements." },
   { q: "How does the AI help?", a: "It offers brief conversation and guidance, and suggests meanings for unclear speech. Retrieved app guidance and confirmed speech pairs ground replies; patients check interpretations before sending requests." },
   { q: "Is Asha ready for a hospital-wide rollout?", a: "The live prototype is available to explore. Supervised validation and pilot evaluation come next. We welcome conversations with care teams and accessibility partners." },
@@ -192,14 +194,14 @@ export const contact = {
 
 export const closing = {
   title: "A little support. A world of difference.",
-  primary: { label: "Experience Asha", href: site.appUrl },
+  primary: { label: "Try Asha", href: site.appUrl },
   secondary: { label: "Book a demo", href: "#contact" },
 };
 
 export const footer = {
   tagline: "Care that understands beyond words.",
   groups: [
-    { title: "Product", links: [{ label: "Open app", href: site.appUrl }, { label: "Modules", href: "#modules" }, { label: "Hardware kit", href: "#kit" }, { label: "Plans", href: "#plans" }] },
+    { title: "Product", links: [{ label: "Try Asha", href: site.appUrl }, { label: "Modules", href: "#modules" }, { label: "Hardware kit", href: "#kit" }, { label: "Plans", href: "#plans" }] },
     { title: "Company", links: [{ label: "Why Asha", href: "#why" }, { label: "Team", href: "#team" }, { label: "Contact", href: "#contact" }] },
     { title: "Connect", links: [{ label: "Email", href: "mailto:mysunatislam@gmail.com" }, { label: "WhatsApp", href: "https://wa.me/8801641576801" }, { label: "Source", href: site.sourceUrl }] },
   ],

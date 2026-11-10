@@ -2,99 +2,137 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { Panel } from "@/components/dashboard/Panel";
+import { useState } from "react";
 import { DeliveryBanner } from "@/components/patient/DeliveryBanner";
 import { NeedButtons } from "@/components/patient/NeedButtons";
-import { RequestList } from "@/components/patient/RequestTimeline";
-import { Button } from "@/components/ui/Button";
-import { EyeIcon, HandIcon, HeartIcon, MicIcon, MoveIcon, NutritionIcon, PostureIcon } from "@/components/ui/icons";
-import { useCalibrationData } from "@/features/calibration/useCalibrationData";
-import { usePerception } from "@/features/perception/PerceptionProvider";
+import { ChevronIcon } from "@/components/ui/icons";
+import { MODULES, type Area } from "@/features/home/areas";
+import { homeStore, orderAreas, useHome } from "@/features/home/store";
 import { usePatientProfile } from "@/features/session/usePatientProfile";
+import { cn } from "@/lib/cn";
 
-const MODULES = {
-  facespeak: { label: "FaceSpeak", text: "Blinks, smiles and head movements", icon: EyeIcon },
-  fingerspeak: { label: "FingerSpeak", text: "Hand and finger gestures", icon: HandIcon },
-  senseassist: { label: "SenseAssist", text: "Clearer speech with Asha", icon: MicIcon },
-  vitalsense: { label: "VitalSense", text: "Pulse and breathing estimate", icon: HeartIcon },
-  posture: { label: "Posture", text: "Position and comfort", icon: PostureIcon },
-  move: { label: "Move", text: "Guided exercise, one step at a time", icon: MoveIcon },
-  nutrition: { label: "Nutrition", text: "Log a meal and see an estimate", icon: NutritionIcon },
-} as const;
+function AreaCard({ area, suggested }: { area: Area; suggested: boolean }) {
+  const Icon = area.icon;
+  const many = area.modules.length > 1;
+  return (
+    <li>
+      <Link
+        href={area.href}
+        className="group flex h-full items-start gap-4 rounded-2xl bg-white p-5 ring-1 ring-line transition hover:ring-brand focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+      >
+        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">
+          <Icon size={22} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex flex-wrap items-center gap-x-2">
+            <span className="text-lg font-semibold text-ink">{area.label}</span>
+            {suggested && <span className="text-xs font-medium text-brand">Suggested for you</span>}
+          </span>
+          <span className="mt-0.5 block text-muted">{area.text}</span>
+          {many && <span className="mt-2 block text-sm text-muted">{area.modules.map((m) => m.label).join(" · ")}</span>}
+        </span>
+        <ChevronIcon size={20} className="mt-3 shrink-0 text-muted transition-transform group-hover:translate-x-0.5" />
+      </Link>
+    </li>
+  );
+}
 
 export default function PatientHome() {
-  const { profile, data, isLocalDemo } = usePatientProfile();
-  const { state, start } = usePerception();
-  const trained = useCalibrationData();
-  const suggested = (profile?.recommendation.suggested ?? []).filter((m): m is keyof typeof MODULES => m in MODULES);
-  const others = (Object.keys(MODULES) as (keyof typeof MODULES)[]).filter((m) => !suggested.includes(m));
+  const { profile, isLocalDemo } = usePatientProfile();
+  const home = useHome();
+  const [customising, setCustomising] = useState(false);
+  const { shown, hidden, suggested } = orderAreas(home, profile?.recommendation.suggested ?? []);
+  const last = home.recent[0] ? MODULES[home.recent[0].module ?? ""] : undefined;
+  const showHelp = !home.hidden.includes("communicate");
 
   return (
-    <>
-      <div className="mb-6 flex items-center gap-4">
+    <div className="max-w-4xl">
+      <div className="mb-8 flex items-center gap-4">
         <Image src="/assets/assets/images/asha-avatar.png" alt="" width={64} height={64} className="size-14 rounded-full ring-4 ring-brand-soft" />
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-ink sm:text-[28px]">Hello{profile && !isLocalDemo ? `, ${profile.label}` : ""}. I’m here with you.</h1>
-          <p className="text-muted">Choose what you need, or use a movement you have practised.</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-ink sm:text-[28px]">
+            Hello{profile && !isLocalDemo ? `, ${profile.label}` : ""}. What would you like to do?
+          </h1>
+          <p className="text-muted">Choose an area. Asha remembers what you use and keeps it close.</p>
         </div>
       </div>
 
       <DeliveryBanner />
 
-      <section aria-labelledby="needs-title" className="mb-8">
-        <h2 id="needs-title" className="sr-only">
-          Quick requests
-        </h2>
-        <NeedButtons />
-      </section>
+      {last && (
+        <Link href={last.href} className="group mb-8 flex items-center gap-4 rounded-2xl bg-brand-soft p-4 ring-1 ring-brand-mint transition hover:ring-brand" data-testid="home-continue">
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-brand">
+            <last.icon size={20} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm text-muted">Continue where you left off</span>
+            <span className="block font-semibold text-ink">{last.label}</span>
+          </span>
+          <ChevronIcon size={20} className="shrink-0 text-brand transition-transform group-hover:translate-x-0.5" />
+        </Link>
+      )}
 
-      <div className="grid items-start gap-6 lg:grid-cols-[1.4fr_1fr]">
-        <Panel title="Recent requests" description="Delivery status from your caregiver" action={<Link href="/dashboard/patient/communicate" className="text-sm font-medium text-brand">See all</Link>}>
-          {isLocalDemo ? (
-            <p className="py-6 text-center text-sm text-muted">This device isn’t linked to a caregiver yet. Requests stay on this device until you link one in Settings.</p>
-          ) : (
-            <RequestList events={data?.events ?? []} limit={5} />
-          )}
-        </Panel>
+      {showHelp && (
+        <section aria-labelledby="needs-title" className="mb-10">
+          <h2 id="needs-title" className="mb-3 text-base font-semibold text-ink">
+            Need something now?
+          </h2>
+          <NeedButtons size="md" />
+        </section>
+      )}
 
-        <div className="space-y-6">
-          {state !== "on" && (
-            <Panel title="Start sensing" description="Turn on the camera so Asha can follow your practised movements.">
-              <Button onClick={start} disabled={state === "starting"}>
-                {state === "starting" ? "Starting…" : "Start camera"}
-              </Button>
-            </Panel>
-          )}
-          {!trained && (
-            <Panel title="Practise your signals" description="A short guided session learns how you blink, smile or move your head.">
-              <Link href="/dashboard/patient/calibration" className="font-medium text-brand">
-                Start calibration
-              </Link>
-            </Panel>
-          )}
-          <Panel title="Your ways to communicate">
-            <ul className="space-y-2">
-              {[...suggested, ...others].map((m) => {
-                const { label, text, icon: Icon } = MODULES[m];
-                return (
-                  <li key={m}>
-                    <Link href={`/dashboard/patient/${m}`} className="flex items-center gap-3 rounded-xl p-2 hover:bg-wash">
-                      <span className="grid size-10 place-items-center rounded-xl bg-brand-soft text-brand">
-                        <Icon size={18} />
-                      </span>
-                      <span className="flex-1">
-                        <span className="block font-medium text-ink">{label}</span>
-                        <span className="text-sm text-muted">{text}</span>
-                      </span>
-                      {suggested.includes(m) && <span className="text-xs font-medium text-brand">Suggested</span>}
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </Panel>
+      <section aria-labelledby="areas-title">
+        <div className="mb-3 flex items-end justify-between gap-4">
+          <h2 id="areas-title" className="text-base font-semibold text-ink">
+            {home.recent.length ? "Your areas" : "What Asha can help with"}
+          </h2>
+          <button type="button" onClick={() => setCustomising((v) => !v)} aria-expanded={customising} className="text-sm font-medium text-brand hover:underline">
+            {customising ? "Done" : "Personalise"}
+          </button>
         </div>
-      </div>
-    </>
+
+        {customising && (
+          <fieldset className="mb-4 rounded-2xl bg-white p-5 ring-1 ring-line">
+            <legend className="sr-only">Areas on your home</legend>
+            <p className="mb-3 text-sm text-muted">Choose what appears on your home. Everything stays in the menu, and nothing is deleted.</p>
+            <ul className="grid gap-2 sm:grid-cols-2">
+              {[...shown, ...hidden].map((a) => (
+                <li key={a.id}>
+                  <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl px-3 hover:bg-wash">
+                    <input type="checkbox" className="size-5 accent-[var(--color-brand)]" checked={!home.hidden.includes(a.id)} onChange={() => homeStore.toggleHidden(a.id)} />
+                    <span className="text-ink">{a.label}</span>
+                  </label>
+                </li>
+              ))}
+            </ul>
+            {(home.recent.length > 0 || home.hidden.length > 0) && (
+              <button type="button" onClick={() => homeStore.reset()} className="mt-3 text-sm font-medium text-muted hover:text-ink">
+                Reset order and choices
+              </button>
+            )}
+          </fieldset>
+        )}
+
+        <ul className="grid gap-3 md:grid-cols-2">
+          {shown.map((a) => (
+            <AreaCard key={a.id} area={a} suggested={suggested.includes(a.id) && !home.recent.some((v) => v.area === a.id)} />
+          ))}
+        </ul>
+
+        {hidden.length > 0 && !customising && (
+          <details className="group mt-6">
+            <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-medium text-muted hover:text-ink">
+              <ChevronIcon size={16} className="transition-transform group-open:rotate-90" />
+              More in Asha ({hidden.length})
+            </summary>
+            <ul className={cn("mt-3 grid gap-3 md:grid-cols-2")}>
+              {hidden.map((a) => (
+                <AreaCard key={a.id} area={a} suggested={false} />
+              ))}
+            </ul>
+          </details>
+        )}
+      </section>
+    </div>
   );
 }

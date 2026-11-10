@@ -47,17 +47,6 @@ export function WorkspaceForm({ initialRole }: { initialRole: Role }) {
           Connect with a private link
         </Link>
       </div>
-      <nav
-        aria-label="Other workspaces"
-        className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm font-medium text-brand"
-      >
-        <a href="/everyday.html" className="rounded-sm hover:underline">
-          Everyday companion ↗
-        </a>
-        <a href="/assistive.html" className="rounded-sm hover:underline">
-          Full assistive app ↗
-        </a>
-      </nav>
     </div>
   );
 }

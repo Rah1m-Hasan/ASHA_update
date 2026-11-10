@@ -3,8 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowIcon, ChatIcon, HeartIcon } from "@/components/ui/icons";
-import { NAV, type NavGroup } from "@/features/dashboard/nav";
+import { NAV, type NavGroup, type NavItem } from "@/features/dashboard/nav";
 import type { Role } from "@/features/session/types";
 import { cn } from "@/lib/cn";
 
@@ -21,17 +20,11 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const groups: NavGroup[] = NAV[role];
-  const active = (href: string) =>
-    pathname === href ||
-    (pathname.startsWith(href + "/") &&
-      !groups
-        .flatMap((g) => g.items)
-        .some(
-          (i) =>
-            i.href !== href &&
-            i.href.startsWith(href) &&
-            pathname.startsWith(i.href),
-        ));
+  // The entry whose own path (or one of its modules' paths) is the longest match wins.
+  const score = (i: NavItem) =>
+    Math.max(-1, ...[i.href, ...(i.match ?? [])].filter((h) => pathname === h || pathname.startsWith(h + "/")).map((h) => h.length));
+  const best = groups.flatMap((g) => g.items).reduce<NavItem | null>((top, i) => (score(i) > (top ? score(top) : -1) ? i : top), null);
+  const active = (href: string) => best?.href === href;
 
   return (
     <div className="flex h-full flex-col">
@@ -100,27 +93,6 @@ export function Sidebar({
             </ul>
           </div>
         ))}
-        <div className="mt-5 border-t border-line pt-4">
-          <p className="mb-1.5 px-3 text-xs font-medium text-muted">
-            More Asha workspaces
-          </p>
-          <a
-            href="/everyday.html"
-            onClick={onNavigate}
-            className="flex min-h-10 items-center gap-3 rounded-xl px-3 py-2 text-[15px] font-medium text-ink hover:bg-brand-soft"
-          >
-            <HeartIcon size={19} className="text-muted" /> Everyday companion{" "}
-            <ArrowIcon size={14} className="ml-auto text-muted" />
-          </a>
-          <a
-            href={"/assistive.html?role=" + role}
-            onClick={onNavigate}
-            className="flex min-h-10 items-center gap-3 rounded-xl px-3 py-2 text-[15px] font-medium text-ink hover:bg-brand-soft"
-          >
-            <ChatIcon size={19} className="text-muted" /> Full assistive app{" "}
-            <ArrowIcon size={14} className="ml-auto text-muted" />
-          </a>
-        </div>
       </nav>
       {footer && <div className="border-t border-line p-3">{footer}</div>}
     </div>

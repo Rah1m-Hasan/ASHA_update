@@ -2,6 +2,7 @@
 
 import { DashboardShell } from "@/components/dashboard/DashboardShell";
 import { StatusPill } from "@/components/dashboard/StatusPill";
+import { VisitTracker } from "@/features/home/VisitTracker";
 import { CameraDock } from "@/components/patient/CameraDock";
 import { ConfirmRequestDialog } from "@/components/patient/ConfirmRequestDialog";
 import { PerceptionProvider } from "@/features/perception/PerceptionProvider";
@@ -22,6 +23,7 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
       <PatientProfileProvider>
         <RequestProvider>
           <SignalTriggers />
+          <VisitTracker />
           <DashboardShell role="patient" sidebarFooter={<CameraDock />} topbarExtra={<ConnectionPill />}>
             {children}
           </DashboardShell>

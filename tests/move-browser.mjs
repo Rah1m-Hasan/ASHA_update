@@ -120,7 +120,7 @@ const seed = (plan, extra = {}) => ({ plan, cameraConsent: true, voice: true, la
 {
   const { context, page } = await setup();
   await page.goto(base + "/dashboard/patient/move");
-  await page.getByRole("link", { name: /Move/ }).first().waitFor();
+  await page.getByRole("heading", { name: "Move", level: 1 }).waitFor();
   await page.getByRole("link", { name: /Core and weight management/ }).click();
   await page.getByRole("button", { name: "Burn belly fat" }).click();
   await page.getByText("No exercise burns fat from one area").waitFor();
