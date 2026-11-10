@@ -198,6 +198,7 @@ function Wizard() {
           </div>
         )}
       </div>,
+      category?.safety,
     );
 
   if (step === "level")

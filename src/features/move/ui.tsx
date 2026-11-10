@@ -26,8 +26,8 @@ export function MoveTabs() {
   const pathname = usePathname();
   const lang = useMove((s) => s.language);
   return (
-    <nav aria-label="Move sections" className="-mx-1 mb-6 overflow-x-auto">
-      <ul className="flex min-w-max gap-1 px-1">
+    <nav aria-label="Move sections" className="mb-8 overflow-x-auto overflow-y-hidden border-b border-line">
+      <ul className="flex min-w-max gap-6">
         {TABS.map((t) => {
           const active = t.href === BASE ? pathname === BASE || pathname === `${BASE}/start` : pathname.startsWith(t.href);
           return (
@@ -35,7 +35,7 @@ export function MoveTabs() {
               <Link
                 href={t.href}
                 aria-current={active ? "page" : undefined}
-                className={cn("inline-flex h-10 items-center rounded-full px-4 text-sm font-medium transition-colors", active ? "bg-brand text-white" : "bg-white text-ink ring-1 ring-line hover:bg-wash")}
+                className={cn("-mb-px inline-flex h-11 items-center border-b-2 text-sm font-medium transition-colors", active ? "border-brand text-ink" : "border-transparent text-muted hover:text-ink")}
               >
                 {tx(lang, t.en, t.bn)}
               </Link>
