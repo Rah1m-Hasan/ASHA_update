@@ -13,13 +13,12 @@ import { useMove, type Lang } from "./store";
 export const BASE = "/dashboard/patient/move";
 export const tx = (lang: Lang, en: string, bn: string) => (lang === "bn" ? bn : en);
 
+// Four sections. A workout and the clinic link are reached from Explore and My plan, so they sit under My plan.
 const TABS = [
-  { href: BASE, en: "Explore", bn: "খুঁজুন" },
-  { href: `${BASE}/plan`, en: "My plan", bn: "আমার প্ল্যান" },
-  { href: `${BASE}/session`, en: "Live session", bn: "সেশন" },
-  { href: `${BASE}/progress`, en: "Progress", bn: "অগ্রগতি" },
-  { href: `${BASE}/safety`, en: "Settings & safety", bn: "সেটিংস ও নিরাপত্তা" },
-  { href: `${BASE}/clinician`, en: "Clinician programs", bn: "চিকিৎসকের প্রোগ্রাম" },
+  { href: BASE, en: "Explore", bn: "খুঁজুন", also: [`${BASE}/start`] },
+  { href: `${BASE}/plan`, en: "My plan", bn: "আমার প্ল্যান", also: [`${BASE}/session`, `${BASE}/clinician`] },
+  { href: `${BASE}/progress`, en: "Progress", bn: "অগ্রগতি", also: [] },
+  { href: `${BASE}/safety`, en: "Safety", bn: "নিরাপত্তা", also: [] },
 ];
 
 export function MoveTabs() {
@@ -29,7 +28,7 @@ export function MoveTabs() {
     <nav aria-label="Move sections" className="mb-8 overflow-x-auto overflow-y-hidden border-b border-line">
       <ul className="flex min-w-max gap-6">
         {TABS.map((t) => {
-          const active = t.href === BASE ? pathname === BASE || pathname === `${BASE}/start` : pathname.startsWith(t.href);
+          const active = (t.href === BASE ? pathname === BASE : pathname.startsWith(t.href)) || t.also.some((p) => pathname.startsWith(p));
           return (
             <li key={t.href}>
               <Link
@@ -108,6 +107,15 @@ export function TrackingBadge({ id }: { id: string }) {
   if (!isTracked(id)) return <StatusPill>Manual</StatusPill>;
   if (isExperimental(id)) return <StatusPill tone="warn">Camera · experimental</StatusPill>;
   return <StatusPill tone="good">Camera counts</StatusPill>;
+}
+
+/** The same information as TrackingBadge, as quiet text for read-only lists. */
+export function trackingNote(id: string, lang: Lang) {
+  const e = EXERCISES[id];
+  if (e.intendedUse === "clinician_assigned") return tx(lang, "Clinician plan only", "শুধু চিকিৎসকের প্ল্যানে");
+  if (!isTracked(id)) return tx(lang, "You count", "আপনি গুনবেন");
+  if (isExperimental(id)) return tx(lang, "Camera counts (experimental)", "ক্যামেরা গোনে (পরীক্ষামূলক)");
+  return tx(lang, "Camera counts", "ক্যামেরা গোনে");
 }
 
 export function Choice({ selected, onClick, children, className }: { selected?: boolean; onClick: () => void; children: React.ReactNode; className?: string }) {

@@ -372,56 +372,79 @@ export default function LiveSession() {
     if (lockoutActive(lockout, Date.now())) return <p className="text-muted">{tx(lang, "Workouts are paused for your safety.", "নিরাপত্তার জন্য ব্যায়াম বন্ধ।")}</p>;
     const answered = ask.every((q: { id: string }) => precheck[q.id]) && (!(precheck.pain === "yes" || precheck.pain === "unsure") || pain.length > 0 || "pain" in conditions);
     return (
-      <>
-        <PageHeader title={plan!.name} description={tx(lang, "Before you start: a quick safety check.", "শুরুর আগে: দ্রুত নিরাপত্তা যাচাই।")} />
-        <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
-          <Panel title={tx(lang, "Safety check", "নিরাপত্তা যাচাই")} description="ASHA doesn't diagnose. These answers decide what is safe to offer today.">
-            <ol className="space-y-5">
-              {ask.map((q: { id: string; en: string; bn: string }) => (
-                <li key={q.id}>
-                  <p className="text-ink">{lang === "bn" ? q.bn : q.en}</p>
-                  <div className="mt-2 grid grid-cols-3 gap-2" role="radiogroup" aria-label={q.en}>
-                    {(["no", "yes", "unsure"] as Answer[]).map((v) => (
-                      <Choice key={v} selected={precheck[q.id] === v} onClick={() => setPrecheck((p) => ({ ...p, [q.id]: v }))} className="p-3 text-center">
-                        <span className="font-medium text-ink">{v === "no" ? tx(lang, "No", "না") : v === "yes" ? tx(lang, "Yes", "হ্যাঁ") : tx(lang, "Not sure", "নিশ্চিত নই")}</span>
-                      </Choice>
-                    ))}
-                  </div>
-                </li>
-              ))}
-            </ol>
-            {(precheck.pain === "yes" || precheck.pain === "unsure") && (
-              <div className="mt-5">
-                <p className="text-ink">{tx(lang, "Where is the pain?", "কোথায় ব্যথা?")}</p>
-                <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                  {PAIN_AREAS.map((p: { id: string; en: string; bn: string }) => (
-                    <Choice key={p.id} selected={pain.includes(p.id)} onClick={() => setPain((x) => (x.includes(p.id) ? x.filter((y) => y !== p.id) : [...x, p.id]))} className="p-3">
-                      <span className="text-ink">{tx(lang, p.en, p.bn)}</span>
-                    </Choice>
+      <div className="max-w-3xl">
+        <PageHeader
+          title={plan!.name}
+          description={tx(lang, "A quick check before you start. ASHA doesn't diagnose; your answers decide what is safe to offer today.", "শুরুর আগে দ্রুত যাচাই। ASHA রোগ নির্ণয় করে না; আপনার উত্তর ঠিক করে আজ কী নিরাপদ।")}
+        />
+        <section aria-labelledby="precheck-title">
+          <h2 id="precheck-title" className="mb-3 text-base font-semibold text-ink">
+            {tx(lang, "Safety check", "নিরাপত্তা যাচাই")}
+          </h2>
+          <ol className="divide-y divide-line rounded-2xl bg-white ring-1 ring-line">
+            {ask.map((q: { id: string; en: string; bn: string }) => (
+              <li key={q.id} className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between md:gap-6">
+                <p className="text-ink md:max-w-md">{lang === "bn" ? q.bn : q.en}</p>
+                <div className="inline-flex shrink-0 self-start rounded-full bg-wash p-1 ring-1 ring-line md:self-center" role="radiogroup" aria-label={q.en}>
+                  {(["no", "yes", "unsure"] as Answer[]).map((v) => (
+                    <button
+                      key={v}
+                      type="button"
+                      aria-pressed={precheck[q.id] === v}
+                      onClick={() => setPrecheck((p) => ({ ...p, [q.id]: v }))}
+                      className={cn("h-9 min-w-14 rounded-full px-3 text-sm font-medium transition-colors", precheck[q.id] === v ? "bg-white text-ink shadow-sm ring-1 ring-line" : "text-muted hover:text-ink")}
+                    >
+                      {v === "no" ? tx(lang, "No", "না") : v === "yes" ? tx(lang, "Yes", "হ্যাঁ") : tx(lang, "Not sure", "নিশ্চিত নই")}
+                    </button>
                   ))}
                 </div>
+              </li>
+            ))}
+          </ol>
+          {(precheck.pain === "yes" || precheck.pain === "unsure") && (
+            <div className="mt-4 rounded-2xl bg-white p-5 ring-1 ring-line">
+              <p className="text-ink">{tx(lang, "Where is the pain?", "কোথায় ব্যথা?")}</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {PAIN_AREAS.map((p: { id: string; en: string; bn: string }) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    aria-pressed={pain.includes(p.id)}
+                    onClick={() => setPain((x) => (x.includes(p.id) ? x.filter((y) => y !== p.id) : [...x, p.id]))}
+                    className={cn("h-10 rounded-full px-4 text-sm ring-1 transition-colors", pain.includes(p.id) ? "bg-brand-soft text-brand ring-brand" : "bg-white text-ink ring-line hover:bg-wash")}
+                  >
+                    {tx(lang, p.en, p.bn)}
+                  </button>
+                ))}
               </div>
-            )}
-          </Panel>
-          <Panel title={tx(lang, "How should ASHA count?", "কীভাবে গুনবে?")}>
-            <div className="grid gap-3">
-              <Choice selected={mode === "camera"} onClick={() => setMode("camera")}>
-                <span className="block font-medium text-ink">{tx(lang, "Camera counts tracked exercises", "ক্যামেরা গুনবে")}</span>
-                <span className="block text-sm text-muted">{tx(lang, "On-device only. Video is never uploaded or saved. You can switch to manual at any time.", "শুধু এই ডিভাইসে। ভিডিও কখনো আপলোড বা সংরক্ষণ হয় না। যেকোনো সময় নিজে গোনায় যেতে পারবেন।")}</span>
-              </Choice>
-              <Choice selected={mode === "manual"} onClick={() => setMode("manual")}>
-                <span className="block font-medium text-ink">{tx(lang, "Manual: I tap to count", "নিজে: আমি চেপে গুনব")}</span>
-                <span className="block text-sm text-muted">{tx(lang, "No camera needed. Works offline.", "ক্যামেরা লাগবে না। অফলাইনেও চলে।")}</span>
-              </Choice>
             </div>
-            <p className="mt-4 text-sm text-muted">{tx(lang, "Each exercise starts with a short demonstration and a practice try that isn't counted.", "প্রতিটি ব্যায়াম শুরু হয় ছোট একটি প্রদর্শন আর একটি অনুশীলন দিয়ে, যা গোনা হয় না।")}</p>
-            <Button className="mt-5 w-full" disabled={!answered} onClick={begin}>
-              {tx(lang, "Start workout", "ব্যায়াম শুরু")}
-            </Button>
-            {!answered && <p className="mt-2 text-center text-xs text-muted">{tx(lang, "Answer each question to continue.", "এগোতে প্রতিটি প্রশ্নের উত্তর দিন।")}</p>}
-          </Panel>
+          )}
+        </section>
+
+        <section aria-labelledby="count-title" className="mt-10">
+          <h2 id="count-title" className="text-base font-semibold text-ink">
+            {tx(lang, "How should ASHA count?", "কীভাবে গুনবে?")}
+          </h2>
+          <p className="mb-3 mt-0.5 text-sm text-muted">{tx(lang, "Each exercise starts with a short demonstration and a practice try that isn't counted.", "প্রতিটি ব্যায়াম শুরু হয় ছোট একটি প্রদর্শন আর একটি অনুশীলন দিয়ে, যা গোনা হয় না।")}</p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Choice selected={mode === "camera"} onClick={() => setMode("camera")}>
+              <span className="block font-medium text-ink">{tx(lang, "Camera counts tracked exercises", "ক্যামেরা গুনবে")}</span>
+              <span className="block text-sm text-muted">{tx(lang, "On-device only. Video is never uploaded or saved. You can switch to manual at any time.", "শুধু এই ডিভাইসে। ভিডিও কখনো আপলোড বা সংরক্ষণ হয় না। যেকোনো সময় নিজে গোনায় যেতে পারবেন।")}</span>
+            </Choice>
+            <Choice selected={mode === "manual"} onClick={() => setMode("manual")}>
+              <span className="block font-medium text-ink">{tx(lang, "Manual: I tap to count", "নিজে: আমি চেপে গুনব")}</span>
+              <span className="block text-sm text-muted">{tx(lang, "No camera needed. Works offline.", "ক্যামেরা লাগবে না। অফলাইনেও চলে।")}</span>
+            </Choice>
+          </div>
+        </section>
+
+        <div className="mt-8 flex flex-wrap items-center gap-4">
+          <Button disabled={!answered} onClick={begin}>
+            {tx(lang, "Start workout", "ব্যায়াম শুরু")}
+          </Button>
+          {!answered && <p className="text-sm text-muted">{tx(lang, "Answer each question to continue.", "এগোতে প্রতিটি প্রশ্নের উত্তর দিন।")}</p>}
         </div>
-      </>
+      </div>
     );
   }
 
