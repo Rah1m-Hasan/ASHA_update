@@ -8,7 +8,7 @@ export function Footer() {
       <Container width="wide">
         <div className="grid gap-10 md:grid-cols-[1.5fr_repeat(3,1fr)]">
           <div>
-            <Image src="/assets/brand/asha-side-540.png" alt="Asha" width={120} height={40} className="h-9 w-auto" />
+            <Image src="/assets/brand/asha-wordmark-light.png" style={{ width: "auto" }} alt="Asha" width={156} height={26} className="h-[26px] w-auto" />
             <p className="mt-4 max-w-xs text-muted">{footer.tagline}</p>
           </div>
           {footer.groups.map((g) => (

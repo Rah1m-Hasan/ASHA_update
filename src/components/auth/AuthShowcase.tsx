@@ -25,11 +25,11 @@ export function AuthShowcase({ copy }: { copy: ShowcaseCopy }) {
           className="inline-flex w-fit rounded-xl bg-white px-3 py-2"
         >
           <Image
-            src="/assets/brand/asha-side-540.png"
+            src="/assets/brand/asha-wordmark-light.png" style={{ width: "auto" }}
             alt="Asha"
-            width={108}
-            height={36}
-            className="h-7 w-auto"
+            width={144}
+            height={24}
+            className="h-6 w-auto"
             priority
           />
         </Link>

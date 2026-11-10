@@ -155,6 +155,18 @@ label {
   letter-spacing: 0.16em;
   margin-top: 9px;
 }
+.brand-logo {
+  display: block;
+  height: 26px;
+  width: auto;
+}
+.brand-logo--dark,
+:root[data-theme="dark"] .brand-logo--light {
+  display: none;
+}
+:root[data-theme="dark"] .brand-logo--dark {
+  display: block;
+}
 .top-actions,
 .actions,
 .section-heading {

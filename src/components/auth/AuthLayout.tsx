@@ -20,7 +20,7 @@ export function AuthLayout({
       <main className="flex flex-col px-4 py-8 sm:px-10">
         <div className="flex items-center justify-between">
           <Link href="/" aria-label="Asha home" className="lg:invisible">
-            <Image src="/assets/brand/asha-side-540.png" alt="Asha" width={108} height={36} className="h-8 w-auto" />
+            <Image src="/assets/brand/asha-wordmark-light.png" style={{ width: "auto" }} alt="Asha" width={144} height={24} className="h-6 w-auto" />
           </Link>
           <Link href="/" className="text-sm font-medium text-muted hover:text-ink">
             ← Back to home

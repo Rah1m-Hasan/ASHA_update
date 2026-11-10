@@ -31,11 +31,11 @@ export function Sidebar({
       <div className="flex h-16 items-center px-5">
         <Link href="/" aria-label="Asha home">
           <Image
-            src="/assets/brand/asha-side-540.png"
+            src="/assets/brand/asha-wordmark-light.png" style={{ width: "auto" }}
             alt="Asha"
-            width={108}
-            height={36}
-            className="h-8 w-auto"
+            width={144}
+            height={24}
+            className="h-6 w-auto"
           />
         </Link>
       </div>

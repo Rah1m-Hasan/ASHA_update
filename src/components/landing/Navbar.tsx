@@ -28,7 +28,7 @@ export function Navbar() {
     >
       <div className="mx-auto flex h-[68px] max-w-[1300px] items-center justify-between px-4 sm:px-8">
         <Link href="/" aria-label="Asha home" className="flex items-center">
-          <Image src="/assets/brand/asha-side-540.png" alt="Asha" width={120} height={40} priority className="h-9 w-auto" />
+          <Image src="/assets/brand/asha-wordmark-light.png" style={{ width: "auto" }} alt="Asha" width={156} height={26} priority className="h-[26px] w-auto" />
         </Link>
 
         <nav aria-label="Primary" className="hidden items-center gap-1 md:flex">
