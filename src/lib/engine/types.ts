@@ -27,7 +27,13 @@ export type FrameSnapshot = {
     eye?: { total?: number };
     head?: { yaw?: number; pitch?: number; roll?: number; nodRecent?: boolean };
     smile?: { intensity?: number; symmetry?: number; state?: string };
-    lip?: { gesture?: string; active?: boolean; kind?: string };
+    /**
+     * One-sided lip pull against the resting face: deviation and threshold in face widths (lateral
+     * shift 0.035, corner asymmetry 0.04); duration counts seconds held on the same side, and latched
+     * is set once it reaches the 60-second limit.
+     */
+    lip?: { gesture?: string; active?: boolean; kind?: string; deviation?: number; threshold?: number; side?: "left" | "right"; duration?: number; latched?: boolean };
+    neutralProgress?: number;
     au?: { values?: Record<string, number> };
     reason?: string;
   };
