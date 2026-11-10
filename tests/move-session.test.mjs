@@ -306,6 +306,29 @@ test("Stopping early keeps what was actually done, and nothing more", () => {
   assert.equal(sum.setsDone, 1);
 });
 
+test("Ending in the middle of a set keeps the reps already done; an empty set records nothing", () => {
+  const s = make({ mode: "manual" });
+  s.begin(0);
+  s.next();
+  s.ready();
+  s.manualRep();
+  s.manualRep();
+  s.pause();
+  s.stop();
+  const e = s.summary().exercises[0];
+  assert.equal(e.reps, 2);
+  assert.equal(e.manualReps, 2);
+  assert.equal(e.setsDone, 0, "an unfinished set isn't a finished set");
+  assert.equal(s.results[0].sets[0].unfinished, true);
+  const empty = make({ mode: "manual" });
+  empty.begin(0);
+  empty.next();
+  empty.ready();
+  empty.reportSymptom("chest");
+  assert.equal(empty.state, "SAFETY_STOP");
+  assert.equal(empty.summary().exercises[0].setsDone, 0, "no set is invented");
+});
+
 test("A symptom reported after the workout ended still stops further exercise and keeps how it ended", () => {
   const s = make({ mode: "manual" });
   s.begin(0);

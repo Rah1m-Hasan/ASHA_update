@@ -488,7 +488,7 @@ export default function LiveSession() {
                           : `${e.setsDone}/${e.plannedSets} ${tx(lang, "sets", "সেট")} · ${e.seconds ? `${e.seconds}s ${held}` : `${e.reps} ${tx(lang, "reps", "বার")}`}`}
                     </span>
                   </div>
-                  {!e.skipped && !e.seconds && e.setsDone > 0 && (
+                  {!e.skipped && !e.seconds && (e.setsDone > 0 || e.reps > 0) && (
                     <p className="mt-1 text-sm text-ink" data-testid="move-summary-sources">
                       {`${e.cameraReps ?? 0} ${tx(lang, "camera estimate", "ক্যামেরার আনুমানিক")} · ${e.manualReps ?? 0} ${tx(lang, "your entry", "আপনার গোনা")}`}
                       {e.partials ? ` · ${e.partials} ${tx(lang, "partial, not counted", "অসম্পূর্ণ, গোনা হয়নি")}` : ""}

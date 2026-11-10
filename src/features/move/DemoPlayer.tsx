@@ -62,6 +62,8 @@ export function DemoPlayer({ exerciseId, lang, className, compact = false }: { e
   const isPlaying = playing ?? !reduced;
   const [t, setT] = useState(0);
   const [narrate, setNarrate] = useState(false);
+  // Bumped by "Show me again" so a running loop restarts from the first frame.
+  const [epoch, setEpoch] = useState(0);
   const started = useRef<number | null>(null);
   const spoken = useRef<number | null>(null);
   const frame = demoAt(exerciseId, t);
@@ -81,7 +83,7 @@ export function DemoPlayer({ exerciseId, lang, className, compact = false }: { e
     return () => cancelAnimationFrame(raf);
     // t is read once when playback (re)starts.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPlaying, exerciseId]);
+  }, [isPlaying, exerciseId, epoch]);
 
   // Narrate each caption once as the demonstration reaches it, only after the person asked for voice.
   useEffect(() => {
@@ -94,6 +96,7 @@ export function DemoPlayer({ exerciseId, lang, className, compact = false }: { e
     spoken.current = null;
     setT(0);
     setPlaying(true);
+    setEpoch((e) => e + 1);
   };
   const label = `${tx(lang, "Demonstration", "প্রদর্শন")}: ${captions.join(" ")}`;
   const still = keyPoses(exerciseId) as { figure: unknown; cap: number; view: string; props: unknown[] }[];

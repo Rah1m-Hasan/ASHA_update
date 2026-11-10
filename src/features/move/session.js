@@ -377,17 +377,7 @@ export class WorkoutSession {
   /** Close the current set with what actually happened (fewer reps than planned is fine). */
   finishSet() {
     if (this.state !== "EXERCISE" && this.state !== "TRACKING_LOST") return this;
-    const r = this.results[this.index];
-    const timed = !!this.holdTarget;
-    if (timed) {
-      const by = this.cameraCounting ? "camera" : "timer";
-      r.sets.push({ seconds: Math.round(this.holdMs / 1000), targetSeconds: Math.round(this.holdTarget / 1000), countedBy: by });
-      this.log("HOLD", by === "camera" ? "camera" : "user", { seconds: Math.round(this.holdMs / 1000) });
-    } else {
-      const { camera, manual } = this.repsBy;
-      const countedBy = camera && manual ? "camera and manual" : camera ? "camera" : manual ? "manual" : this.cameraCounting ? "camera" : "manual";
-      r.sets.push({ reps: this.reps, targetReps: this.step.targetReps ?? null, partials: this.partials, camera, manual, countedBy });
-    }
+    this.recordSet();
     this.manualCount = 0;
     this.holdRunning = false;
     const lastSet = this.set >= this.step.sets;
@@ -402,6 +392,28 @@ export class WorkoutSession {
       else this.say(`Rest for ${this.step.restSeconds ?? 0} seconds.`);
     }
     return this;
+  }
+
+  /** Write the current set's record: reps by source, or seconds held and who timed them. */
+  recordSet(extra = {}) {
+    const r = this.results[this.index];
+    if (this.holdTarget) {
+      const by = this.cameraCounting ? "camera" : "timer";
+      r.sets.push({ seconds: Math.round(this.holdMs / 1000), targetSeconds: Math.round(this.holdTarget / 1000), countedBy: by, ...extra });
+      this.log("HOLD", by === "camera" ? "camera" : "user", { seconds: Math.round(this.holdMs / 1000) });
+    } else {
+      const { camera, manual } = this.repsBy;
+      const countedBy = camera && manual ? "camera and manual" : camera ? "camera" : manual ? "manual" : this.cameraCounting ? "camera" : "manual";
+      r.sets.push({ reps: this.reps, targetReps: this.step.targetReps ?? null, partials: this.partials, camera, manual, countedBy, ...extra });
+    }
+  }
+
+  /** Keep what was done in an unfinished set when the workout ends early. Nothing is invented. */
+  recordUnfinishedSet() {
+    const live = this.state === "PAUSED" ? this.resumeTo : this.state;
+    if (live !== "EXERCISE" && live !== "TRACKING_LOST") return;
+    if (this.holdTarget ? this.holdMs < 1000 : this.reps === 0) return;
+    this.recordSet({ unfinished: true });
   }
 
   nextAllowedIndex() {
@@ -485,6 +497,7 @@ export class WorkoutSession {
 
   stop() {
     if (TERMINAL.has(this.state) || this.state === "SUMMARY") return this;
+    this.recordUnfinishedSet();
     this.endedBy = "cancelled";
     this.endedAt = new Date(this.wallClock()).toISOString();
     this.enter("CANCELLED");
@@ -515,6 +528,7 @@ export class WorkoutSession {
     this.safety = { action, reasons };
     this.lockout = lock ? createLockout(action, reasons, this.wallClock()) : null;
     if (!(TERMINAL.has(this.state) || this.state === "SUMMARY")) {
+      this.recordUnfinishedSet();
       this.endedBy = "safety_stop";
       this.endedAt = new Date(this.wallClock()).toISOString();
     }
@@ -547,7 +561,8 @@ export class WorkoutSession {
         exerciseId: r.exerciseId,
         title: EXERCISES[r.exerciseId].title,
         plannedSets: r.step.sets,
-        setsDone: r.sets.length,
+        // A set ended early still counts its reps, but not as a finished set.
+        setsDone: r.sets.filter((x) => !x.unfinished).length,
         reps: sum("reps"),
         cameraReps,
         manualReps,
