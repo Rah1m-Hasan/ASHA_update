@@ -1,0 +1,171 @@
+"use client";
+
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useRequests } from "@/features/requests/RequestProvider";
+import { speak } from "@/features/speech/speak";
+import { cn } from "@/lib/cn";
+import { BOARDS, CONFIRM_TILES, DwellSelector, predictGaze, tileAt } from "./gaze";
+import type { BoardSize, GazeModel, Tile } from "./gaze";
+import type { Feed } from "./Calibration";
+
+type Rect = { id: string; x: number; y: number; w: number; h: number };
+
+/**
+ * Full screen tiles chosen by looking. A tile is chosen after the smoothed gaze point stays inside
+ * it for the selection time; touch works on every tile too. Needs (water, toilet…) go through the
+ * same confirmation as everywhere in Asha, answered here with two halves of the screen.
+ */
+export function Board({ size, model, dwellMs, showDot, feed, onExit }: { size: Exclude<BoardSize, 0>; model: GazeModel; dwellMs: number; showDot: boolean; feed: Feed; onExit: () => void }) {
+  const { pending, propose, confirm, cancel, delivery } = useRequests();
+  const confirming = !!pending && pending.source === "eyespeak";
+  const board = BOARDS[size];
+  const tiles = useMemo(() => (confirming ? CONFIRM_TILES : board.tiles), [confirming, board]);
+  const cols = confirming ? 2 : board.cols;
+  const grid = useRef<HTMLDivElement>(null);
+  const dot = useRef<HTMLDivElement>(null);
+  const rects = useRef<Rect[]>([]);
+  const nodes = useRef(new Map<string, HTMLElement>());
+  const dwell = useMemo(() => new DwellSelector({ dwellMs }), [dwellMs]);
+  const smooth = useRef<{ x: number; y: number } | null>(null);
+  const [status, setStatus] = useState("");
+  const [said, setSaid] = useState<string[]>([]);
+  // The note shows whatever happened last: a word spoken after a request replaces its delivery note.
+  const [saidOver, setSaidOver] = useState<typeof delivery | null>(null);
+
+  const choose = useCallback(
+    (tile: Tile) => {
+      if (tile.id === "confirm-yes") return void confirm();
+      if (tile.id === "confirm-no") return cancel();
+      setSaid((s) => [tile.label, ...s].slice(0, 6));
+      if (tile.need) propose(tile.need, tile.say, "eyespeak");
+      else {
+        setSaidOver(delivery);
+        speak(tile.say);
+      }
+    },
+    [confirm, cancel, propose, delivery],
+  );
+  const chooseRef = useRef(choose);
+  useEffect(() => {
+    chooseRef.current = choose;
+  });
+
+  // Tile positions as fractions of the screen, the same frame the calibration used.
+  useLayoutEffect(() => {
+    const measure = () => {
+      const W = innerWidth, H = innerHeight;
+      rects.current = [...nodes.current.entries()].map(([id, el]) => {
+        const r = el.getBoundingClientRect();
+        return { id, x: r.left / W, y: r.top / H, w: r.width / W, h: r.height / H };
+      });
+    };
+    measure();
+    addEventListener("resize", measure);
+    return () => removeEventListener("resize", measure);
+  }, [tiles]);
+
+  useEffect(() => {
+    dwell.reset();
+    // A new layout appears under a still gaze (after "Water" the left half is "No"). The tile under the
+    // gaze is ignored until the eyes move off it, so nothing is chosen without a deliberate look.
+    let settled = false;
+    const paint = (id: string | null, progress: number) => {
+      for (const [key, el] of nodes.current) el.style.setProperty("--dwell", key === id ? String(progress) : "0");
+    };
+    feed((f, t) => {
+      if (document.querySelector("dialog[open]")) return; // another confirmation is on screen
+      if (!f.valid) {
+        dwell.update(null, t, false);
+        paint(null, 0);
+        if (dot.current) dot.current.style.opacity = "0";
+        setStatus(f.reason);
+        return;
+      }
+      const p = predictGaze(model, f.values, { requireValidation: false }) as { valid: boolean; x?: number; y?: number; reason?: string };
+      if (!p.valid || p.x === undefined || p.y === undefined) {
+        dwell.update(null, t, false);
+        paint(null, 0);
+        if (dot.current) dot.current.style.opacity = "0";
+        setStatus(p.reason ?? "");
+        return;
+      }
+      const k = 0.35;
+      smooth.current = smooth.current ? { x: smooth.current.x * (1 - k) + p.x * k, y: smooth.current.y * (1 - k) + p.y * k } : { x: p.x, y: p.y };
+      const s = smooth.current;
+      if (dot.current) {
+        dot.current.style.opacity = "1";
+        dot.current.style.transform = `translate(${s.x * innerWidth}px, ${s.y * innerHeight}px)`;
+      }
+      setStatus("");
+      const over = tileAt(s, rects.current);
+      if (!settled) {
+        settled = true;
+        dwell.hold(over);
+      }
+      const chosen = dwell.update(over, t, true);
+      paint((dwell.target as string | null) ?? null, dwell.progress ?? 0);
+      if (chosen) {
+        paint(null, 0);
+        const tile = tiles.find((x) => x.id === chosen);
+        if (tile) chooseRef.current(tile);
+      }
+    });
+    return () => feed(null);
+  }, [feed, model, dwell, tiles]);
+
+  useEffect(() => {
+    const key = (e: KeyboardEvent) => e.key === "Escape" && onExit();
+    addEventListener("keydown", key);
+    return () => removeEventListener("keydown", key);
+  }, [onExit]);
+
+  const saidNote = said.length ? `Said: ${said.join(" · ")}` : "Look at a tile and hold your gaze until it fills.";
+  const deliveryNote: Partial<Record<typeof delivery.state, string>> = {
+    sending: "Sending to your caregiver…",
+    sent: "Sent to your caregiver.",
+    local: "Recognised on this device. Connect a caregiver to deliver requests.",
+    failed: "Not sent. Check the connection, or use touch.",
+  };
+  const note = confirming ? `Send to your caregiver: “${pending!.text}”?` : (delivery !== saidOver && deliveryNote[delivery.state]) || saidNote;
+
+  return (
+    <div className="fixed inset-0 z-[60] flex flex-col bg-wash" role="dialog" aria-modal="true" aria-label="Look to choose" data-testid="gaze-board" data-size={confirming ? 2 : size}>
+      <div className="flex min-h-12 items-center gap-3 px-4 pt-2 text-sm">
+        <p role="status" aria-live="polite" className="min-w-0 flex-1 truncate text-ink" data-testid="board-note">
+          {note}
+        </p>
+        {status && <p className="hidden shrink-0 text-amber-700 sm:block">{status}</p>}
+        <button onClick={onExit} className="shrink-0 rounded-full px-4 py-2 font-medium text-muted ring-1 ring-line hover:bg-white">
+          Close
+        </button>
+      </div>
+      <div ref={grid} className="grid flex-1 gap-[3vmin] p-[3vmin]" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+        {tiles.map((t) => (
+          <button
+            key={t.id}
+            ref={(el) => {
+              if (el) nodes.current.set(t.id, el);
+              else nodes.current.delete(t.id);
+            }}
+            data-tile={t.id}
+            onClick={() => choose(t)}
+            className={cn(
+              "relative grid place-items-center overflow-hidden rounded-3xl text-center ring-1",
+              t.id === "confirm-yes" ? "bg-brand text-white ring-brand" : "bg-white text-ink ring-line",
+            )}
+            style={{ ["--dwell" as string]: "0" }}
+          >
+            <span aria-hidden="true" className={cn("absolute inset-x-0 bottom-0 origin-bottom transition-transform duration-100", t.id === "confirm-yes" ? "bg-white/30" : "bg-brand/20")} style={{ height: "100%", transform: "scaleY(var(--dwell))" }} />
+            <span className="relative">
+              <span className="block text-[clamp(1.5rem,5vmin,3.5rem)] leading-tight font-semibold">{t.label}</span>
+              <span className={cn("mt-1 block text-[clamp(1rem,3vmin,1.75rem)]", t.id === "confirm-yes" ? "text-white/80" : "text-muted")}>{t.bn}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+      {showDot && (
+        <div ref={dot} data-testid="gaze-dot" aria-hidden="true" className="pointer-events-none fixed top-0 left-0 z-[61] -mt-4 -ml-4 size-8 rounded-full border-4 border-brand/70 bg-brand/15 opacity-0 ring-2 ring-white transition-opacity" />
+      )}
+    </div>
+  );
+}

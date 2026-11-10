@@ -10,6 +10,17 @@
     <meta name="referrer" content="no-referrer" />
     <title>Asha · Everyday companion</title>
     <link rel="icon" href="/assets/brand/asha-favicon-48.png" />
+    <script>
+      // Opened inside the Asha app (/dashboard/patient/eyespeak, /care): hide this app's own menus.
+      (function () {
+        var q = new URLSearchParams(location.search);
+        if (!q.has("embed") || window.parent === window) return;
+        document.documentElement.dataset.embed = "1";
+        var lang = q.get("lang");
+        if (lang === "en" || lang === "bn")
+          try { localStorage.setItem("asha_everyday_language", lang); } catch (e) {}
+      })();
+    </script>
     <link rel="stylesheet" href="/app/everyday/style.css" />
   </head>
   <body>
@@ -156,6 +167,45 @@
       </button>
     </aside>
     <div id="toast" role="status" aria-live="polite"></div>
+    <script>
+      // Embedded: a slim bar (saving status, back, language), plus height and notices for the host page.
+      (function () {
+        if (!document.documentElement.dataset.embed) return;
+        var actions = document.querySelector(".top-actions");
+        var pill = document.getElementById("vaultStatus");
+        var start = location.hash || "#home";
+        var back = document.createElement("a");
+        back.className = "secondary";
+        back.href = start;
+        back.textContent = "\u2190 Back";
+        var saving = document.createElement("a");
+        saving.className = "secondary";
+        saving.href = "#privacy";
+        saving.textContent = "Saving on this device";
+        if (pill) actions.prepend(pill);
+        actions.insertBefore(saving, document.getElementById("language").previousElementSibling);
+        actions.insertBefore(back, saving);
+        var sync = function () {
+          back.hidden = location.hash === start;
+          saving.hidden = location.hash === "#privacy";
+        };
+        addEventListener("hashchange", sync);
+        sync();
+        var post = function (msg) {
+          try { parent.postMessage(msg, location.origin); } catch (e) {}
+        };
+        var size = function () {
+          post({ type: "asha-embed-height", height: Math.ceil(document.body.getBoundingClientRect().height) });
+        };
+        new ResizeObserver(size).observe(document.body);
+        addEventListener("load", size);
+        var toast = document.getElementById("toast");
+        new MutationObserver(function () {
+          var text = toast.textContent.trim();
+          if (text) post({ type: "asha-embed-notice", text: text });
+        }).observe(toast, { childList: true, characterData: true, subtree: true });
+      })();
+    </script>
     <script type="module" src="/app/everyday/main.js"></script>
   </body>
 </html>

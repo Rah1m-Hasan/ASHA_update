@@ -130,3 +130,18 @@ test("Dwell selects once, requires a real release, and cannot count across track
   assert.equal(dwell.progress, 0);
   assert.equal(dwell.update("yes", 1250), null); // out-of-order time
 });
+
+test("EyeSpeak ignores the tile under a still gaze when the layout changes", () => {
+  const dwell = new DwellSelector({ dwellMs: 800 });
+  dwell.hold("confirm-no");
+  for (let t = 0; t <= 2000; t += 100) assert.equal(dwell.update("confirm-no", t), null);
+  assert.equal(dwell.progress, 0);
+  // Looking away for the release time and back makes it selectable again.
+  for (let t = 2100; t <= 2600; t += 100) dwell.update("confirm-yes", t);
+  let chosen = null;
+  for (let t = 2700; t <= 4000 && !chosen; t += 100) chosen = dwell.update("confirm-no", t);
+  assert.equal(chosen, "confirm-no");
+  dwell.hold(null);
+  for (let t = 4100; t <= 5000 && chosen === "confirm-no"; t += 100) chosen = dwell.update("confirm-yes", t) ?? chosen;
+  assert.equal(chosen, "confirm-yes");
+});

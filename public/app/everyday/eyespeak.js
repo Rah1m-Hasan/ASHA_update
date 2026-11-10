@@ -63,7 +63,7 @@ export function mount(host, ctx) {
   host.innerHTML = `
     <section class="card">
       <h2>EyeSpeak · চোখের ভাষা</h2>
-      <p>Choose a phrase or build your words. Touch, a keyboard switch, and calibrated gaze can select tiles.</p>
+      <p>Choose a phrase or build your words. ${document.documentElement.dataset.embed ? "Touch or a keyboard switch selects tiles. Looking to choose is on the EyeSpeak page." : "Touch, a keyboard switch, and calibrated gaze can select tiles."}</p>
       <div class="actions">
         <label class="field">Language / ভাষা<select data-language><option value="en">English</option><option value="bn">বাংলা</option></select></label>
         <label class="field">Selection time<select data-dwell><option value="800">0.8 seconds</option><option value="1100" selected>1.1 seconds</option><option value="1500">1.5 seconds</option></select></label>

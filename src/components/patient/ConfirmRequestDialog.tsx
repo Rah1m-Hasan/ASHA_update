@@ -2,13 +2,17 @@
 
 import { Dialog } from "@/components/dashboard/Dialog";
 import { Button } from "@/components/ui/Button";
+import { useEyeSpeak } from "@/features/eyespeak/store";
 import { useRequests } from "@/features/requests/RequestProvider";
 
 /** The separate confirmation step every request goes through before it is sent. */
 export function ConfirmRequestDialog() {
   const { pending, confirm, cancel, repeat, confirmationHint } = useRequests();
+  // The EyeSpeak board asks the same question itself, with two halves of the screen chosen by gaze.
+  const { boardOpen } = useEyeSpeak();
+  const byGaze = boardOpen && pending?.source === "eyespeak";
   return (
-    <Dialog open={!!pending} onClose={cancel} title="Confirm request">
+    <Dialog open={!!pending && !byGaze} onClose={cancel} title="Confirm request">
       {pending && (
         <div className="p-7 text-center">
           <p className="text-sm text-muted">Send this to your caregiver?</p>

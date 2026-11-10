@@ -882,3 +882,60 @@ progress {
 .clinic-workspace li {
   overflow-wrap: anywhere;
 }
+
+/* Opened inside the Asha app: no second header, menu, companion or footer. The host page
+   supplies the title; this page keeps a slim bar for saving, back and language. */
+:root[data-embed][data-theme] {
+  color-scheme: light;
+  --bg: #f5f7fc;
+  --surface: #fff;
+  --card: #fff;
+  --ink: #17243e;
+  --muted: #64728a;
+  --line: #dce3ef;
+  --accent: #164dd5;
+  --soft: #edf2ff;
+}
+:root[data-embed] body {
+  background: transparent;
+}
+:root[data-embed] .skip,
+:root[data-embed] .brand,
+:root[data-embed] #theme,
+:root[data-embed] .assistive-link,
+:root[data-embed] .sidebar,
+:root[data-embed] .page-top,
+:root[data-embed] footer,
+:root[data-embed] .companion,
+:root[data-embed] .module-heading {
+  display: none !important;
+}
+:root[data-embed] .topbar {
+  height: auto;
+  padding: 0 0 14px;
+  background: transparent;
+  border: 0;
+}
+:root[data-embed] .top-actions {
+  width: 100%;
+  gap: 8px;
+}
+:root[data-embed] .top-actions .pill {
+  margin-right: auto;
+}
+:root[data-embed] .app-layout {
+  display: block;
+  max-width: none;
+}
+:root[data-embed] main {
+  padding: 0;
+}
+:root[data-embed] #toast {
+  display: none;
+}
+/* In the app, gaze has its own page with a live eye view and an accuracy check, so the embedded
+   keyboard is for touch and switch only. */
+:root[data-embed] #cameraPanel,
+:root[data-embed] section.card:has([data-calibrate]) {
+  display: none !important;
+}

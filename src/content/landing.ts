@@ -55,9 +55,10 @@ export const modulesIntro = {
   video: { src: "", poster: undefined, posterAlt: "Asha modules in use", label: "See the modules", duration: "" },
 };
 
-export type ModuleKey = "facespeak" | "fingerspeak" | "senseassist" | "vitalsense" | "posture" | "move" | "nutrition";
+export type ModuleKey = "facespeak" | "eyespeak" | "fingerspeak" | "senseassist" | "vitalsense" | "posture" | "move" | "nutrition";
 export const modules: { key: ModuleKey; name: string; title: string; text: string }[] = [
   { key: "facespeak", name: "FaceSpeak", title: "A movement can become a message.", text: "Guided calibration learns a personal baseline for deliberate blinks, smiles and head movements. A separate confirmation keeps ordinary movement from becoming an unintended request." },
+  { key: "eyespeak", name: "EyeSpeak", title: "Your eyes. Your words.", text: "Spell a word or pick a phrase by looking at it, with touch or a single switch always available. Eye tracking is experimental and checks its own accuracy before it can select anything." },
   { key: "fingerspeak", name: "FingerSpeak", title: "Hands and fingers, understood.", text: "Practise comfortable gestures and map them to phrases. Asha speaks the phrase and can send it to the caregiver after confirmation." },
   { key: "senseassist", name: "SenseAssist", title: "Clearer speech, together.", text: "Asha suggests a meaning for unclear speech in Bangla or English. The person confirms before anything is spoken or sent." },
   { key: "vitalsense", name: "VitalSense", title: "A gentle signal check.", text: "Experimental camera-based pulse estimates for awareness only — not a clinical measurement." },

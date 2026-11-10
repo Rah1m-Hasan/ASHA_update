@@ -419,7 +419,8 @@ export class Perception extends EventTarget {
       yolo: this.yoloResult,
     };
     this.emit("frame", this.snapshot);
-    if (this.activeModule === "move") this.emitLandmarks(d, analysis);
+    // Move and EyeSpeak read raw landmarks (pose/hands, or the 478 face points with irises).
+    if (this.activeModule === "move" || this.activeModule === "eyespeak") this.emitLandmarks(d, analysis);
     this.draw();
   }
   /**
@@ -526,8 +527,9 @@ export class Perception extends EventTarget {
   }
   draw() {
     if (!this.canvas.offsetParent) return;
-    // Move draws its own exercise-aware overlay, aligned to the on-screen crop.
-    if (this.activeModule === "move") {
+    // Move draws its own exercise-aware overlay, and EyeSpeak its own eye and iris outline, both aligned
+    // to the on-screen crop.
+    if (this.activeModule === "move" || this.activeModule === "eyespeak") {
       if (!this.overlayCleared) this.canvas.getContext("2d")?.clearRect(0, 0, this.canvas.width, this.canvas.height);
       this.overlayCleared = true;
       return;

@@ -62,7 +62,7 @@ export interface PerceptionInstance extends EventTarget {
 }
 
 export type Landmark = { x: number; y: number; z?: number; visibility?: number; presence?: number };
-/** One moment of everything the models returned for one person (engine "landmarks" event, Move only). */
+/** One moment of everything the models returned for one person (engine "landmarks" event, Move and EyeSpeak). */
 export type FrameLandmarks = {
   timestampMs: number;
   videoSize: { width: number; height: number };

@@ -400,4 +400,12 @@ export class DwellSelector {
     this.progress = 0;
     return target;
   }
+  /** Ignore `target` until the gaze has left it, as after a selection. For a layout that changes under a still gaze. */
+  hold(target) {
+    this.locked = target ?? null;
+    this.releaseAt = null;
+    this.target = null;
+    this.startedAt = null;
+    this.progress = 0;
+  }
 }

@@ -9,7 +9,7 @@ export default function WellbeingPage() {
   const area = areaById("wellbeing")!;
   return (
     <div className="max-w-3xl">
-      <PageHeader title={area.label} description="Gentle checks that use your camera on this device. They are estimates for awareness, not medical measurements." />
+      <PageHeader title={area.label} description="Gentle checks and a private journal for your care. Camera checks are estimates for awareness, not medical measurements." />
       <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-white ring-1 ring-line">
         {area.modules.map((m) => (
           <li key={m.id}>

@@ -92,6 +92,7 @@ export function RequestProvider({ children }: { children: React.ReactNode }) {
     const { profile, trained } = latest.current;
     if (p?.source === "deliberate blink")
       return "Wait for the question to finish, keep your eyes open briefly, then make your practised yes blink.";
+    if (p?.source === "eyespeak") return "Look at Yes, send to ask, or at No to cancel.";
     const plan = guide.current?.responsePlan(
       profile?.assessment,
       trained?.enabled,
