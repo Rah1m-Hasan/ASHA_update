@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { StatusPill } from "@/components/dashboard/StatusPill";
 import { cn } from "@/lib/cn";
 import { EXERCISES } from "./catalog.js";
-import { isTracked, FACE_RULES } from "./detectors.js";
+import { isTracked, isExperimental } from "./detectors.js";
 import { lockoutActive, urgentGuidance, restGuidance } from "./safety.js";
 import { useMove, type Lang } from "./store";
 
@@ -106,7 +106,7 @@ export function TrackingBadge({ id }: { id: string }) {
   const e = EXERCISES[id];
   if (e.intendedUse === "clinician_assigned") return <StatusPill tone="brand">Clinician plan only</StatusPill>;
   if (!isTracked(id)) return <StatusPill>Manual</StatusPill>;
-  if ((FACE_RULES as Record<string, { experimental?: boolean }>)[id]?.experimental) return <StatusPill tone="warn">Camera · experimental</StatusPill>;
+  if (isExperimental(id)) return <StatusPill tone="warn">Camera · experimental</StatusPill>;
   return <StatusPill tone="good">Camera counts</StatusPill>;
 }
 

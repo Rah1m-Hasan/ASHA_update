@@ -58,14 +58,37 @@ export class Perception extends EventTarget {
   }
   setActiveModule(name) {
     this.activeModule = name;
-    this.handsPriority = name === "fingerspeak" || !!this.neuralHandActive;
-    // Move counts repetitions from consecutive pose frames, so pose runs near camera rate there.
-    this.posePeriod = name === "move" ? 50 : 500;
+    const move = name === "move" ? this.moveTracking || { pose: true, hands: false } : null;
+    this.handsPriority = name === "fingerspeak" || !!this.neuralHandActive || !!move?.hands;
+    // Move counts repetitions from consecutive frames, so the model an exercise needs runs near
+    // camera rate there; the others keep their slow default cadence (model router).
+    this.posePeriod = move?.pose ? 50 : 500;
     this.worker?.postMessage({
       type: "schedule",
       handsPriority: this.handsPriority,
       posePeriod: this.posePeriod,
     });
+  }
+  /** Move's model router: which landmark models the current exercise needs at full rate. */
+  setMoveTracking(modules = {}) {
+    this.moveTracking = { pose: !!modules.pose, hands: !!modules.hands };
+    this.setActiveModule(this.activeModule);
+  }
+  /** Front ("user") or back ("environment") camera. Swaps the stream; the models keep running. */
+  async setFacingMode(facing) {
+    this.facingMode = facing === "environment" ? "environment" : "user";
+    if (!this.running) return this.facingMode;
+    const next = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: this.facingMode }, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30, max: 30 } },
+      audio: false,
+    });
+    const old = this.stream;
+    this.stream = next;
+    this.video.srcObject = next;
+    await this.video.play().catch(() => {});
+    old?.getTracks().forEach((t) => t.stop());
+    this.lastTime = this.lastHandTime = null;
+    return next.getVideoTracks()[0]?.getSettings?.().facingMode || this.facingMode;
   }
   async start() {
     if (this.running) return;
@@ -73,7 +96,7 @@ export class Perception extends EventTarget {
     this.emit("status", "Loading face, two-hand and pose models…");
     this.stream = await navigator.mediaDevices.getUserMedia({
       video: {
-        facingMode: "user",
+        facingMode: this.facingMode === "environment" ? { ideal: "environment" } : "user",
         width: { ideal: 640 },
         height: { ideal: 480 },
         frameRate: { ideal: 30, max: 30 },
@@ -216,6 +239,21 @@ export class Perception extends EventTarget {
         this.emit("vitals", this.pulse);
       }
     }
+    // Move's lighting check: mean brightness of a tiny downscaled frame, twice a second.
+    if (this.activeModule === "move" && !document.hidden && this.video.readyState >= 2 && t - (this.lastLuma || 0) >= 500) {
+      this.lastLuma = t;
+      try {
+        this.lumaCanvas ??= Object.assign(document.createElement("canvas"), { width: 16, height: 12 });
+        const lc = this.lumaContext ??= this.lumaCanvas.getContext("2d", { willReadFrequently: true });
+        lc.drawImage(this.video, 0, 0, 16, 12);
+        const px = lc.getImageData(0, 0, 16, 12).data;
+        let sum = 0;
+        for (let i = 0; i < px.length; i += 4) sum += 0.2126 * px[i] + 0.7152 * px[i + 1] + 0.0722 * px[i + 2];
+        this.luma = sum / (px.length / 4) / 255;
+      } catch {
+        this.luma = null;
+      }
+    }
     if (this.lastPulseFrame && t - this.lastPulseFrame > 600 && (this.pulse.bpm != null || this.vitals.rows.length)) {
       this.invalidateVitals("Camera frames stopped; waiting for a fresh signal");
     }
@@ -329,6 +367,7 @@ export class Perception extends EventTarget {
     if (d.pose) {
       this.cycles.pose++;
       this.poseResult = d.pose;
+      this.poseResultAt = d.t;
       this.posture = poseFeatures(d.pose.landmarks?.[0], this.posture);
       this.poseAt = d.t;
       this.emit("pose", {
@@ -380,13 +419,47 @@ export class Perception extends EventTarget {
       yolo: this.yoloResult,
     };
     this.emit("frame", this.snapshot);
+    if (this.activeModule === "move") this.emitLandmarks(d, analysis);
     this.draw();
+  }
+  /**
+   * Everything the models returned for this moment, one person: up to 33 pose + 478 face + 21 per
+   * hand landmarks, each with the timestamp of the frame it came from. Nothing is interpolated:
+   * a modality that wasn't detected is null or empty. Frames never leave the device.
+   */
+  emitLandmarks(d, analysis) {
+    const pose = this.poseResult;
+    const hands = (this.handResult?.landmarks || []).map((landmarks, i) => ({
+      landmarks,
+      handedness: this.handResult.handedness?.[i]?.[0]?.categoryName ?? this.handResult.handednesses?.[i]?.[0]?.categoryName ?? null,
+      score: this.handResult.handedness?.[i]?.[0]?.score ?? this.handResult.handednesses?.[i]?.[0]?.score ?? null,
+    }));
+    this.emit("landmarks", {
+      timestampMs: d.t,
+      videoSize: { width: this.video.videoWidth || 1, height: this.video.videoHeight || 1 },
+      pose: pose?.landmarks?.[0] ?? null,
+      poseWorld: pose?.worldLandmarks?.[0] ?? null,
+      poseAt: this.poseResultAt ?? null,
+      personCount: pose?.landmarks?.length ?? 0,
+      face: d.face.faceLandmarks?.[0] ?? null,
+      faceAt: d.t,
+      faceValid: !!analysis?.valid,
+      head: { yaw: analysis?.head?.yaw ?? 0, pitch: analysis?.head?.pitch ?? 0 },
+      blendshapes: this.snapshot.blendshapes,
+      hands,
+      handsAt: this.handResultAt ?? null,
+      processingMs: Math.round(d.ms * 10) / 10,
+      luma: this.luma ?? null,
+      facing: this.facingMode || "user",
+      models: { pose: this.posePeriod <= 100 ? "fast" : "slow", hands: this.handsPriority ? "fast" : "slow", face: "on" },
+    });
   }
   consumeHands(hand, t) {
     if (hand) {
       this.emit("handframe", { result: hand, t });
       this.cycles.hand++;
       this.handResult = hand;
+      this.handResultAt = t;
       this.handTracks ??= new HandTracks();
       const hands = this.handTracks.update(
         NF_fingerspeakSignal.orderedHands(hand),
@@ -453,6 +526,13 @@ export class Perception extends EventTarget {
   }
   draw() {
     if (!this.canvas.offsetParent) return;
+    // Move draws its own exercise-aware overlay, aligned to the on-screen crop.
+    if (this.activeModule === "move") {
+      if (!this.overlayCleared) this.canvas.getContext("2d")?.clearRect(0, 0, this.canvas.width, this.canvas.height);
+      this.overlayCleared = true;
+      return;
+    }
+    this.overlayCleared = false;
     const c = this.overlayContext ??= this.canvas.getContext("2d"),
       W = this.video.videoWidth || 640,
       H = this.video.videoHeight || 480;
@@ -621,6 +701,9 @@ export class Perception extends EventTarget {
     this.lastPulseVideoTime = null;
     this.lastPulseFrame = 0;
     this.faceResultAt = 0;
+    this.poseResult = this.handResult = null;
+    this.poseResultAt = this.handResultAt = null;
+    this.luma = null;
     this.pulseGeometry = null;
     this.emit("status", "Monitoring paused");
   }

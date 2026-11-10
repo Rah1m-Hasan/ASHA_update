@@ -2,12 +2,12 @@
 // clinically validated one. A detector never counts what it cannot see: when the needed body part
 // is missing, low-confidence or out of frame it reports why and drops the incomplete repetition.
 
-export const DETECTOR_VERSION = "move-detectors/1.0.0";
+export const DETECTOR_VERSION = "move-detectors/1.1.0";
 
 /** MediaPipe pose landmark indices, person-relative. */
 const POSE = {
-  left: { shoulder: 11, elbow: 13, wrist: 15, hip: 23, knee: 25, ankle: 27 },
-  right: { shoulder: 12, elbow: 14, wrist: 16, hip: 24, knee: 26, ankle: 28 },
+  left: { shoulder: 11, elbow: 13, wrist: 15, hip: 23, knee: 25, ankle: 27, heel: 29, foot: 31 },
+  right: { shoulder: 12, elbow: 14, wrist: 16, hip: 24, knee: 26, ankle: 28, heel: 30, foot: 32 },
 };
 const MIN_VISIBILITY = 0.6;
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
@@ -135,6 +135,9 @@ export const POSE_RULES = Object.freeze({
   sit_to_stand: { joint: ["hip", "knee", "ankle"], direction: "increase", start: 115, target: 155, ret: 120, hipRise: 0.12, view: "side", cue: { down: "Sit back down slowly", up: "Stand up fully" } },
   wall_pushup: { joint: ["shoulder", "elbow", "wrist"], direction: "decrease", start: 150, target: 115, ret: 145, view: "side", cue: { down: "Bend your elbows a little more", up: "Push back until your arms are nearly straight" } },
   arm_raise: { joint: ["hip", "shoulder", "elbow"], direction: "increase", start: 40, target: 75, ret: 45, eitherArm: true, view: "front", cue: { down: "Lower your arm slowly", up: "Raise to shoulder height" } },
+  // Experimental: heel height over the toes, in shin lengths, relative to the person's own flat-foot
+  // stance (learned over the first second). Camera-only vertical motion is noisy; manual +1 stays available.
+  heel_raise: { signal: "heel_lift", points: ["knee", "ankle", "heel", "foot"], direction: "increase", start: 0.04, target: 0.12, ret: 0.06, calibrateMs: 800, experimental: true, view: "side", cue: { down: "Lower your heels slowly", up: "Rise onto your toes" } },
   // Clinician-assigned movements: these defaults are replaced by the clinician's own angles.
   knee_extension: { joint: ["hip", "knee", "ankle"], direction: "increase", start: 110, target: 155, ret: 115, view: "side", cue: { down: "Lower your foot slowly", up: "Straighten your knee to the set range" } },
   elbow_flexion: { joint: ["shoulder", "elbow", "wrist"], direction: "decrease", start: 150, target: 75, ret: 145, view: "side", cue: { down: "Straighten your arm slowly", up: "Bend your elbow to the set range" } },
@@ -148,8 +151,21 @@ export const FACE_RULES = Object.freeze({
   cheek_puff: { signal: (b) => b.cheekPuff ?? 0, rise: 0.15, minTarget: 0.2, experimental: true, cue: "Puff a little more air into your cheeks" },
 });
 
-export const isTracked = (exerciseId) => exerciseId in POSE_RULES || exerciseId in FACE_RULES;
-export const detectorKind = (exerciseId) => (exerciseId in POSE_RULES ? "pose" : exerciseId in FACE_RULES ? "face" : null);
+/** Hand exercises: mean fingertip reach from the wrist, in palm lengths (scale-free). */
+export const HAND_RULES = Object.freeze({
+  finger_opening: { direction: "increase", start: 1.25, target: 1.6, ret: 1.35, experimental: true, cue: { down: "Close your hand gently", up: "Open all your fingers" } },
+});
+
+/** Timed holds measured by the camera: the timer only runs while the body line is held. */
+export const HOLD_RULES = Object.freeze({
+  // Straight line from shoulder through hip to knee, and the body leaning (not standing upright).
+  supported_plank: { points: ["shoulder", "hip", "knee"], minAngle: 155, minIncline: 20, settleMs: 300, experimental: true, view: "side", cue: { fix: "Make a straight line from your shoulders to your knees", hold: "Hold steady and keep breathing" } },
+});
+
+export const isTracked = (exerciseId) => exerciseId in POSE_RULES || exerciseId in FACE_RULES || exerciseId in HAND_RULES || exerciseId in HOLD_RULES;
+export const detectorKind = (exerciseId) => (exerciseId in POSE_RULES || exerciseId in HOLD_RULES ? "pose" : exerciseId in FACE_RULES ? "face" : exerciseId in HAND_RULES ? "hands" : null);
+/** Experimental detectors are labelled as such on screen. */
+export const isExperimental = (exerciseId) => !!(POSE_RULES[exerciseId]?.experimental || FACE_RULES[exerciseId]?.experimental || HAND_RULES[exerciseId]?.experimental || HOLD_RULES[exerciseId]?.experimental);
 
 /** Which side of the body the camera sees best for these joints. Sticky, so it doesn't flip mid-rep. */
 function chooseSide(landmarks, joints, previous) {
@@ -167,7 +183,13 @@ export class PoseDetector {
     this.exerciseId = exerciseId;
     this.rule = rule;
     const l = limits ? { start: limits.start, target: limits.target, ret: limits.return ?? limits.start } : { start: rule.start, target: rule.target, ret: rule.ret };
-    this.counter = new PhaseCounter({ direction: rule.direction, ...l, holdMs });
+    this.thresholds = l;
+    this.holdMs = holdMs;
+    // Relative signals learn the person's own resting value first; angle rules count straight away.
+    this.counter = rule.calibrateMs ? null : new PhaseCounter({ direction: rule.direction, ...l, holdMs });
+    this.samples = [];
+    this.calibStart = null;
+    this.baseline = null;
     this.smooth = new Smoother();
     this.fixedSide = side === "left" || side === "right" ? side : null;
     this.side = this.fixedSide;
@@ -177,14 +199,21 @@ export class PoseDetector {
     this.badFrames = 0;
   }
   get reps() {
-    return this.counter.reps;
+    return this.counter?.reps ?? 0;
+  }
+  /** Start counting afresh (e.g. practice is over) without re-learning the resting value. */
+  restart() {
+    this.counter?.reset();
+    this.smooth.reset();
+    this.anchorHip = null;
   }
   lost(reason, t) {
     this.badFrames++;
-    this.counter.reset();
+    this.counter?.reset();
     this.smooth.reset();
     this.anchorHip = null;
-    return { valid: false, reason, reps: this.counter.reps, partials: this.counter.partials, phase: "lost", counted: false, progress: 0, confidence: 0, t };
+    if (this.baseline === null) (this.samples = []), (this.calibStart = null);
+    return { valid: false, reason, reps: this.reps, partials: this.counter?.partials ?? 0, phase: "lost", counted: false, progress: 0, confidence: 0, t };
   }
   update(frame) {
     const t = frame?.timestamp;
@@ -193,7 +222,7 @@ export class PoseDetector {
     if (frame.personCount > 1) return this.lost("Keep only one person in view.", t);
     const lm = frame.landmarks;
     const { rule } = this;
-    const needs = rule.hipDrop || rule.hipRise ? [...new Set([...rule.joint, "hip", "knee", "ankle"])] : rule.joint;
+    const needs = rule.points ?? (rule.hipDrop || rule.hipRise ? [...new Set([...rule.joint, "hip", "knee", "ankle"])] : rule.joint);
     let angle, side, confidence;
     if (rule.eitherArm) {
       // Front view: count whichever arm is raised; each visible arm is measured on its own.
@@ -213,8 +242,20 @@ export class PoseDetector {
       if (confidence < MIN_VISIBILITY) return this.lost(`Keep your ${needs.join(", ")} in view, side-on to the camera.`, t);
       const pts = needs.map((j) => lm[POSE[side][j]]);
       if (!pts.every(inFrame)) return this.lost("Move back so your whole body stays inside the frame.", t);
-      angle = jointAngle(...rule.joint.map((j) => lm[POSE[side][j]]), frame.width ?? 1, frame.height ?? 1);
+      angle = rule.signal === "heel_lift" ? heelLift(lm, side, frame.width ?? 1, frame.height ?? 1) : jointAngle(...rule.joint.map((j) => lm[POSE[side][j]]), frame.width ?? 1, frame.height ?? 1);
       if (angle === null) return this.lost("Turn side-on so your joints don't overlap.", t);
+    }
+    if (!this.counter) {
+      // Learn the resting value (flat feet) before counting anything.
+      this.goodFrames++;
+      this.side = side;
+      this.calibStart ??= t;
+      this.samples.push(angle);
+      if (t - this.calibStart < rule.calibrateMs) return { valid: true, phase: "calibrating", reason: "Stand still with your feet flat", reps: 0, partials: 0, counted: false, progress: (t - this.calibStart) / rule.calibrateMs, confidence, side, t };
+      const sorted = [...this.samples].sort((a, b) => a - b);
+      this.baseline = sorted[Math.floor(sorted.length / 2)];
+      const b = this.baseline, th = this.thresholds;
+      this.counter = new PhaseCounter({ direction: rule.direction, start: b + th.start, target: b + th.target, ret: b + th.ret, holdMs: this.holdMs });
     }
     this.side = side;
     this.goodFrames++;
@@ -234,6 +275,141 @@ export class PoseDetector {
     const toward = this.counter.phase === "returning" ? rule.cue.up : rule.cue.down;
     const reason = r.event === "partial" ? `Not counted: ${rule.cue.down.toLowerCase()}.` : r.counted ? "Counted" : r.phase === "find_start" ? `Get into the start position` : toward;
     return { valid: true, reason, ...r, angle: value, side, confidence, t };
+  }
+  quality() {
+    const total = this.goodFrames + this.badFrames;
+    return total ? this.goodFrames / total : 0;
+  }
+}
+
+/** Heel height above the toes, in shin lengths. Flat feet are near 0; positive is heels up. */
+function heelLift(lm, side, w, h) {
+  const knee = lm[POSE[side].knee], ankle = lm[POSE[side].ankle], heel = lm[POSE[side].heel], foot = lm[POSE[side].foot];
+  if (![knee, ankle, heel, foot].every(Boolean)) return null;
+  const shin = Math.hypot((knee.x - ankle.x) * w, (knee.y - ankle.y) * h);
+  if (shin < 1e-6) return null;
+  return ((foot.y - heel.y) * h) / shin;
+}
+
+/**
+ * Timed hold for the supported plank. Reports `holding` only while a straight shoulder-hip-knee line
+ * is seen, leaning (not standing upright), for at least `settleMs`. The session runs the hold timer
+ * from this, so time stops the moment the camera is unsure.
+ */
+export class HoldDetector {
+  constructor(exerciseId, { side = null } = {}) {
+    const rule = HOLD_RULES[exerciseId];
+    if (!rule) throw new Error(`No camera hold detector for ${exerciseId}`);
+    this.exerciseId = exerciseId;
+    this.rule = rule;
+    this.fixedSide = side === "left" || side === "right" ? side : null;
+    this.side = this.fixedSide;
+    this.alignedSince = null;
+    this.goodFrames = 0;
+    this.badFrames = 0;
+  }
+  get reps() {
+    return 0;
+  }
+  restart() {
+    this.alignedSince = null;
+  }
+  lost(reason, t) {
+    this.badFrames++;
+    this.alignedSince = null;
+    return { valid: false, reason, holding: false, heldMs: 0, phase: "lost", counted: false, progress: 0, confidence: 0, reps: 0, partials: 0, t };
+  }
+  update(frame) {
+    const t = frame?.timestamp;
+    if (!frame || !Number.isFinite(t)) return this.lost("Waiting for the camera", t);
+    if (!frame.landmarks?.length) return this.lost("Can't see your body. Step into the camera view.", t);
+    if (frame.personCount > 1) return this.lost("Keep only one person in view.", t);
+    const lm = frame.landmarks, { rule } = this, w = frame.width ?? 1, h = frame.height ?? 1;
+    const { side, confidence } = this.fixedSide ? { side: this.fixedSide, confidence: Math.min(...rule.points.map((j) => visibility(lm[POSE[this.fixedSide][j]]))) } : chooseSide(lm, rule.points, this.side);
+    if (confidence < MIN_VISIBILITY) return this.lost("Keep your shoulders, hips and knees in view, side-on to the camera.", t);
+    const [s, hip, k] = rule.points.map((j) => lm[POSE[side][j]]);
+    if (![s, hip, k].every(inFrame)) return this.lost("Move back so your whole body stays inside the frame.", t);
+    this.side = side;
+    this.goodFrames++;
+    const angle = jointAngle(s, hip, k, w, h);
+    // Lean of the shoulder-to-knee line from vertical: ~0 standing, ~90 lying flat.
+    const incline = (Math.atan2(Math.abs((s.x - k.x) * w), Math.abs((s.y - k.y) * h)) * 180) / Math.PI;
+    const aligned = angle !== null && angle >= rule.minAngle && incline >= rule.minIncline;
+    if (!aligned) {
+      this.alignedSince = null;
+      return { valid: true, holding: false, heldMs: 0, phase: "find_start", reason: rule.cue.fix, angle, incline, side, confidence, counted: false, progress: angle === null ? 0 : clamp((angle - 120) / (rule.minAngle - 120), 0, 1), reps: 0, partials: 0, t };
+    }
+    this.alignedSince ??= t;
+    const heldMs = t - this.alignedSince;
+    const holding = heldMs >= rule.settleMs;
+    return { valid: true, holding, heldMs, phase: holding ? "holding" : "settling", reason: rule.cue.hold, angle, incline, side, confidence, counted: false, progress: 1, reps: 0, partials: 0, t };
+  }
+  quality() {
+    const total = this.goodFrames + this.badFrames;
+    return total ? this.goodFrames / total : 0;
+  }
+}
+
+const TIPS = [8, 12, 16, 20], KNUCKLES = [5, 9, 13, 17];
+/** Mean wrist-to-fingertip distance over wrist-to-knuckle distance: ~1.8 open, under 1.2 in a loose fist. */
+export function fingerOpenness(lm, w = 1, h = 1) {
+  if (lm?.length !== 21) return null;
+  const d = (a, b) => Math.hypot((a.x - b.x) * w, (a.y - b.y) * h);
+  let sum = 0;
+  for (let i = 0; i < 4; i++) {
+    const base = d(lm[0], lm[KNUCKLES[i]]);
+    if (base < 1e-6) return null;
+    sum += d(lm[0], lm[TIPS[i]]) / base;
+  }
+  return sum / 4;
+}
+
+/** Counts close -> open -> close cycles of one hand. Experimental until evaluated on reference video. */
+export class HandDetector {
+  constructor(exerciseId, { holdMs = 200, side = null } = {}) {
+    const rule = HAND_RULES[exerciseId];
+    if (!rule) throw new Error(`No hand detector for ${exerciseId}`);
+    this.exerciseId = exerciseId;
+    this.rule = rule;
+    this.counter = new PhaseCounter({ direction: rule.direction, start: rule.start, target: rule.target, ret: rule.ret, holdMs, settleMs: 150 });
+    this.smooth = new Smoother(0.5);
+    this.wanted = side === "left" || side === "right" ? side : null;
+    this.handedness = null;
+    this.goodFrames = 0;
+    this.badFrames = 0;
+  }
+  get reps() {
+    return this.counter.reps;
+  }
+  restart() {
+    this.counter.reset();
+    this.smooth.reset();
+  }
+  lost(reason, t) {
+    this.badFrames++;
+    this.counter.reset();
+    this.smooth.reset();
+    return { valid: false, reason, reps: this.counter.reps, partials: this.counter.partials, phase: "lost", counted: false, progress: 0, confidence: 0, t };
+  }
+  update(frame) {
+    const t = frame?.timestamp;
+    if (!frame || !Number.isFinite(t)) return this.lost("Waiting for the camera", t);
+    const w = frame.width ?? 1, h = frame.height ?? 1;
+    let hands = (frame.hands ?? []).filter((x) => x?.landmarks?.length === 21);
+    if (this.wanted) hands = hands.filter((x) => (x.handedness ?? "").toLowerCase() === this.wanted);
+    if (!hands.length) return this.lost("Show your hand to the camera, palm facing it.", t);
+    // Stay with the same hand once chosen, so two hands in view can't double count.
+    const same = this.handedness && hands.find((x) => x.handedness === this.handedness);
+    const hand = same ?? hands.map((x) => ({ x, size: Math.hypot((x.landmarks[0].x - x.landmarks[9].x) * w, (x.landmarks[0].y - x.landmarks[9].y) * h) })).sort((a, b) => b.size - a.size)[0].x;
+    if (!hand.landmarks.every(inFrame)) return this.lost("Keep your whole hand, fingertips too, inside the picture.", t);
+    this.handedness = hand.handedness ?? null;
+    const raw = fingerOpenness(hand.landmarks, w, h);
+    if (raw === null) return this.lost("Hold your hand flat to the camera.", t);
+    this.goodFrames++;
+    const value = this.smooth.update(raw, t);
+    const r = this.counter.update(value, t);
+    const reason = r.event === "partial" ? "Not counted: open your fingers a little wider." : r.counted ? "Counted" : r.phase === "find_start" ? "Close your hand gently to start" : r.phase === "returning" ? this.rule.cue.down : this.rule.cue.up;
+    return { valid: true, ...r, reason, value, confidence: hand.score ?? 1, side: (hand.handedness ?? "").toLowerCase() || null, t };
   }
   quality() {
     const total = this.goodFrames + this.badFrames;
@@ -272,6 +448,11 @@ export class FaceDetector {
     this.smooth.reset();
     if (this.baseline === null) (this.samples = []), (this.calibStart = null);
     return { valid: false, reason, reps: this.reps, partials: this.partialsBefore + (this.counter?.partials ?? 0), phase: "lost", counted: false, progress: 0, confidence: 0, t };
+  }
+  /** Count afresh after practice, keeping the neutral face already learned. */
+  restart() {
+    this.counter?.reset();
+    this.smooth.reset();
   }
   /** Re-learn the neutral face (e.g. the person was already smiling at the start). */
   recalibrate() {
@@ -325,7 +506,9 @@ export class FaceDetector {
 /** Returns a detector for camera-tracked exercises, or null when the exercise is manual-only. */
 export function createDetector(exerciseId, options = {}) {
   if (exerciseId in POSE_RULES) return new PoseDetector(exerciseId, options);
+  if (exerciseId in HOLD_RULES) return new HoldDetector(exerciseId, options);
   if (exerciseId in FACE_RULES) return new FaceDetector(exerciseId, { ...options, holdMs: options.holdMs ?? 2000 });
+  if (exerciseId in HAND_RULES) return new HandDetector(exerciseId, { side: options.side ?? null, holdMs: options.holdMs ?? 200 });
   return null;
 }
 

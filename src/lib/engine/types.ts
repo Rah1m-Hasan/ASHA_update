@@ -55,7 +55,33 @@ export interface PerceptionInstance extends EventTarget {
   resetVitalsBaseline(): void;
   resetVitalsSession(): void;
   enableYolo?(): Promise<void>;
+  /** Move's model router: which landmark models run at full rate. */
+  setMoveTracking?(modules: { pose?: boolean; hands?: boolean }): void;
+  /** Swap between the front ("user") and back ("environment") camera; resolves to the one in use. */
+  setFacingMode?(facing: "user" | "environment"): Promise<string>;
 }
+
+export type Landmark = { x: number; y: number; z?: number; visibility?: number; presence?: number };
+/** One moment of everything the models returned for one person (engine "landmarks" event, Move only). */
+export type FrameLandmarks = {
+  timestampMs: number;
+  videoSize: { width: number; height: number };
+  pose: Landmark[] | null;
+  poseWorld?: Landmark[] | null;
+  poseAt: number | null;
+  personCount: number;
+  face: Landmark[] | null;
+  faceAt: number;
+  faceValid: boolean;
+  head: { yaw: number; pitch: number };
+  blendshapes?: Record<string, number>;
+  hands: { landmarks: Landmark[]; handedness: string | null; score: number | null }[];
+  handsAt: number | null;
+  processingMs: number;
+  luma: number | null;
+  facing?: string;
+  models?: { pose: string; hands: string; face: string };
+};
 
 export type Assessment = Record<
   "leftHand" | "rightHand" | "wrist" | "fingers" | "eyes" | "lips" | "head" | "speech",

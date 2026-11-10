@@ -35,6 +35,12 @@ type PerceptionContextValue = {
   instance: () => PerceptionInstance | null;
   /** Show the shared camera inside `host`. The most recently attached host wins; returns a detach function. */
   attach: (host: HTMLElement) => () => void;
+  /** Whether the preview is shown mirrored (selfie view). Display only; models see the raw frame. */
+  mirrored: boolean;
+  setMirrored: (value: boolean) => void;
+  /** Which camera is in use, and a switch between front and back where the device has both. */
+  facing: "user" | "environment";
+  switchCamera: () => Promise<void>;
 };
 
 const PerceptionContext = createContext<PerceptionContextValue | null>(null);
@@ -69,6 +75,8 @@ export function PerceptionProvider({
   const [pulse, setPulse] = useState<PulseValue | null>(null);
   const [calibrating, setCalibrating] = useState(false);
   const [exercising, setExercising] = useState(false);
+  const [mirrored, setMirroredState] = useState(true);
+  const [facing, setFacing] = useState<"user" | "environment">("user");
   const instance = useCallback(() => engine.current, []);
   const starting = useRef<Promise<void> | null>(null);
   const generation = useRef(0);
@@ -188,6 +196,30 @@ export function PerceptionProvider({
     setCalibrating(false);
   }, []);
 
+  const setMirrored = useCallback(
+    (value: boolean) => {
+      setMirroredState(value);
+      const el = stage();
+      for (const node of el?.querySelectorAll("video, canvas") ?? []) node.classList.toggle("-scale-x-100", value);
+    },
+    [stage],
+  );
+
+  const switchCamera = useCallback(async () => {
+    const p = engine.current;
+    const next = facing === "user" ? "environment" : "user";
+    if (!p?.setFacingMode) return;
+    try {
+      const actual = await p.setFacingMode(next);
+      const now = actual === "environment" ? "environment" : "user";
+      setFacing(now);
+      // Selfie view for the front camera; a true (unmirrored) view for the back camera.
+      setMirrored(now === "user");
+    } catch (err) {
+      setStatus(`Could not switch camera: ${(err as Error).message}`);
+    }
+  }, [facing, setMirrored]);
+
   const setModule = useCallback((name: string) => {
     moduleName.current = name;
     engine.current?.setActiveModule(name);
@@ -223,6 +255,10 @@ export function PerceptionProvider({
       setModule,
       instance,
       attach,
+      mirrored,
+      setMirrored,
+      facing,
+      switchCamera,
     }),
     [
       state,
@@ -236,6 +272,10 @@ export function PerceptionProvider({
       setModule,
       instance,
       attach,
+      mirrored,
+      setMirrored,
+      facing,
+      switchCamera,
     ],
   );
   return (

@@ -49,7 +49,26 @@ export type Summary = {
   endedBy: string | null;
   activeMinutes: number;
   mode: "camera" | "manual";
-  exercises: { exerciseId: string; title: string; plannedSets: number; setsDone: number; reps: number; seconds: number; partials: number; countedBy: string[]; skipped: boolean; skipReason: string; excludedBySafetyCheck?: boolean }[];
+  exercises: {
+    exerciseId: string;
+    title: string;
+    plannedSets: number;
+    setsDone: number;
+    reps: number;
+    /** Repetitions counted by the camera (estimates) and entered by the person, kept apart. */
+    cameraReps?: number;
+    manualReps?: number;
+    seconds: number;
+    partials: number;
+    countedBy: string[];
+    skipped: boolean;
+    skipReason: string;
+    excludedBySafetyCheck?: boolean;
+    practiced?: boolean;
+    /** How well the camera could see the needed landmarks while counting. Not a form score. */
+    quality?: { framesSeen: number; clearViewShare: number; trackingLost: number } | null;
+  }[];
+  eventsBySource?: { camera: number; user: number; system: number };
   setsDone: number;
   setsPlanned: number;
   safety: { action: string; reasons: string[] } | null;
@@ -75,6 +94,10 @@ export type MoveState = {
   /** The wizard's answers, handed to the first workout for 15 minutes so they aren't asked twice. */
   recentScreen: { answers: Record<string, Answer>; painAreas: string[]; at: number } | null;
   consentAudit: { at: string; event: string }[];
+  /** Live coach preferences. All off by default: nothing advances or vibrates unless chosen. */
+  autoNext: boolean;
+  haptics: boolean;
+  showAllLandmarks: boolean;
 };
 
 const initial: MoveState = {
@@ -93,6 +116,9 @@ const initial: MoveState = {
   activeSession: null,
   recentScreen: null,
   consentAudit: [],
+  autoNext: false,
+  haptics: false,
+  showAllLandmarks: false,
 };
 
 let state: MoveState | null = null;

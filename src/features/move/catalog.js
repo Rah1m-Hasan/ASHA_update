@@ -1,13 +1,13 @@
 // ASHA Move exercise library. Data, not screens: every program and session is built from these
 // versioned definitions. "tracked" exercises have a deterministic camera detector in detectors.js;
 // everything else is manual (the person logs it) until a detector passes evaluation.
-// Demonstration media is intentionally absent: no licensed illustrations are bundled yet.
+// Demonstrations are original animated illustrations (demo.js) with lesson text in lessons.js.
 
-export const CATALOG_VERSION = "2026.11.0";
+export const CATALOG_VERSION = "2026.11.1";
 
 /** @typedef {"face"|"upper_body"|"lower_body"|"core"|"full_body"|"mobility"|"rehab"} Category */
 /** @typedef {"reps"|"timed_hold"|"duration"|"manual_log"} ExerciseKind */
-/** @typedef {"face_blendshape"|"pose_landmarks"|"manual"|"clinician_record"} TrackingMethod */
+/** @typedef {"face_blendshape"|"pose_landmarks"|"hand_landmarks"|"manual"|"clinician_record"} TrackingMethod */
 
 /**
  * @typedef {Object} ExerciseDefinition
@@ -165,13 +165,13 @@ export const EXERCISES = Object.freeze({
     limitation: "Manual counting.", defaults: { sets: 1, targetReps: 5, restSeconds: 30 },
   },
   heel_raise: {
-    id: "heel_raise", version: "1.0.0", title: "Supported heel raise", titleBn: "সাপোর্ট নিয়ে গোড়ালি তোলা",
-    category: "lower_body", intendedUse: "wellness", kind: "reps", trackingMethod: "manual",
-    validationLevel: "demo", area: "Calves, balance", difficulty: "beginner", equipment: ["Chair or counter for support"],
+    id: "heel_raise", version: "1.1.0", title: "Supported heel (calf) raise", titleBn: "সাপোর্ট নিয়ে গোড়ালি তোলা",
+    category: "lower_body", intendedUse: "wellness", kind: "reps", trackingMethod: "pose_landmarks",
+    validationLevel: "demo", area: "Calves, balance", difficulty: "beginner", cameraView: "side", equipment: ["Chair or counter for support"],
     steps: ["Hold a chair back or counter.", "Rise onto your toes.", "Lower slowly."],
     stepsBn: ["চেয়ারের পিঠ বা টেবিল ধরুন।", "পায়ের আঙুলের ওপর উঠুন।", "ধীরে নামুন।"],
     stopCues: [...STOP], screeningFlags: ["balance"], alternatives: ["sit_to_stand"],
-    limitation: "Manual counting.", defaults: { sets: 1, targetReps: 8, restSeconds: 30 },
+    limitation: "Experimental: heel lift from one camera is noisy. Keep your feet in view and use +1 if it misses one.", defaults: { sets: 1, targetReps: 8, restSeconds: 30 },
   },
   lunge: {
     id: "lunge", version: "1.0.0", title: "Supported lunge", titleBn: "সাপোর্ট নিয়ে লাঞ্জ",
@@ -192,13 +192,13 @@ export const EXERCISES = Object.freeze({
     limitation: "Manual counting.", defaults: { sets: 1, targetReps: 5, restSeconds: 45 },
   },
   supported_plank: {
-    id: "supported_plank", version: "1.0.0", title: "Supported plank hold", titleBn: "সাপোর্টেড প্ল্যাঙ্ক",
-    category: "core", intendedUse: "wellness", kind: "timed_hold", trackingMethod: "manual",
-    validationLevel: "demo", area: "Core", difficulty: "beginner", equipment: ["Table, wall or knees down"],
+    id: "supported_plank", version: "1.1.0", title: "Supported plank hold", titleBn: "সাপোর্টেড প্ল্যাঙ্ক",
+    category: "core", intendedUse: "wellness", kind: "timed_hold", trackingMethod: "pose_landmarks",
+    validationLevel: "demo", area: "Core", difficulty: "beginner", cameraView: "side", equipment: ["Table, wall or knees down"],
     steps: ["Hands on a table or wall, or knees on the floor.", "Keep a straight line from head to knees or heels.", "Breathe normally and hold."],
     stepsBn: ["টেবিল বা দেয়ালে হাত, অথবা হাঁটু মেঝেতে।", "মাথা থেকে হাঁটু/গোড়ালি সোজা রাখুন।", "স্বাভাবিক শ্বাস নিয়ে ধরে রাখুন।"],
     stopCues: [...STOP, "Do not hold your breath."], screeningFlags: ["back_injury"], alternatives: ["bridge"],
-    limitation: "Hold time is counted by the timer you start. Core work does not target belly fat.",
+    limitation: "Experimental: with the camera, the timer runs only while a straight shoulder-to-knee line is seen. In manual mode you start the timer. Core work does not target belly fat.",
     defaults: { sets: 2, holdSeconds: 15, restSeconds: 30 },
   },
   bridge: {
@@ -239,6 +239,16 @@ export const EXERCISES = Object.freeze({
     stopCues: [...STOP, "Stop if your shoulder pain increases."], screeningFlags: ["shoulder_injury"], alternatives: [],
     limitation: "Uses the angles your clinician set. A 2D camera estimate.",
     defaults: { sets: 1, targetReps: 5, restSeconds: 45 },
+  },
+  finger_opening: {
+    id: "finger_opening", version: "1.0.0", title: "Finger opening", titleBn: "আঙুল খোলা",
+    category: "mobility", intendedUse: "wellness", kind: "reps", trackingMethod: "hand_landmarks",
+    validationLevel: "demo", area: "Hands, fingers", difficulty: "beginner", cameraView: "front", equipment: [],
+    steps: ["Hold one hand up facing the camera, fingers gently curled.", "Open and spread all your fingers.", "Close your hand gently."],
+    stepsBn: ["এক হাত ক্যামেরার দিকে তুলে ধরুন, আঙুল আলতো ভাঁজ করা।", "সব আঙুল খুলে ছড়িয়ে দিন।", "আলতো করে হাত বন্ধ করুন।"],
+    stopCues: [...STOP, "Stop if your hand or wrist hurts or goes numb."], screeningFlags: [], alternatives: [],
+    limitation: "Experimental: counts finger opening of the hand the camera sees best. Not a grip-strength measure.",
+    defaults: { sets: 1, targetReps: 8, restSeconds: 20 },
   },
   walk_log: {
     id: "walk_log", version: "1.0.0", title: "Easy walk", titleBn: "সহজ হাঁটা",
@@ -310,10 +320,10 @@ export const TEMPLATES = Object.freeze({
   lower_body: { name: "Lower body starter", sequence: [step("chair_squat"), step("sit_to_stand"), step("heel_raise")] },
   core: { name: "Whole body with core", sequence: [step("walk_log", { durationSeconds: 300 }), step("chair_squat"), step("supported_plank"), step("bridge", { optional: true })] },
   full_body: { name: "Low-impact circuit", sequence: [step("wall_pushup"), step("sit_to_stand"), step("shoulder_mobility")] },
-  mobility: { name: "Chair mobility", sequence: [step("sit_to_stand"), step("shoulder_mobility"), step("arm_raise")] },
+  mobility: { name: "Chair mobility", sequence: [step("sit_to_stand"), step("shoulder_mobility"), step("arm_raise"), step("finger_opening", { optional: true })] },
 });
 
-const SEATED_SAFE = new Set(["arm_raise", "shoulder_mobility", "smile", "eyebrow_raise", "cheek_puff", "lip_purse"]);
+const SEATED_SAFE = new Set(["arm_raise", "shoulder_mobility", "smile", "eyebrow_raise", "cheek_puff", "lip_purse", "finger_opening"]);
 
 /**
  * Build a recommended starter plan from wizard answers. Returns null for categories that
