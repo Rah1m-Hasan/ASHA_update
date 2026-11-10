@@ -9,10 +9,12 @@ import { ChevronIcon } from "@/components/ui/icons";
 import { Board } from "@/features/eyespeak/Board";
 import { Calibration } from "@/features/eyespeak/Calibration";
 import type { CalibrationResult, Feed } from "@/features/eyespeak/Calibration";
+import { eyeOpenness } from "@/features/eyespeak/cursor-logic.js";
 import { EyeOverlay } from "@/features/eyespeak/EyeOverlay";
 import { BOARD_LABEL, BOARD_LIMITS, boardFor, extractGazeFeatures, predictGaze } from "@/features/eyespeak/gaze";
 import type { Features, Sample } from "@/features/eyespeak/gaze";
 import { eyeSpeakStore, useEyeSpeak } from "@/features/eyespeak/store";
+import type { CursorClick } from "@/features/eyespeak/store";
 import { CameraView } from "@/features/perception/CameraView";
 import { useActiveModule, usePerception, usePerceptionEvent } from "@/features/perception/PerceptionProvider";
 import type { FrameLandmarks } from "@/lib/engine/types";
@@ -25,12 +27,18 @@ const DWELL = [
   { ms: 1200, label: "1.2 s" },
   { ms: 1500, label: "1.5 s" },
 ];
+const CLICKS: { value: CursorClick; label: string }[] = [
+  { value: "blink", label: "Slow blink" },
+  { value: "dwell", label: "Hold your look" },
+  { value: "both", label: "Either" },
+];
+const pill = (on: boolean) => `rounded-full px-3 py-1 text-sm font-medium ${on ? "bg-white text-ink shadow-sm" : "text-muted"}`;
 
 export default function EyeSpeakPage() {
   useActiveModule("eyespeak");
   const { state: camera, mirrored } = usePerception();
   const es = useEyeSpeak();
-  const consumer = useRef<((f: Features, t: number) => void) | null>(null);
+  const consumer = useRef<((f: Features, t: number, open: number | null) => void) | null>(null);
   const feed: Feed = useCallback((c) => {
     consumer.current = c;
   }, []);
@@ -50,7 +58,7 @@ export default function EyeSpeakPage() {
   usePerceptionEvent<FrameLandmarks>("landmarks", (f) => {
     const features = extractGazeFeatures(f.face, f.videoSize.width, f.videoSize.height) as Features;
     const t = f.faceAt ?? f.timestampMs;
-    consumer.current?.(features, t);
+    consumer.current?.(features, t, eyeOpenness(f.face, f.videoSize.width, f.videoSize.height));
     const r = rate.current;
     if (r.last && t > r.last) r.fps = r.fps ? r.fps * 0.9 + (1000 / (t - r.last)) * 0.1 : 1000 / (t - r.last);
     r.last = t;
@@ -68,6 +76,7 @@ export default function EyeSpeakPage() {
   const tracking = camera === "on" && !!live?.valid;
   const validation = es.checked ? es.model?.validation ?? null : null;
   const size = boardFor(validation);
+  const cursorOk = size === 9 || size === 6;
   const screenChanged = !!es.screen && typeof window !== "undefined" && (Math.abs(es.screen.w - innerWidth) > innerWidth * 0.1 || Math.abs(es.screen.h - innerHeight) > innerHeight * 0.1);
 
   const finished = (r: CalibrationResult) => {
@@ -221,7 +230,7 @@ export default function EyeSpeakPage() {
         <h2 id="look-title" className="text-base font-semibold text-ink">
           3. Look to choose
         </h2>
-        <p className="mt-0.5 mb-3 text-sm text-muted">Hold your gaze on a tile until it fills. Asha says it aloud. Requests like Water ask “Send to your caregiver?” and you answer by looking at Yes or No.</p>
+        <p className="mt-0.5 mb-3 text-sm text-muted">Hold your gaze on a tile until it fills, or blink slowly while looking at it. Asha says it aloud. Requests like Water ask “Send to your caregiver?” and you answer by looking at Yes or No.</p>
         <Button onClick={openBoard} disabled={!size || camera !== "on"} className={DIM} data-testid="open-board">
           {size ? `Open the board (${BOARD_LABEL[size]})` : "Open the board"}
         </Button>
@@ -231,13 +240,47 @@ export default function EyeSpeakPage() {
             <span className="font-medium text-ink">Selection time</span>
             <div className="flex gap-1 rounded-full bg-wash p-1" role="group" aria-label="Selection time">
               {DWELL.map((d) => (
-                <button key={d.ms} aria-pressed={es.dwellMs === d.ms} onClick={() => eyeSpeakStore.setDwell(d.ms)} className={`rounded-full px-3 py-1 text-sm font-medium ${es.dwellMs === d.ms ? "bg-white text-ink shadow-sm" : "text-muted"}`}>
+                <button key={d.ms} aria-pressed={es.dwellMs === d.ms} onClick={() => eyeSpeakStore.setDwell(d.ms)} className={pill(es.dwellMs === d.ms)}>
                   {d.label}
                 </button>
               ))}
             </div>
           </div>
           <Switch checked={es.showDot} onChange={(showDot) => eyeSpeakStore.set({ showDot })} label="Show where Asha thinks you’re looking" description="A ring follows your gaze on the board." />
+        </div>
+      </section>
+
+      <section aria-labelledby="cursor-title" className="mb-10">
+        <h2 id="cursor-title" className="text-base font-semibold text-ink">
+          4. Use your eyes as a mouse
+        </h2>
+        <p className="mt-0.5 mb-3 text-sm text-muted">
+          A ring follows your gaze on every Asha page. Look at a button and blink slowly, with your eyes closed for about half a second, to click it. Normal blinks don’t click. When buttons are too close together for your accuracy, Asha shows them as big tiles to choose from.
+        </p>
+        <Button
+          onClick={() => eyeSpeakStore.set({ cursor: !es.cursor, cursorPaused: false })}
+          disabled={!es.cursor && (!cursorOk || camera !== "on")}
+          variant={es.cursor ? "secondary" : "primary"}
+          className={DIM}
+          data-testid="cursor-toggle"
+        >
+          {es.cursor ? "Turn off eye cursor" : "Turn on eye cursor"}
+        </Button>
+        {!cursorOk && <p className="mt-2 text-xs text-muted">Available after a calibration accurate enough for 6 or 9 tiles. Ordinary buttons are smaller than board tiles.</p>}
+        <div className="mt-4 divide-y divide-line rounded-2xl bg-white px-5 ring-1 ring-line">
+          <div className="flex flex-wrap items-center justify-between gap-3 py-3">
+            <span className="font-medium text-ink">Click with</span>
+            <div className="flex flex-wrap gap-1 rounded-full bg-wash p-1" role="group" aria-label="Click with">
+              {CLICKS.map((c) => (
+                <button key={c.value} aria-pressed={es.cursorClick === c.value} onClick={() => eyeSpeakStore.set({ cursorClick: c.value })} className={pill(es.cursorClick === c.value)}>
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="py-3 text-sm text-muted">
+            “Hold your look” clicks after the selection time above, so resting your eyes on a button clicks it. While the eye cursor is on, Asha reads only your face on most pages so the ring stays steady: hand signs pause, and with blink clicks the blink requests pause too.
+          </p>
         </div>
       </section>
 

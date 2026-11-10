@@ -64,14 +64,21 @@ export class Perception extends EventTarget {
     // camera rate there; the others keep their slow default cadence (model router).
     this.posePeriod = move?.pose ? 50 : 500;
     // EyeSpeak needs only the face model, as often as the device allows: a pose or hand pass on the
-    // same frame delays the next face result, and gaze dwell needs steady results.
-    this.faceOnly = name === "eyespeak";
+    // same frame delays the next face result, and gaze dwell needs steady results. The eye cursor
+    // needs the same on every page, except pages that are about hands or the body.
+    const needsBody = name === "move" || name === "posture" || name === "fingerspeak" || name === "senseassist" || !!this.neuralHandActive;
+    this.faceOnly = name === "eyespeak" || (!!this.gazeCursor && !needsBody);
     this.worker?.postMessage({
       type: "schedule",
       handsPriority: this.handsPriority,
       posePeriod: this.posePeriod,
       faceOnly: this.faceOnly,
     });
+  }
+  /** The eye cursor reads the face points on every page while it is on. */
+  setGazeCursor(on) {
+    this.gazeCursor = !!on;
+    this.setActiveModule(this.activeModule);
   }
   /** Move's model router: which landmark models the current exercise needs at full rate. */
   setMoveTracking(modules = {}) {
@@ -426,8 +433,8 @@ export class Perception extends EventTarget {
       yolo: this.yoloResult,
     };
     this.emit("frame", this.snapshot);
-    // Move and EyeSpeak read raw landmarks (pose/hands, or the 478 face points with irises).
-    if (this.activeModule === "move" || this.activeModule === "eyespeak") this.emitLandmarks(d, analysis);
+    // Move, EyeSpeak and the eye cursor read raw landmarks (pose/hands, or the 478 face points with irises).
+    if (this.activeModule === "move" || this.activeModule === "eyespeak" || this.gazeCursor) this.emitLandmarks(d, analysis);
     this.draw();
   }
   /**

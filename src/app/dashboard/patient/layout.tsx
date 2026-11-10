@@ -5,6 +5,7 @@ import { StatusPill } from "@/components/dashboard/StatusPill";
 import { VisitTracker } from "@/features/home/VisitTracker";
 import { CameraDock } from "@/components/patient/CameraDock";
 import { ConfirmRequestDialog } from "@/components/patient/ConfirmRequestDialog";
+import { EyeCursor } from "@/features/eyespeak/EyeCursor";
 import { PerceptionProvider } from "@/features/perception/PerceptionProvider";
 import { RequestProvider } from "@/features/requests/RequestProvider";
 import { SignalTriggers } from "@/features/requests/SignalTriggers";
@@ -28,6 +29,7 @@ export default function PatientLayout({ children }: { children: React.ReactNode 
             {children}
           </DashboardShell>
           <ConfirmRequestDialog />
+          <EyeCursor />
         </RequestProvider>
       </PatientProfileProvider>
     </PerceptionProvider>

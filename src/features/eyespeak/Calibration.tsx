@@ -4,7 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { CAPTURE, CHECK_CAPTURE, CHECK_TARGETS, calibrationTargets, fitGazeModel, validateGazeModel } from "./gaze";
 import type { Features, GazeModel, Sample, Validation } from "./gaze";
 
-export type Feed = (consumer: ((f: Features, t: number) => void) | null) => void;
+/** Gaze features for each face result, with how open the eyes are (for slow-blink clicks). */
+export type Feed = (consumer: ((f: Features, t: number, open: number | null) => void) | null) => void;
 export type CalibrationResult = { model: GazeModel; validation: Validation; check: Sample[] };
 
 type Step = { x: number; y: number; check: boolean };

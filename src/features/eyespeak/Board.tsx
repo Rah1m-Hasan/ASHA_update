@@ -4,6 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useRequests } from "@/features/requests/RequestProvider";
 import { speak } from "@/features/speech/speak";
 import { cn } from "@/lib/cn";
+import { LongBlink, tileBefore } from "./cursor-logic.js";
 import { BOARDS, CONFIRM_TILES, DwellSelector, TileTracker, predictGaze, smoothPoint } from "./gaze";
 import type { BoardSize, GazeModel, Tile } from "./gaze";
 import type { Feed } from "./Calibration";
@@ -16,7 +17,8 @@ const SLOW_FPS = 5;
 
 /**
  * Full screen tiles chosen by looking. A tile is chosen after the smoothed gaze point stays on it for
- * the selection time (brief jitter, blinks and slow frames pause rather than restart it); touch works
+ * the selection time (brief jitter, blinks and slow frames pause rather than restart it), or at once
+ * with a slow blink (eyes closed for about half a second; natural blinks don't count); touch works
  * on every tile too. Needs (water, toilet…) go through the
  * same confirmation as everywhere in Asha, answered here with two halves of the screen.
  */
@@ -27,6 +29,7 @@ export function Board({ size, model, dwellMs, showDot, feed, onExit }: { size: E
   const tiles = useMemo(() => (confirming ? CONFIRM_TILES : board.tiles), [confirming, board]);
   const cols = confirming ? 2 : board.cols;
   const grid = useRef<HTMLDivElement>(null);
+  const root = useRef<HTMLDivElement>(null);
   const dot = useRef<HTMLDivElement>(null);
   const rects = useRef<Rect[]>([]);
   const nodes = useRef(new Map<string, HTMLElement>());
@@ -80,6 +83,10 @@ export function Board({ size, model, dwellMs, showDot, feed, onExit }: { size: E
     dwell.hold(was ? (rects.current.find((r) => was.x >= r.x && was.x <= r.x + r.w && was.y >= r.y && was.y <= r.y + r.h)?.id ?? null) : null);
     let lostSince: number | null = null;
     let lastT: number | null = null;
+    const blink = new LongBlink();
+    // Where the eyes were, moment by moment, so a slow blink chooses the tile they had settled on.
+    const trail: { t: number; x: number; y: number }[] = [];
+    const steady = Math.min(0.14, Math.max(0.06, (model.validation?.p90Error ?? 0.1) * 0.8));
     let rate = 0;
     const paint = (id: string | null, progress: number) => {
       for (const [key, el] of nodes.current) el.style.setProperty("--dwell", key === id ? String(progress) : "0");
@@ -87,7 +94,7 @@ export function Board({ size, model, dwellMs, showDot, feed, onExit }: { size: E
     const lose = (t: number, reason: string) => {
       // A blink or a frame or two without irises pauses the fill; only a longer loss clears it.
       lostSince ??= t;
-      if (t - lostSince < LOSS_MS) return;
+      if (t - lostSince < LOSS_MS || blink.closing) return;
       dwell.update(null, t, false);
       tracker.reset();
       smooth.current = null;
@@ -95,12 +102,27 @@ export function Board({ size, model, dwellMs, showDot, feed, onExit }: { size: E
       if (dot.current) dot.current.style.opacity = "0";
       setStatus(reason);
     };
-    feed((f, t) => {
+    // A short message that outlasts the per-frame status for a few seconds.
+    let hint: { text: string; until: number } | null = null;
+    const pick = (id: string, via: "blink" | "dwell") => {
+      if (root.current) root.current.dataset.chosenBy = via;
+      dwell.hold(id);
+      paint(null, 0);
+      const tile = tiles.find((x) => x.id === id);
+      if (tile) chooseRef.current(tile);
+    };
+    feed((f, t, open) => {
       if (lastT !== null && t > lastT) rate = rate ? rate * 0.9 + (1000 / (t - lastT)) * 0.1 : 1000 / (t - lastT);
       lastT = t;
       if (document.querySelector("dialog[open]")) {
         setStatus("Answer the question on screen first.");
         return;
+      }
+      const b = blink.update(open, t);
+      if (b?.kind === "click") {
+        const id = tileBefore(trail, rects.current, b.closedAt, { radius: steady });
+        if (id) return pick(id, "blink");
+        hint = { text: "Your eyes were still moving. Rest them on a tile for a moment, then blink slowly.", until: t + 3000 };
       }
       if (!f.valid) return lose(t, f.reason);
       const p = predictGaze(model, f.values, { requireValidation: false }) as { valid: boolean; x?: number; y?: number; reason?: string };
@@ -111,15 +133,13 @@ export function Board({ size, model, dwellMs, showDot, feed, onExit }: { size: E
         dot.current.style.opacity = "1";
         dot.current.style.transform = `translate(${s.x * innerWidth}px, ${s.y * innerHeight}px)`;
       }
-      setStatus(rate && rate < SLOW_FPS ? `Tracking is slow on this device (${Math.round(rate)} per second), so hold your gaze a little longer. Closing other apps helps.` : "");
+      setStatus(hint && t < hint.until ? hint.text : rate && rate < SLOW_FPS ? `Tracking is slow on this device (${Math.round(rate)} per second), so hold your gaze a little longer. Closing other apps helps.` : "");
       const over = tracker.update(s, rects.current, t);
+      trail.push(s);
+      while (trail.length && trail[0].t < t - 2500) trail.shift();
       const chosen = dwell.update(over, t, true);
       paint((dwell.target as string | null) ?? null, dwell.progress ?? 0);
-      if (chosen) {
-        paint(null, 0);
-        const tile = tiles.find((x) => x.id === chosen);
-        if (tile) chooseRef.current(tile);
-      }
+      if (chosen) pick(chosen as string, "dwell");
     });
     return () => feed(null);
   }, [feed, model, dwell, tiles]);
@@ -130,7 +150,7 @@ export function Board({ size, model, dwellMs, showDot, feed, onExit }: { size: E
     return () => removeEventListener("keydown", key);
   }, [onExit]);
 
-  const saidNote = said.length ? `Said: ${said.join(" · ")}` : "Look at a tile and hold your gaze until it fills.";
+  const saidNote = said.length ? `Said: ${said.join(" · ")}` : "Look at a tile and hold your gaze until it fills, or blink slowly.";
   const deliveryNote: Partial<Record<typeof delivery.state, string>> = {
     sending: "Sending to your caregiver…",
     sent: "Sent to your caregiver.",
@@ -140,7 +160,7 @@ export function Board({ size, model, dwellMs, showDot, feed, onExit }: { size: E
   const note = confirming ? `Send to your caregiver: “${pending!.text}”?` : (delivery !== saidOver && deliveryNote[delivery.state]) || saidNote;
 
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col bg-wash" role="dialog" aria-modal="true" aria-label="Look to choose" data-testid="gaze-board" data-size={confirming ? 2 : size}>
+    <div ref={root} className="fixed inset-0 z-[60] flex flex-col bg-wash" role="dialog" aria-modal="true" aria-label="Look to choose" data-testid="gaze-board" data-size={confirming ? 2 : size}>
       <div className="flex min-h-12 items-center gap-3 px-4 pt-2 text-sm">
         <p role="status" aria-live="polite" className="min-w-0 flex-1 truncate text-ink" data-testid="board-note">
           {note}

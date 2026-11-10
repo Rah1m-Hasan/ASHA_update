@@ -57,6 +57,8 @@ export interface PerceptionInstance extends EventTarget {
   enableYolo?(): Promise<void>;
   /** Move's model router: which landmark models run at full rate. */
   setMoveTracking?(modules: { pose?: boolean; hands?: boolean }): void;
+  /** Eye cursor on: face points on every page, and only the face model where hands and body aren't needed. */
+  setGazeCursor?(on: boolean): void;
   /** Swap between the front ("user") and back ("environment") camera; resolves to the one in use. */
   setFacingMode?(facing: "user" | "environment"): Promise<string>;
 }

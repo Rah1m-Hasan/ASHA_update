@@ -54,3 +54,6 @@
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+/* The eye cursor's bar sits over the bottom of the page; leave room so nothing hides behind it. */
+html[data-eye-cursor] body { padding-bottom: 7rem; }
