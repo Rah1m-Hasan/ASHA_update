@@ -1,6 +1,7 @@
 // EyeSpeak in the app, end to end with simulated eyes: the camera view shows the irises, the raw
 // eye dot follows where the eyes look, a 12-dot calibration measures accuracy and picks a board,
-// looking at "Water" proposes a request and looking at "Yes, send" confirms it. Noisy eyes get a
+// looking at "Water" proposes a request and looking at "Yes, send" confirms it. Accuracy for two
+// halves reaches every word in steps; blink scanning needs no calibration. Noisy eyes get a
 // smaller board or none. Also: the spelling keyboard and Care journal open inside the app.
 //   node tests/eyespeak-browser.mjs   (needs the dev server, NEXT_TEST_URL, default http://127.0.0.1:4180)
 // The camera is replaced by a fake engine that emits the same "landmarks" events as the real one,
@@ -34,7 +35,9 @@ export class Perception extends EventTarget {
 // Runs in the page: a face whose irises turn toward window.__look (screen fractions), or toward the
 // calibration dot on screen. Gaussian noise of window.__noise (image fractions) on each iris.
 // Real-world options: window.__frameMs (time between face results) with window.__lateMs extra random
-// delay, and window.__blinkEvery (ms) for a 200 ms blink with the eyes closed.
+// delay, window.__blinkEvery (ms) for a 200 ms blink with the eyes closed, window.__closedFrom/Until
+// (performance.now times) for a slow blink, and window.__checkBias, an error added to where the eyes
+// look only while calibration checks accuracy, to get a measured accuracy that fits 2 halves.
 const eyesScript = () => {
   const gauss = () => Math.sqrt(-2 * Math.log(1 - Math.random())) * Math.cos(2 * Math.PI * Math.random());
   window.__look = { x: 0.5, y: 0.5 };
@@ -44,10 +47,12 @@ const eyesScript = () => {
     window.__eyes = setTimeout(tick, (window.__frameMs ?? 33) + Math.random() * (window.__lateMs ?? 0));
     if (!window.__perception?.running) return;
     const dot = document.querySelector("[data-testid=gaze-target]");
-    const g = dot ? { x: Number(dot.dataset.x), y: Number(dot.dataset.y) } : window.__look;
+    const checking = !!dot && document.querySelector("[data-testid=calibration] p")?.textContent.startsWith("Checking");
+    const g = dot ? { x: Number(dot.dataset.x) + (checking ? window.__checkBias ?? 0 : 0), y: Number(dot.dataset.y) } : window.__look;
     const t = performance.now();
     const blinking = window.__blinkEvery && (t - started) % window.__blinkEvery < 200;
-    const lid = blinking ? 0.0005 : 0.01;
+    const closed = blinking || (t >= (window.__closedFrom ?? 0) && t < (window.__closedUntil ?? 0));
+    const lid = closed ? 0.0005 : 0.01;
     const face = Array.from({ length: 478 }, () => ({ x: 0.5, y: 0.5, z: 0 }));
     const put = (i, x, y) => (face[i] = { x, y, z: 0 });
     put(33, 0.4, 0.4), put(133, 0.46, 0.4), put(159, 0.43, 0.4 - lid), put(145, 0.43, 0.4 + lid);
@@ -91,6 +96,12 @@ const lookAtTile = (page, id) =>
     const r = document.querySelector(`[data-tile="${id}"]`).getBoundingClientRect();
     window.__look = { x: (r.left + r.width / 2) / innerWidth, y: (r.top + r.height / 2) / innerHeight };
   }, id);
+/** Close both eyes for `ms`, then open them again. */
+async function slowBlink(page, ms = 650) {
+  await page.evaluate((ms) => Object.assign(window, { __closedFrom: performance.now(), __closedUntil: performance.now() + ms }), ms);
+  await page.waitForTimeout(ms + 300);
+}
+const tileIds = (page) => page.locator("[data-tile]").evaluateAll((els) => els.map((el) => el.dataset.tile));
 const rawDotX = (page) => page.getByTestId("raw-eye-dot").evaluate((el) => parseFloat(el.style.left));
 
 async function startEyes(page) {
@@ -188,6 +199,101 @@ async function startEyes(page) {
   await context.close();
 }
 
+// ---------- 1c. Accuracy for only two halves: every word is reached in steps of two halves ----------
+{
+  const { context, page } = await setup({ eyes: { __checkBias: 0.14 } });
+  await startEyes(page);
+  await page.getByRole("button", { name: "Start calibration" }).click();
+  await page.getByTestId("accuracy").waitFor({ timeout: 60000 });
+  assert.equal(await page.getByTestId("board-size").textContent(), "2 halves of the screen, chosen in steps");
+  assert.equal(await page.getByTestId("cursor-toggle").isDisabled(), true, "the eye cursor needs more accuracy than halves");
+  await page.getByTestId("open-board").click();
+  await page.locator("[data-testid=gaze-board][data-size='steps']").waitFor();
+  assert.deepEqual(await tileIds(page), ["g-yesno", "g-more"]);
+  assert.match(await page.locator('[data-tile="g-more"]').textContent(), /Water · Food · Toilet/, "More words lists what it holds");
+  // Look right: More words opens two more halves.
+  await lookAtTile(page, "g-more");
+  await page.getByTestId("board-note").getByText("More words. Close your eyes for 2 seconds to go back.").waitFor();
+  assert.deepEqual(await tileIds(page), ["g-wft", "g-rest"]);
+  // The eyes are still on the right, now "Pain and more": nothing is chosen until they move.
+  await page.waitForTimeout(2000);
+  assert.deepEqual(await tileIds(page), ["g-wft", "g-rest"], "a still gaze does not choose the new half under it");
+  await lookAtTile(page, "g-wft");
+  await page.getByTestId("board-note").getByText("More words › Water, food or toilet.", { exact: false }).waitFor();
+  assert.deepEqual(await tileIds(page), ["water", "g-ft"]);
+  // Water is now under the eyes. A slow blink chooses it at once.
+  await page.waitForTimeout(500);
+  await slowBlink(page);
+  await page.getByTestId("board-note").getByText("Send to your caregiver: “I need water”?").waitFor();
+  assert.equal(await page.getByTestId("gaze-board").getAttribute("data-chosen-by"), "blink");
+  await lookAtTile(page, "confirm-yes");
+  await page.getByTestId("board-note").getByText("Recognised on this device").waitFor();
+  assert.deepEqual(await tileIds(page), ["g-yesno", "g-more"], "after a word, the board starts from the top");
+  // Closing the eyes for two seconds goes back a step; so does Back.
+  // To choose the side the eyes are already on, they glance away (here, to the top left corner) and back.
+  await look(page, 0.02, 0.02);
+  await page.waitForTimeout(1200);
+  await lookAtTile(page, "g-more");
+  await page.getByTestId("board-note").getByText("More words.", { exact: false }).waitFor();
+  await slowBlink(page, 2200);
+  await page.waitForFunction(() => [...document.querySelectorAll("[data-tile]")].map((el) => el.dataset.tile).join() === "g-yesno,g-more");
+  assert.equal(await page.getByTestId("board-back").count(), 0);
+  await page.locator('[data-tile="g-more"]').click();
+  await page.locator('[data-tile="g-rest"]').click();
+  assert.deepEqual(await tileIds(page), ["g-ph", "g-ct"]);
+  await page.getByTestId("board-back").click();
+  assert.deepEqual(await tileIds(page), ["g-wft", "g-rest"]);
+  console.log("  2-halves accuracy: More words, then Water, food or toilet, then Water by slow blink, confirmed by looking; eyes closed 2 s went back");
+  await context.close();
+}
+
+// ---------- 1d. Blink scanning: no calibration, a light moves and a slow blink chooses ----------
+{
+  const { context, page } = await setup();
+  await startEyes(page);
+  assert.equal(await page.getByTestId("open-board").isDisabled(), true, "no gaze board without calibration");
+  await page.getByTestId("open-scan").click();
+  const board = page.locator("[data-testid=gaze-board][data-mode='scan']");
+  await board.waitFor();
+  assert.equal(await page.getByTestId("gaze-dot").count(), 0, "no gaze ring when scanning");
+  assert.equal((await tileIds(page)).length, 9, "all 9 words");
+  // Blink slowly once Water is lit.
+  await page.locator('[data-tile="water"][data-scan]').waitFor({ timeout: 20000 });
+  await page.waitForTimeout(350);
+  await slowBlink(page);
+  await page.getByTestId("board-note").getByText("Send to your caregiver: “I need water”? Blink slowly when your answer is lit.").waitFor();
+  assert.equal(await board.getAttribute("data-chosen-by"), "scan");
+  // The answers start with No, then Yes, send.
+  await page.locator('[data-tile="confirm-no"][data-scan]').waitFor();
+  await page.locator('[data-tile="confirm-yes"][data-scan]').waitFor();
+  await page.waitForTimeout(350);
+  await slowBlink(page);
+  await page.getByTestId("board-note").getByText("Recognised on this device").waitFor();
+  // A blink that begins just as the light moves could be meant for either word: nothing is chosen.
+  const spoken = await page.evaluate(() => window.__utterances.length);
+  await page.evaluate(
+    () =>
+      new Promise((done) => {
+        const food = document.querySelector('[data-tile="food"]');
+        new MutationObserver((_, obs) => {
+          if (!food.dataset.scan) return;
+          obs.disconnect();
+          Object.assign(window, { __closedFrom: performance.now(), __closedUntil: performance.now() + 650 });
+          done();
+        }).observe(food, { attributes: true });
+      }),
+  );
+  await page.getByTestId("board-status").getByText("That blink began just as the light moved").waitFor();
+  assert.equal(await page.getByTestId("board-note").textContent(), "Recognised on this device. Connect a caregiver to deliver requests.", "the ambiguous blink chose nothing");
+  // Ordinary quick blinks don't choose either.
+  await page.evaluate(() => (window.__blinkEvery = 1500));
+  await page.waitForTimeout(6000);
+  assert.equal(await page.evaluate(() => window.__utterances.length), spoken, "natural blinks say nothing");
+  assert.equal(await page.getByTestId("board-note").textContent(), "Recognised on this device. Connect a caregiver to deliver requests.");
+  console.log("  blink scanning without calibration: Water and Yes, send chosen by slow blinks; a blink as the light moved and natural blinks chose nothing");
+  await context.close();
+}
+
 // ---------- 2. Noisy eyes: a smaller board or none, never a board the accuracy can't support ----------
 {
   const { context, page } = await setup({ noise: 0.0035 });
@@ -197,7 +303,7 @@ async function startEyes(page) {
   const mean = parseFloat(await page.getByTestId("mean-error").textContent()) / 100;
   const p90 = parseFloat(await page.getByTestId("p90-error").textContent()) / 100;
   const board = await page.getByTestId("board-size").textContent();
-  const expected = p90 <= 0.09 && mean <= 0.06 ? "9 tiles" : p90 <= 0.16 && mean <= 0.11 ? "6 large tiles" : p90 <= 0.26 && mean <= 0.18 ? "2 halves of the screen (Yes or No)" : "Not reliable enough yet";
+  const expected = p90 <= 0.09 && mean <= 0.06 ? "9 tiles" : p90 <= 0.16 && mean <= 0.11 ? "6 large tiles" : p90 <= 0.26 && mean <= 0.18 ? "2 halves of the screen, chosen in steps" : "Not reliable enough yet";
   assert.equal(board, expected, `board follows the measured accuracy (mean ${mean}, p90 ${p90})`);
   assert.notEqual(board, "9 tiles", "noisy eyes don't get the small tiles");
   assert.equal(await page.getByTestId("open-board").isDisabled(), board === "Not reliable enough yet");
@@ -246,4 +352,4 @@ async function startEyes(page) {
 
 await browser.close();
 assert.deepEqual(errors, [], "no page errors");
-console.log("EyeSpeak browser: visible eye tracking, calibration with measured accuracy, adaptive board, gaze request and confirmation, noisy-eye fallback, keyboard and Care in the app, phone layout passed");
+console.log("EyeSpeak browser: visible eye tracking, calibration with measured accuracy, adaptive board, steps of two halves, blink scanning without calibration, gaze request and confirmation, noisy-eye fallback, keyboard and Care in the app, phone layout passed");

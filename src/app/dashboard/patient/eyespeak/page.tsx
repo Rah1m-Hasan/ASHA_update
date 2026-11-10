@@ -47,7 +47,7 @@ export default function EyeSpeakPage() {
   // Face results per second, shown so a slow device is visible (gaze selection needs steady results).
   const rate = useRef({ last: 0, fps: 0 });
   const [fps, setFps] = useState(0);
-  const [overlay, setOverlay] = useState<null | "full" | "check" | "board">(null);
+  const [overlay, setOverlay] = useState<null | "full" | "check" | "board" | "scan">(null);
   const [result, setResult] = useState<CalibrationResult | null>(null);
   const [problem, setProblem] = useState("");
   useEffect(() => () => eyeSpeakStore.set({ boardOpen: false, inUse: false }), []);
@@ -89,9 +89,9 @@ export default function EyeSpeakPage() {
     setOverlay(null);
     if (reason) setProblem(reason);
   };
-  const openBoard = () => {
+  const openBoard = (kind: "board" | "scan" = "board") => {
     eyeSpeakStore.set({ boardOpen: true });
-    setOverlay("board");
+    setOverlay(kind);
   };
   const closeBoard = useCallback(() => {
     eyeSpeakStore.set({ boardOpen: false });
@@ -205,7 +205,7 @@ export default function EyeSpeakPage() {
             </div>
             {size === 0 ? (
               <p className="mt-4 text-sm text-ink">
-                Gaze isn’t accurate enough yet to choose even half the screen safely, so it stays off. It usually helps to light your face from the front, put the camera at eye level, sit 40–70 cm away and keep your head still. Touch and a switch work now.
+                Gaze isn’t accurate enough yet to choose even half the screen safely, so it stays off. It usually helps to light your face from the front, put the camera at eye level, sit 40–70 cm away and keep your head still. Blink scanning below works without it, and touch and a switch work too.
               </p>
             ) : (
               <p className="mt-4 text-sm text-muted">
@@ -230,14 +230,29 @@ export default function EyeSpeakPage() {
         <h2 id="look-title" className="text-base font-semibold text-ink">
           3. Look to choose
         </h2>
-        <p className="mt-0.5 mb-3 text-sm text-muted">Hold your gaze on a tile until it fills, or blink slowly while looking at it. Asha says it aloud. Requests like Water ask “Send to your caregiver?” and you answer by looking at Yes or No.</p>
-        <Button onClick={openBoard} disabled={!size || camera !== "on"} className={DIM} data-testid="open-board">
+        <p className="mt-0.5 mb-3 text-sm text-muted">
+          Hold your gaze on a tile until it fills, or blink slowly while looking at it. Asha says it aloud. Requests like Water ask “Send to your caregiver?” and you answer by looking at Yes or No.
+          {size === 2 && " Your accuracy fits two halves of the screen, so you choose in steps: each half opens two more until you reach your word. Water is three looks: More words, then Water, food or toilet, then Water. Close your eyes for 2 seconds to go back. To choose the same side twice, glance away and back, or blink slowly."}
+        </p>
+        <Button onClick={() => openBoard()} disabled={!size || camera !== "on"} className={DIM} data-testid="open-board">
           {size ? `Open the board (${BOARD_LABEL[size]})` : "Open the board"}
         </Button>
         {!size && <p className="mt-2 text-xs text-muted">Available after a calibration that is accurate enough.</p>}
+        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3 rounded-2xl bg-white px-5 py-4 ring-1 ring-line">
+          <span className="min-w-0 flex-1 basis-60">
+            <span className="block font-medium text-ink">Blink scanning</span>
+            <span className="block text-sm text-muted">No calibration needed. A light moves over all 9 words, one at a time, and a slow blink chooses the lit word. Slower than looking, but it works at any accuracy.</span>
+          </span>
+          <Button variant="secondary" onClick={() => openBoard("scan")} disabled={!tracking} className={DIM} data-testid="open-scan">
+            Start blink scanning
+          </Button>
+        </div>
         <div className="mt-4 divide-y divide-line rounded-2xl bg-white px-5 ring-1 ring-line">
           <div className="flex flex-wrap items-center justify-between gap-3 py-3">
-            <span className="font-medium text-ink">Selection time</span>
+            <span>
+              <span className="block font-medium text-ink">Selection time</span>
+              <span className="block text-xs text-muted">Blink scanning lights each word for {((es.dwellMs + 600) / 1000).toFixed(1)} s.</span>
+            </span>
             <div className="flex gap-1 rounded-full bg-wash p-1" role="group" aria-label="Selection time">
               {DWELL.map((d) => (
                 <button key={d.ms} aria-pressed={es.dwellMs === d.ms} onClick={() => eyeSpeakStore.setDwell(d.ms)} className={pill(es.dwellMs === d.ms)}>
@@ -299,6 +314,7 @@ export default function EyeSpeakPage() {
 
       {(overlay === "full" || overlay === "check") && <Calibration mode={overlay} model={es.model} feed={feed} onDone={finished} onCancel={stopped} />}
       {overlay === "board" && size !== 0 && es.model && <Board size={size} model={es.model} dwellMs={es.dwellMs} showDot={es.showDot} feed={feed} onExit={closeBoard} />}
+      {overlay === "scan" && <Board size={9} mode="scan" model={es.model} dwellMs={es.dwellMs} showDot={false} feed={feed} onExit={closeBoard} />}
     </div>
   );
 }

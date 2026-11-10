@@ -37,7 +37,7 @@ export function boardFor(v: Pick<Validation, "meanError" | "p90Error"> | null | 
 export const BOARD_LABEL: Record<BoardSize, string> = {
   9: "9 tiles",
   6: "6 large tiles",
-  2: "2 halves of the screen (Yes or No)",
+  2: "2 halves of the screen, chosen in steps",
   0: "Not reliable enough yet",
 };
 
@@ -58,6 +58,40 @@ export const BOARDS: Record<Exclude<BoardSize, 0>, { cols: number; rows: number;
   6: { cols: 3, rows: 2, tiles: [YES, NO, WATER, TOILET, PAIN, HELP] },
   2: { cols: 2, rows: 1, tiles: [YES, NO] },
 };
+
+/**
+ * With accuracy for only two halves of the screen, every word is still reachable: each look picks a
+ * half, and a half is either a word or two more halves. Water is three looks: More words, then
+ * Water, food or toilet, then Water. Yes and No are two.
+ */
+export type Group = { id: string; label: string; bn: string; options: [Step, Step] };
+export type Step = Tile | Group;
+const group = (id: string, label: string, bn: string, a: Step, b: Step): Group => ({ id, label, bn, options: [a, b] });
+export const isGroup = (s: Step): s is Group => "options" in s;
+export const wordsIn = (s: Step): string[] => (isGroup(s) ? s.options.flatMap(wordsIn) : [s.label]);
+export const HALF_STEPS: Group = group(
+  "root",
+  "",
+  "",
+  group("g-yesno", "Yes or No", "হ্যাঁ বা না", YES, NO),
+  group(
+    "g-more",
+    "More words",
+    "আরও শব্দ",
+    group("g-wft", "Water, food or toilet", "পানি, খাবার বা টয়লেট", WATER, group("g-ft", "Food or toilet", "খাবার বা টয়লেট", FOOD, TOILET)),
+    group("g-rest", "Pain and more", "ব্যথা ও আরও", group("g-ph", "Pain or come here", "ব্যথা বা এখানে আসুন", PAIN, HELP), group("g-ct", "Comfort or thank you", "আরাম বা ধন্যবাদ", COMFORT, THANKS)),
+  ),
+);
+/** The group reached by following `path` (group ids) from the top. */
+export function stepAt(path: string[]): Group {
+  let node = HALF_STEPS;
+  for (const id of path) {
+    const next = node.options.find((o) => o.id === id);
+    if (!next || !isGroup(next)) break;
+    node = next;
+  }
+  return node;
+}
 
 /** Two halves for confirming a request by gaze. */
 export const CONFIRM_TILES: Tile[] = [
