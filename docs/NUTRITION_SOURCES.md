@@ -24,6 +24,20 @@ USDA states its FDC data are public domain under [CC0 1.0](https://creativecommo
 
 All values above are per **100 g edible food**, not per serving. Numeric zero is a reported zero, never an imputed missing value. Selected API nutrient numbers: 208 energy kcal, 203 protein g, 204 fat g, 205 carbohydrate g, 291 fibre g, 307 sodium mg. The six values were verified directly against the official API. The public sample key was used for development verification; the shipped module has no API key and makes no nutrition-data network request.
 
+## Records added for Nutrition V5 (dashboard)
+
+`src/features/nutrition/catalog.js` reuses the eleven records above unchanged and adds five. The FoodData Central API host was blocked in the build environment, so these values were transcribed from two published copies of the same USDA SR Legacy data (the VA VistA nutrient file and FoodData Central CSV extracts) that agree. They are marked `cross_checked`, their fibre is left **unknown** until verified, and `node scripts/verify-nutrition-records.mjs` re-checks every record, portion and spoon weight against the API.
+
+| FDC ID | Original food description | State | kcal | Protein g | Fat g | Carbohydrate g | Fibre g | Sodium mg |
+| --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| [171688](https://fdc.nal.usda.gov/food-details/171688/nutrients) | Apples, raw, with skin | raw | 52 | 0.26 | 0.17 | 13.81 | unknown | 1 |
+| [167762](https://fdc.nal.usda.gov/food-details/167762/nutrients) | Strawberries, raw | raw | 32 | 0.67 | 0.3 | 7.68 | unknown | 1 |
+| [168173](https://fdc.nal.usda.gov/food-details/168173/nutrients) | Strawberries, frozen, unsweetened | frozen | 35 | 0.43 | 0.11 | 9.13 | unknown | 2 |
+| [168174](https://fdc.nal.usda.gov/food-details/168174/nutrients) | Strawberries, frozen, sweetened, sliced | frozen | 96 | 0.53 | 0.13 | 25.92 | unknown | 3 |
+| [168877](https://fdc.nal.usda.gov/food-details/168877/nutrients) | Rice, white, long-grain, regular, raw, enriched | dried | 365 | 7.13 | 0.66 | 79.95 | unknown | 5 |
+
+Portion weights (USDA SR Legacy food portions, edible grams, cross-checked in published copies): banana small 101 g, medium 118 g, large 136 g; apple small 149 g, medium 182 g, large 223 g; cooked rice 1 cup 158 g; soybean oil 1 tsp 4.5 g, 1 tbsp 13.6 g; granulated sugar 1 tsp 4.2 g; table salt 1 tsp 6.0 g. ASHA's own template, shown to the person as an assumption: one bowl of dal = 100 g boiled lentils. How the V5 calculator uses these is in `NUTRITION_V5.md`.
+
 ## Bangladesh data audit
 
 The official [FAO directory entry for the 2013 Food Composition Table for Bangladesh](https://www.fao.org/food-composition/tables-and-databases/detail/%28country--date%29-title-1/en) provides free access to the University of Dhaka table. Its [PDF](https://www.fao.org/fileadmin/templates/food_composition/documents/FCT_10_2_14_final_version.pdf) credits Shaheen and colleagues, INFS/CARS, University of Dhaka. An explicit commercial redistribution licence was not established in this audit. Free access alone is insufficient to assume that licence. No numbers from that table are bundled. Obtain written reuse terms and complete food-matching/quality review before importing it. FAO's directory is a catalogue, not endorsement of each included dataset.

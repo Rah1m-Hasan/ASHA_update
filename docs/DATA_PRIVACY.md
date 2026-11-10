@@ -12,3 +12,8 @@
 - Production storage encryption, backups, region, retention, staff access, incident handling and applicable health-data regulation need a deployment-specific assessment. A clinician role is self-attested and is not verified professional identity. No continuously staffed monitoring service is claimed.
 
 The browser suite verifies ciphertext in IndexedDB, incorrect passphrase rejection, lock/unlock, export payload, deletion and explicit clinic record sharing. Security tests cover consent-write races, deletion failures, tenant/role/patient isolation and expiry. Physical-device, accessibility and external security review remain pending.
+
+## Nutrition V5 (dashboard)
+
+Camera frames and uploaded photos are processed on the device in a worker and are never uploaded or stored. An uploaded photo is redrawn onto a canvas (at most 1280 px), which drops its location, camera and time metadata; that copy is only held in memory for the current meal. Meal logs (answers, numbers, source ids, model id, capture method; no photo) are kept in this browser's local storage under `asha_live_nutrition_v5`, with export, per-meal delete and delete-all. "Ask ASHA about this meal" only types a question into Talk to Asha; nothing is sent until the person presses Send, under the existing cloud consent. No nutrition data is shared with caregivers or clinicians.
+

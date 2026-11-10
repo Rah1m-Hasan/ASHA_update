@@ -7,6 +7,7 @@ import {
   InboxIcon,
   MicIcon,
   MoveIcon,
+  NutritionIcon,
   PostureIcon,
   SettingsIcon,
   SparkIcon,
@@ -44,6 +45,7 @@ export const NAV: Record<Role, NavGroup[]> = {
       items: [
         { href: `${P}/vitalsense`, label: "VitalSense", icon: HeartIcon },
         { href: `${P}/move`, label: "Move", icon: MoveIcon },
+        { href: `${P}/nutrition`, label: "Nutrition", icon: NutritionIcon },
         { href: `${P}/posture`, label: "Posture", icon: PostureIcon },
       ],
     },

@@ -18,6 +18,16 @@
       "bytes": 48259,
       "sha256": "6ef726f355b791129f7ddf3f62e7877a16b9b777abe87004b8ab306e6b9cf265",
       "source": "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/ort.wasm.min.mjs"
+    },
+    {
+      "file": "models/efficientnet_lite0_int8.tflite",
+      "bytes": 5434517,
+      "sha256": "bc2ffe19c1118de0c0c2a9088992da5589722656e0fba81421385300a4a34b16",
+      "source": "https://storage.googleapis.com/mediapipe-models/image_classifier/efficientnet_lite0/int8/latest/efficientnet_lite0.tflite",
+      "downloadedAt": "2026-11-10",
+      "publishedAt": "2023-04-26",
+      "license": "Apache-2.0 (stated in the model's embedded TFLite metadata)",
+      "use": "Nutrition: experimental whole-fruit suggestions only (ImageNet classes banana, Granny Smith, strawberry)"
     }
   ]
 }

@@ -7,7 +7,7 @@ import { DeliveryBanner } from "@/components/patient/DeliveryBanner";
 import { NeedButtons } from "@/components/patient/NeedButtons";
 import { RequestList } from "@/components/patient/RequestTimeline";
 import { Button } from "@/components/ui/Button";
-import { EyeIcon, HandIcon, HeartIcon, MicIcon, MoveIcon, PostureIcon } from "@/components/ui/icons";
+import { EyeIcon, HandIcon, HeartIcon, MicIcon, MoveIcon, NutritionIcon, PostureIcon } from "@/components/ui/icons";
 import { useCalibrationData } from "@/features/calibration/useCalibrationData";
 import { usePerception } from "@/features/perception/PerceptionProvider";
 import { usePatientProfile } from "@/features/session/usePatientProfile";
@@ -19,6 +19,7 @@ const MODULES = {
   vitalsense: { label: "VitalSense", text: "Pulse and breathing estimate", icon: HeartIcon },
   posture: { label: "Posture", text: "Position and comfort", icon: PostureIcon },
   move: { label: "Move", text: "Guided exercise, one step at a time", icon: MoveIcon },
+  nutrition: { label: "Nutrition", text: "Log a meal and see an estimate", icon: NutritionIcon },
 } as const;
 
 export default function PatientHome() {

@@ -33,6 +33,13 @@ export default function AssistantPage() {
     end.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages]);
 
+  // Another module (e.g. Nutrition's "Ask ASHA about this meal") can prefill a question.
+  // It is only placed in the box; nothing is sent until the person presses Send.
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search).get("q");
+    if (q) setInput(q.slice(0, 600));
+  }, []);
+
   async function send(e: React.FormEvent) {
     e.preventDefault();
     const text = input.trim();

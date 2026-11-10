@@ -35,6 +35,7 @@ export const HandIcon = (p: IconProps) => <Svg {...p}><path d="M18 11V6a2 2 0 0 
 export const MicIcon = (p: IconProps) => <Svg {...p}><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></Svg>;
 export const HeartIcon = (p: IconProps) => <Svg {...p}><path d="M3 12h4l2-5 4 10 2-5h6" /></Svg>;
 export const MoveIcon = (p: IconProps) => <Svg {...p}><circle cx="14" cy="4.5" r="2" /><path d="m6 20 3.5-5 3 2.5V22M9.5 15l1.5-6 4 3h4M11 9 7 10.5 5 14" /></Svg>;
+export const NutritionIcon = (p: IconProps) => <Svg {...p}><path d="M3 12h18a9 9 0 0 1-18 0ZM8 21h8M12 8c0-3 2-5 5-5-.5 3-2 5-5 5ZM12 8c-1-2-3-3-5-3" /></Svg>;
 export const PostureIcon = (p: IconProps) => <Svg {...p}><circle cx="12" cy="4.5" r="2" /><path d="M12 7v7m0 0-3 7m3-7 3 7M7 10h10" /></Svg>;
 export const CameraIcon = (p: IconProps) => <Svg {...p}><path d="M3 8a2 2 0 0 1 2-2h2l2-2h6l2 2h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" /><circle cx="12" cy="13" r="4" /></Svg>;
 export const MountIcon = (p: IconProps) => <Svg {...p}><rect x="7" y="2" width="10" height="14" rx="2" /><path d="M12 16v4M7 22h10" /></Svg>;
