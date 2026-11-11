@@ -1,5 +1,59 @@
 # NeuroBridge Asha · Unified app
 
+## Stack (Next.js + Tailwind)
+
+```bash
+npm install
+npm run dev        # http://localhost:3000  (landing at /, app at /app)
+npm run build && npm start
+npm test           # unit tests
+```
+
+```
+src/
+  app/                    Next.js App Router
+    page.tsx              Landing page (sections composed from components/landing)
+    dashboard/            Patient and caregiver dashboards (old /app links redirect here)
+    api/*/route.ts        API routes (session, asha, cleanup, health)
+  components/
+    ui/                   Reusable primitives: Button, Container, Section, SectionHeading,
+                          Eyebrow, FeatureItem, VideoFrame, Reveal, icons
+    landing/              Landing sections (Navbar, Hero, Story, Modules, Plans, ...)
+    dashboard/ patient/ caregiver/ auth/   Dashboard UI building blocks
+  content/landing.ts      All landing copy and data — edit text here
+  features/enquiry/       Contact/enquiry form (email + WhatsApp drafts)
+  server/
+    handlers/             API logic (framework-independent, unit-tested)
+    lib/                  Storage, Maira provider, orchestration, retrieval
+    node-adapter.ts       Runs handlers inside Next route handlers
+public/
+  engine/                 Browser engine: camera, ML workers, calibration, caregiver sync
+  neuroface/, models/     MediaPipe/TF vendor files and model weights
+```
+
+**Adding videos:** set `src` on `hero.video` / `modulesIntro.video` in `src/content/landing.ts`
+(e.g. put `asha-demo.mp4` in `public/videos/` and use `"/videos/asha-demo.mp4"`). Until then a
+branded placeholder is shown.
+
+### Dashboard
+
+| Role | Route | Pages |
+|---|---|---|
+| Patient | `/dashboard/patient` | Home, Ask for help, Talk to Asha, FaceSpeak, FingerSpeak, SenseAssist, VitalSense, Posture, Calibration, Settings |
+| Caregiver | `/dashboard/caregiver` | Overview, Requests, Patients, Add patient, Patient profile, Settings |
+
+- `src/features/perception` — one shared camera + engine (`PerceptionProvider`, `CameraView`, hooks)
+- `src/features/requests` — propose → confirm → send flow, signal triggers (blink, gestures, cues), heartbeat
+- `src/features/session` — device credentials, care circles, private links
+- `src/features/caregiver` — live care-circle polling, receipts, acknowledgements, push
+- `src/components/dashboard` — shell, sidebar, panels, stats, pills, dialog, switch, sparkline
+
+Local dev without cloud storage: `ASHA_MEMORY_STORE=1 LOCAL_DEV=1 npm run dev` (in-memory, dev only).
+
+Routes: `/` landing · `/app` app · `/app?module=facespeak|fingerspeak|senseassist|vitalsense|posture`
+· `/app?role=caregiver` (also `/care`).
+
+
 A new application built from the preserved `neurobridge-asha-unified-web` assets. Original repositories are not modified.
 
 ## Live application
@@ -24,7 +78,7 @@ Choose **Explore live demo** on the first page or open a direct `?module=` link.
 
 ## Implemented
 
-- Clean light/dark responsive UI and installable PWA. Large controls, visible labels, keyboard focus, reduced-motion support, live status, movable floating Asha companion.
+- Clean light-theme responsive UI and installable PWA. Large controls, visible labels, keyboard focus, reduced-motion support, live status, movable floating Asha companion.
 - Capability assessment and recommendations without module access restrictions. Manual interface choice is always possible.
 - Optional “Tell Asha about you” setup: accident-related voice loss, ALS, stroke recovery, cerebral palsy, older-adult support, locked-in syndrome, autism, temporary voice loss or another reason. Multiple choices, goals, and skip are supported. This self-described context is editable by the caregiver and is never used to infer or limit capabilities.
 - NeuroFace Sense (including FaceSpeak calibration), FingerSpeak, VitalSense and posture remain enabled together on the shared camera, regardless of the open details tab. Live status distinguishes tracked signals from searching or weak signals. Facial expression values are model signals, never a percentage of the patient's ability.

@@ -4,8 +4,8 @@ import {
   normalizeSupport,
   supportSummary,
   supportOptions,
-} from "../app/support-profile.js";
-import { assessment, recommend } from "../server/logic.js";
+} from "../public/engine/support-profile.js";
+import { assessment, recommend } from "../src/server/lib/logic.js";
 
 test("optional support context is empty for old profiles, null or skipped answers", () => {
   for (const v of [undefined, null, 42, {}])

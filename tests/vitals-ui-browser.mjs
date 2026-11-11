@@ -2,9 +2,9 @@ import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 const require = createRequire(import.meta.url);
-const { chromium } = require("C:/Users/user/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright");
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 const base = process.env.ASHA_TEST_BASE || "http://127.0.0.1:4180/";
-const browser = await chromium.launch({headless:true, executablePath:"C:/Program Files/Google/Chrome/Application/chrome.exe"});
+const browser = await chromium.launch({headless:true, executablePath: process.env.CHROME_PATH || undefined});
 const page = await browser.newPage({viewport:{width:390,height:844}, reducedMotion:"reduce"});
 const errors = [];
 page.on("pageerror", e => errors.push(e.message));
@@ -29,7 +29,7 @@ try {
   // Recovered observations render as observations; pause immediately clears all
   // live numbers while the session history remains available.
   await page.evaluate(async () => {
-    const {paintVitals} = await import("/app/vitals-studio.js");
+    const {paintVitals} = await import("/engine/vitals-studio.js");
     const pulse={bpm:78,quality:.9,confidence:90,status:"good",windowSeconds:12,requiredSeconds:12,sampleFps:30,roiCount:3,breathingBpm:15,reason:"Fixture signal",signal:[0,1,0,-1,0,1],hrv:{rmssd:null,beats:8,meanIbi:null,reason:"Timing not sufficient"},baseline:{bpm:76,progress:1,calibrating:false},trend:[{t:12000,bpm:78},{t:16000,bpm:79}],readings:[{t:12000,bpm:78,quality:.9}]};
     pulse.at=performance.now();
     paintVitals(pulse,true);

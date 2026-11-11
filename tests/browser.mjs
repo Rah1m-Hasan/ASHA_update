@@ -3,10 +3,10 @@ import fs from "node:fs/promises";
 const require = createRequire(import.meta.url);
 const {
   chromium,
-} = require("C:/Users/user/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright");
+} = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 await fs.mkdir("artifacts", { recursive: true });
 const browser = await chromium.launch({
-  executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  executablePath: process.env.CHROME_PATH || undefined,
   headless: true,
   args: [
     "--use-fake-ui-for-media-stream",
@@ -20,6 +20,7 @@ const p = await browser.newPage({
 });
 const errors = [];
 p.on("pageerror", (e) => errors.push(e.message));
+p.on('dialog', (dialog) => dialog.accept());
 await p.goto("http://127.0.0.1:4180/app");
 await p.screenshot({ path: "artifacts/welcome-desktop.png", fullPage: true });
 await p.locator("#beginSetup").click();
@@ -95,7 +96,7 @@ await p.waitForFunction(
   () =>
     document.getElementById("speechResult").textContent.includes("Is this") ||
     document.getElementById("speakCandidate") ||
-    document.getElementById("speechResult").textContent.includes("unavailable"),
+    /unavailable|not configured|cloud assistance is off/i.test(document.getElementById("speechResult").textContent),
   {},
   { timeout: 40000 },
 );

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { BlinkCounter } from "../app/blink-counter.js";
+import { BlinkCounter } from "../public/engine/blink-counter.js";
 
 // These are observation traces, not intentional FaceSpeak command gestures.
 // In particular, MediaPipe blink blendshapes can stay near zero with glasses.

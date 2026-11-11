@@ -4,11 +4,11 @@ import assert from "node:assert/strict";
 const require = createRequire(import.meta.url),
   {
     chromium,
-  } = require("C:/Users/user/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright");
+  } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 const base = "https://neurobridge-asha-live.vercel.app/";
 const browser = await chromium.launch({
   headless: true,
-  executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  executablePath: process.env.CHROME_PATH || undefined,
 });
 const p = await browser.newPage({ viewport: { width: 390, height: 844 } }),
   c = await browser.newPage({ viewport: { width: 412, height: 915 } }),

@@ -7,7 +7,7 @@ import {
   poseFeatures,
   pulseEstimate,
   recommendations,
-} from "../app/signals.js";
+} from "../public/engine/signals.js";
 import {
   assessment,
   recommend,
@@ -16,7 +16,7 @@ import {
   hash,
   equal,
   pushEndpoint,
-} from "../server/logic.js";
+} from "../src/server/lib/logic.js";
 test("assessment recommends speech alongside usable face and does not gate modules", () => {
   const a = assessment({ eyes: "reliable", speech: "limited" });
   assert.deepEqual(recommendations(a), ["facespeak", "senseassist"]);

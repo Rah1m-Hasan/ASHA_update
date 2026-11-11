@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { SpeechCapture } from "../app/speech-capture.js";
+import { SpeechCapture } from "../public/engine/speech-capture.js";
 
 function fakeClock() {
   let time = 0;

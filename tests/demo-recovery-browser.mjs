@@ -5,7 +5,7 @@ import { createRequire } from "node:module";
 const require = createRequire(import.meta.url);
 const {
   chromium,
-} = require("C:/Users/user/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright");
+} = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 const base = process.env.ASHA_TEST_BASE || "http://127.0.0.1:4180/";
 const ids = ["0123456789abcdef01234567", "fedcba987654321001234567"];
 const tokens = ["old-demo-token", "new-demo-token"];
@@ -19,7 +19,7 @@ const profile = (index) => ({
 });
 const browser = await chromium.launch({
   headless: true,
-  executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  executablePath: process.env.CHROME_PATH || undefined,
 });
 const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
 const errors = [];
@@ -92,7 +92,7 @@ try {
     await page.locator("#cloudBadge").textContent(),
     "Asha connected",
   );
-  assert.match(await page.locator("#demoNotice").textContent(), /Demo session/);
+  assert.match(await page.locator("#demoNotice").textContent(), /Demo · all modules available/);
   assert.match(
     await page.locator("#demoNotice").textContent(),
     /copy the new link/,

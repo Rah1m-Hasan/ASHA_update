@@ -7,7 +7,7 @@ const fs = require("node:fs"),
   vm = require("node:vm");
 function originalModule(name) {
   const source = fs.readFileSync(
-    new URL("../neuroface/src/" + name + ".js", import.meta.url),
+    new URL("../public/neuroface/src/" + name + ".js", import.meta.url),
     "utf8",
   );
   return vm.runInThisContext(

@@ -4,10 +4,10 @@ import assert from "node:assert/strict";
 const require = createRequire(import.meta.url);
 const {
   chromium,
-} = require("C:/Users/user/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright");
+} = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 const browser = await chromium.launch({
   headless: true,
-  executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  executablePath: process.env.CHROME_PATH || undefined,
 });
 const base = process.env.ASHA_TEST_BASE || "http://127.0.0.1:4180/";
 const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
@@ -16,9 +16,9 @@ page.on("pageerror", (error) => errors.push(error.message));
 try {
   await page.goto(base + "app");
   const result = await page.evaluate(async () => {
-    const { BlinkCounter } = await import("./app/blink-counter.js");
+    const { BlinkCounter } = await import("./engine/blink-counter.js");
     const { faceStudio, paintFaceStudio } = await import(
-      "./app/face-studio.js"
+      "./engine/face-studio.js"
     );
     document.getElementById("moduleContent").innerHTML = faceStudio();
     for (const view of document.querySelectorAll(".view"))

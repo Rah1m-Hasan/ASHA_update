@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { usableVitalSignal } from "../app/vitals-studio.js";
+import { usableVitalSignal } from "../public/engine/vitals-studio.js";
 
 test("heart animation requires a fresh, accepted, visible camera observation", (t) => {
   const saved = Object.getOwnPropertyDescriptor(globalThis, "document");

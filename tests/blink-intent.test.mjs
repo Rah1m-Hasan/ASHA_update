@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { BlinkIntent, blinkProfile, RAPID_BLINK, CONFIRM_BLINK } from "../app/blink-intent.js";
-import { RequestGate } from "../app/signals.js";
+import { BlinkIntent, blinkProfile, RAPID_BLINK, CONFIRM_BLINK } from "../public/engine/blink-intent.js";
+import { RequestGate } from "../public/engine/signals.js";
 
 const blink = (start, duration = 160) => ({ start, duration, timestamp: start + duration + 40, amplitude: 0.3 });
 const profile = blinkProfile([blink(1000), blink(1400), blink(1800)], [blink(3000, 480), blink(4200, 480), blink(5400, 480)]);

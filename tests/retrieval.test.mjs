@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { retrieveKnowledge } from "../server/retrieval.js";
+import { retrieveKnowledge } from "../src/server/lib/retrieval.js";
 
 test("retrieves eye confirmation evidence without a fixed module context", () => {
   const results = retrieveKnowledge({

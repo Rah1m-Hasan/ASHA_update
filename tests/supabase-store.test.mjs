@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { createSupabaseStore } from "../server/supabase-store.js";
+import { createSupabaseStore } from "../src/server/lib/supabase-store.js";
 
 test("Supabase store keeps the existing private read/write/list/remove contract", async () => {
   const rows = new Map();

@@ -3,10 +3,10 @@ import fs from "node:fs/promises";
 const require = createRequire(import.meta.url);
 const {
   chromium,
-} = require("C:/Users/user/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/node_modules/playwright");
+} = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 const browser = await chromium.launch({
   headless: true,
-  executablePath: "C:/Program Files/Google/Chrome/Application/chrome.exe",
+  executablePath: process.env.CHROME_PATH || undefined,
   args: ["--no-sandbox"],
 });
 const page = await browser.newPage({ viewport: { width: 1380, height: 980 } });
@@ -16,7 +16,7 @@ page.on("console", (m) => {
 });
 await page.goto("http://127.0.0.1:4180/");
 const result = await page.evaluate(async () => {
-  const { Perception } = await import("/app/perception.js");
+  const { Perception } = await import("/engine/perception.js");
   const img = new Image();
   img.src = "/artifacts/pose-test.jpg";
   await img.decode();

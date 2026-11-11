@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { resolve } from "node:path";
-import { guides } from "../server/knowledge.js";
+import { guides } from "../src/server/lib/knowledge.js";
 
 const MODULES = [
   "companion",

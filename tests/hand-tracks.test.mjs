@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { HandTracks } from "../app/hand-tracks.js";
+import { HandTracks } from "../public/engine/hand-tracks.js";
 const h = (x) => ({ label: "right", lm: [{ x, y: 0.5 }] });
 test("two same-handedness labels have independent stable identities", () => {
   const t = new HandTracks(),

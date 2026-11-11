@@ -3,8 +3,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { compileOkf } from "../okf/compile.mjs";
 import { okfDocuments } from "../okf/generated.js";
-import { guides } from "../server/knowledge.js";
-import { retrieveKnowledge } from "../server/retrieval.js";
+import { guides } from "../src/server/lib/knowledge.js";
+import { retrieveKnowledge } from "../src/server/lib/retrieval.js";
 
 test("the OKF bundle, generated corpus, and versioned app guides agree", () => {
   const checkedIn = readFileSync(

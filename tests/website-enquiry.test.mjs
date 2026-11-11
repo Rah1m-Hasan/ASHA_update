@@ -4,7 +4,7 @@ import {
   buildEnquiryDraft,
   CONTACT_EMAIL,
   CONTACT_PHONE,
-} from "../website/enquiry.js";
+} from "../src/features/enquiry/enquiry.js";
 const input = {
   name: "Demo Visitor",
   email: "demo@example.com",
