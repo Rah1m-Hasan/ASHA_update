@@ -57,10 +57,9 @@ export function SignalTriggers() {
   const { instance, state, snapshot, calibrating, exercising: workout } = usePerception();
   // EyeSpeak's calibration and board fill the screen and take answers by gaze. Check-ins and
   // face, blink or hand questions wait, so nothing talks over the board or covers it with a dialog.
-  const eyes = useEyeSpeak();
-  const gazeInUse = eyes.inUse || eyes.picking;
+  const gazeInUse = useEyeSpeak((s) => s.mode !== null || s.picking);
   // With the eye cursor clicking by blink, a slow blink is a click, not a request or a "yes".
-  const blinkClicks = eyes.cursor && eyes.cursorClick !== "dwell";
+  const blinkClicks = useEyeSpeak((s) => s.cursor && s.cursorClick !== "dwell");
   const exercising = workout || gazeInUse;
   const { propose, pending, confirm, confirmationReadyAt } = useRequests();
   const { profile } = usePatientProfile();

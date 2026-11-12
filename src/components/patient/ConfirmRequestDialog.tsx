@@ -9,7 +9,7 @@ import { useRequests } from "@/features/requests/RequestProvider";
 export function ConfirmRequestDialog() {
   const { pending, confirm, cancel, repeat, confirmationHint } = useRequests();
   // The EyeSpeak board asks the same question itself, with two halves of the screen chosen by gaze.
-  const { boardOpen } = useEyeSpeak();
+  const boardOpen = useEyeSpeak((s) => s.mode === "board" || s.mode === "scan");
   const byGaze = boardOpen && pending?.source === "eyespeak";
   return (
     <Dialog open={!!pending && !byGaze} onClose={cancel} title="Confirm request">

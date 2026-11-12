@@ -11,13 +11,13 @@ export type CalibrationResult = { model: GazeModel; validation: Validation; chec
 type Step = { x: number; y: number; check: boolean };
 
 /**
- * Full screen, one dot at a time. "full" fits a new model from 9 dots and then measures it on 3
+ * Full screen, one dot at a time. "calibrate" fits a new model from 9 dots and then measures it on 3
  * different dots; "check" only measures an existing model. Nothing is guessed: a dot that gets too
  * few usable eye frames is repeated, and after two repeats the calibration stops and says why.
  */
-export function Calibration({ mode, model: existing, feed, onDone, onCancel }: { mode: "full" | "check"; model?: GazeModel | null; feed: Feed; onDone: (r: CalibrationResult) => void; onCancel: (reason?: string) => void }) {
+export function Calibration({ mode, model: existing, feed, onDone, onCancel }: { mode: "calibrate" | "check"; model?: GazeModel | null; feed: Feed; onDone: (r: CalibrationResult) => void; onCancel: (reason?: string) => void }) {
   const steps = useRef<Step[]>([
-    ...(mode === "full" ? (calibrationTargets(9) as [number, number][]).map(([x, y]) => ({ x, y, check: false })) : []),
+    ...(mode === "calibrate" ? (calibrationTargets(9) as [number, number][]).map(([x, y]) => ({ x, y, check: false })) : []),
     ...(CHECK_TARGETS as [number, number][]).map(([x, y]) => ({ x, y, check: true })),
   ]);
   const [index, setIndex] = useState(0);

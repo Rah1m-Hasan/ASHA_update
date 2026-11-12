@@ -4,14 +4,13 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { useRequests } from "@/features/requests/RequestProvider";
 import { speak } from "@/features/speech/speak";
 import { cn } from "@/lib/cn";
-import { LongBlink, tileBefore } from "./cursor-logic.js";
-import { BOARDS, CONFIRM_TILES, DwellSelector, HALF_STEPS, TileTracker, isGroup, predictGaze, smoothPoint, stepAt, wordsIn } from "./gaze";
-import type { BoardSize, GazeModel, Group, Step } from "./gaze";
+import { activeDialog } from "@/lib/dialog";
+import { tileBefore } from "./cursor-logic.js";
+import { BOARDS, CONFIRM_TILES, DwellSelector, TileTracker, inside, isGroup, measureRects, pathAt, steadyRadius, wordsIn } from "./gaze";
+import type { BoardSize, GazeModel, Rect, Step } from "./gaze";
+import { GazeSession } from "./gaze-session";
 import type { Feed } from "./Calibration";
 
-type Rect = { id: string; x: number; y: number; w: number; h: number };
-/** Eyes lost for longer than this (not a blink) clear the fill. */
-const LOSS_MS = 600;
 /** Below this many face results per second, say so on the board. */
 const SLOW_FPS = 5;
 /** A slow blink that starts this soon after the scanning light moves could be meant for either tile. */
@@ -61,19 +60,9 @@ export function Board({
   const steps = !scan && size === 2;
   const board = BOARDS[scan ? 9 : size];
   const [path, setPath] = useState<string[]>([]);
-  const tiles: Step[] = useMemo(() => (confirming ? CONFIRM_TILES : steps ? stepAt(path).options : board.tiles), [confirming, steps, path, board]);
+  const tiles: Step[] = useMemo(() => (confirming ? CONFIRM_TILES : steps ? pathAt(path).node.options : board.tiles), [confirming, steps, path, board]);
   const cols = confirming || steps ? 2 : board.cols;
-  const crumbs = useMemo(() => {
-    const out: string[] = [];
-    let node: Group = HALF_STEPS;
-    for (const id of path) {
-      const next = node.options.find((o) => o.id === id);
-      if (!next || !isGroup(next)) break;
-      out.push(next.label);
-      node = next;
-    }
-    return out;
-  }, [path]);
+  const crumbs = useMemo(() => pathAt(path).labels, [path]);
   const grid = useRef<HTMLDivElement>(null);
   const root = useRef<HTMLDivElement>(null);
   const dot = useRef<HTMLDivElement>(null);
@@ -83,10 +72,10 @@ export function Board({
   const dwell = useMemo(() => new DwellSelector({ dwellMs, maxGapMs: 900 }), [dwellMs]);
   // Each tile stays lit a little longer than the selection time, enough to see it and blink slowly.
   const stepMs = dwellMs + 600;
-  const smooth = useRef<{ x: number; y: number; t: number } | null>(null);
-  // One blink detector for the whole board: it learns what this person's open eyes look like, and a
+  // One gaze session for the whole board: it learns what this person's open eyes look like, and a
   // new layout must not make it start learning again (a closure in that moment would count as open).
-  const blinkRef = useRef<LongBlink | null>(null);
+  const sessionRef = useRef<GazeSession | null>(null);
+  const session = (sessionRef.current ??= new GazeSession());
   const [status, setStatus] = useState("");
   const [lit, setLit] = useState(-1);
   const [said, setSaid] = useState<string[]>([]);
@@ -117,11 +106,7 @@ export function Board({
   // Tile positions as fractions of the screen, the same frame the calibration used.
   useLayoutEffect(() => {
     const measure = () => {
-      const W = innerWidth, H = innerHeight;
-      rects.current = [...nodes.current.entries()].map(([id, el]) => {
-        const r = el.getBoundingClientRect();
-        return { id, x: r.left / W, y: r.top / H, w: r.width / W, h: r.height / H };
-      });
+      rects.current = measureRects(nodes.current);
     };
     measure();
     addEventListener("resize", measure);
@@ -134,14 +119,11 @@ export function Board({
     // A new layout appears under a still gaze (after "Water" the left half is "No"). The tile under
     // where the eyes were when it changed is ignored until they move off it, so nothing is chosen
     // without a deliberate look. (Tile positions are already measured: layout effects run first.)
-    const was = smooth.current;
-    dwell.hold(was ? (rects.current.find((r) => was.x >= r.x && was.x <= r.x + r.w && was.y >= r.y && was.y <= r.y + r.h)?.id ?? null) : null);
-    let lostSince: number | null = null;
+    const was = session.history.at(-1) ?? null;
+    dwell.hold(was ? (rects.current.find((r) => inside(was, r))?.id ?? null) : null);
+    session.reset();
     let lastT: number | null = null;
-    const blink = (blinkRef.current ??= new LongBlink());
-    // Where the eyes were, moment by moment, so a slow blink chooses the tile they had settled on.
-    const trail: { t: number; x: number; y: number }[] = [];
-    const steady = Math.min(0.14, Math.max(0.06, (model?.validation?.p90Error ?? 0.1) * 0.8));
+    const steady = steadyRadius(model?.validation?.p90Error ?? 0.1);
     let rate = 0;
     // A short message that outlasts the per-frame status for a few seconds.
     let hint: { text: string; until: number } | null = null;
@@ -156,17 +138,6 @@ export function Board({
 
     const paint = (id: string | null, progress: number) => {
       for (const [key, el] of nodes.current) el.style.setProperty("--dwell", key === id ? String(progress) : "0");
-    };
-    const lose = (t: number, reason: string) => {
-      // A blink or a frame or two without irises pauses the fill; only a longer loss clears it.
-      lostSince ??= t;
-      if (t - lostSince < LOSS_MS || blink.closing) return;
-      dwell.update(null, t, false);
-      tracker.reset();
-      smooth.current = null;
-      paint(null, 0);
-      if (dot.current) dot.current.style.opacity = "0";
-      setStatus(reason);
     };
     const pick = (id: string, via: "blink" | "dwell" | "scan") => {
       if (root.current) root.current.dataset.chosenBy = via;
@@ -188,14 +159,14 @@ export function Board({
           const dt = now - lastTick;
           lastTick = now;
           const cur = lights[lights.length - 1];
-          const asking = !!document.querySelector("dialog[open]");
+          const asking = !!activeDialog(now);
           const away = now - seenAt > NO_FACE_MS;
           setStatus(asking ? "Answer the question on screen first." : away ? NO_FACE : hint && now < hint.until ? hint.text : "");
           if (now < cur.at) return setLit(-1);
           setLit(cur.i);
           // The light waits while the eyes are closing (it may be a choice), while the face is away
           // and while another question is open.
-          if (blink.closing || away || asking) {
+          if (session.closing || away || asking) {
             paused += dt;
             return;
           }
@@ -210,11 +181,13 @@ export function Board({
       if (lastT !== null && t > lastT) rate = rate ? rate * 0.9 + (1000 / (t - lastT)) * 0.1 : 1000 / (t - lastT);
       lastT = t;
       if (open !== null) seenAt = t;
-      if (document.querySelector("dialog[open]")) {
+      if (activeDialog()) {
         if (!scan) setStatus("Answer the question on screen first.");
         return;
       }
-      const b = blink.update(open, t);
+      // Scanning needs no gaze, so the session only looks for blinks there.
+      const step = session.step({ features: f, t, open }, scan ? null : model);
+      const b = step.blink;
       if (scan) {
         if (b?.kind !== "click") return;
         const at = [...lights].reverse().find((l) => l.at <= b.closedAt);
@@ -224,26 +197,30 @@ export function Board({
         return;
       }
       if (b?.kind === "click") {
-        const id = tileBefore(trail, rects.current, b.closedAt, { radius: steady });
+        const id = tileBefore(session.history, rects.current, b.closedAt, { radius: steady });
         if (id) return pick(id, "blink");
         hint = { text: "Your eyes were still moving. Rest them on a tile for a moment, then blink slowly.", until: t + 3000 };
       }
       // Closing the eyes for about two seconds goes back a step.
       if (b?.kind === "long" && steps) back();
       if (!model) return;
-      if (!f.valid) return lose(t, f.reason);
-      const p = predictGaze(model, f.values, { requireValidation: false }) as { valid: boolean; x?: number; y?: number; reason?: string };
-      if (!p.valid || p.x === undefined || p.y === undefined) return lose(t, p.reason ?? "");
-      lostSince = null;
-      const s = (smooth.current = smoothPoint(smooth.current, { x: p.x, y: p.y }, t));
+      if (!step.point) {
+        // A blink or a frame or two without irises pauses the fill; a longer loss clears it.
+        if (!step.lost) return;
+        dwell.update(null, t, false);
+        tracker.reset();
+        paint(null, 0);
+        if (dot.current) dot.current.style.opacity = "0";
+        setStatus(step.reason);
+        return;
+      }
+      const s = step.point;
       if (dot.current) {
         dot.current.style.opacity = "1";
         dot.current.style.transform = `translate(${s.x * innerWidth}px, ${s.y * innerHeight}px)`;
       }
       setStatus(hint && t < hint.until ? hint.text : rate && rate < SLOW_FPS ? `Tracking is slow on this device (${Math.round(rate)} per second), so hold your gaze a little longer. Closing other apps helps.` : "");
       const over = tracker.update(s, rects.current, t);
-      trail.push(s);
-      while (trail.length && trail[0].t < t - 2500) trail.shift();
       const chosen = dwell.update(over, t, true);
       paint((dwell.target as string | null) ?? null, dwell.progress ?? 0);
       if (chosen) pick(chosen as string, "dwell");
@@ -252,7 +229,7 @@ export function Board({
       feed(null);
       if (timer) clearInterval(timer);
     };
-  }, [feed, model, dwell, tiles, scan, steps, stepMs, back]);
+  }, [feed, model, dwell, tiles, scan, steps, stepMs, back, session]);
 
   useEffect(() => {
     const key = (e: KeyboardEvent) => e.key === "Escape" && onExit();

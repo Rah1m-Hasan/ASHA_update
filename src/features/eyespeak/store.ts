@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { readLocal, removeLocal, saveLocal } from "@/lib/storage";
+import { readLocal, saveLocal } from "@/lib/storage";
 import type { GazeModel } from "./gaze";
 
 // The calibration lives in memory for this visit. It is kept on the device only if the person
@@ -13,39 +13,36 @@ const KEY = "eyespeak_v1";
 export type Saved = { model: GazeModel; screen: { w: number; h: number }; savedAt: string };
 /** How the eye cursor clicks: a slow blink, holding the look still, or either. */
 export type CursorClick = "blink" | "dwell" | "both";
+/** What the eyes are doing on screen: nothing, a calibration, or the board. */
+export type Mode = null | "calibrate" | "check" | "board" | "scan";
+
 export type EyeSpeakState = {
   model: GazeModel | null;
   screen: { w: number; h: number } | null;
-  /** True once this visit's target check has run for the current model. */
-  checked: boolean;
   remember: boolean;
   dwellMs: number;
   showDot: boolean;
-  /** The look-to-choose board is on screen; it answers its own confirmations by gaze. */
-  boardOpen: boolean;
-  /** Calibration or the board fills the screen; Asha's check-ins and face/blink questions wait. */
-  inUse: boolean;
   /** The eyes move a pointer on every patient page (for this visit only). */
   cursor: boolean;
   cursorPaused: boolean;
   cursorClick: CursorClick;
   /** The eye cursor is asking which of several close buttons was meant, full screen. */
   picking: boolean;
+  /** Calibration, the check or the board fills the screen; Asha's questions wait for the eyes. */
+  mode: Mode;
 };
 
 const initial: EyeSpeakState = {
   model: null,
   screen: null,
-  checked: false,
   remember: false,
   dwellMs: 1200,
   showDot: true,
-  boardOpen: false,
-  inUse: false,
   cursor: false,
   cursorPaused: false,
   cursorClick: "blink",
   picking: false,
+  mode: null,
 };
 const CLICKS: CursorClick[] = ["blink", "dwell", "both"];
 let state = initial;
@@ -59,9 +56,9 @@ function load() {
   if (!saved) return;
   state = {
     ...state,
-    model: saved.model ?? null,
+    // A remembered calibration keeps its numbers but not its result: it must pass the check again.
+    model: saved.model ? { ...saved.model, validation: null } : null,
     screen: saved.screen ?? null,
-    checked: false,
     remember: !!saved.model,
     dwellMs: clampDwell(saved.dwellMs ?? state.dwellMs),
     showDot: saved.showDot ?? true,
@@ -77,30 +74,40 @@ function persist() {
   else saveLocal(KEY, prefs);
 }
 
+/** Only the settings worth keeping between visits are written to the device. */
+const durable = (a: EyeSpeakState, b: EyeSpeakState) =>
+  a.dwellMs !== b.dwellMs ||
+  a.showDot !== b.showDot ||
+  a.cursorClick !== b.cursorClick ||
+  a.remember !== b.remember ||
+  a.model !== b.model ||
+  a.screen !== b.screen;
+
 function set(patch: Partial<EyeSpeakState>) {
   load();
+  const before = state;
   state = { ...state, ...patch };
-  persist();
+  if (durable(before, state)) persist();
   listeners.forEach((l) => l());
 }
 
 export const eyeSpeakStore = {
   get: () => (load(), state),
   set,
-  setModel: (model: GazeModel, screen: { w: number; h: number }) => set({ model, screen, checked: true }),
+  setModel: (model: GazeModel, screen: { w: number; h: number }) => set({ model, screen }),
   setDwell: (ms: number) => set({ dwellMs: clampDwell(ms) }),
-  forget: () => {
-    removeLocal(KEY);
-    state = { ...initial, dwellMs: state.dwellMs, showDot: state.showDot, cursorClick: state.cursorClick };
-    persist();
-    listeners.forEach((l) => l());
-  },
   subscribe: (l: () => void) => {
     listeners.add(l);
     return () => listeners.delete(l);
   },
 };
 
-export function useEyeSpeak() {
-  return useSyncExternalStore(eyeSpeakStore.subscribe, eyeSpeakStore.get, () => initial);
+/** True when the window is a different size from the one the calibration was measured on. */
+export function screenChanged(screen: { w: number; h: number } | null): boolean {
+  if (!screen || typeof innerWidth === "undefined") return false;
+  return Math.abs(screen.w - innerWidth) > innerWidth * 0.1 || Math.abs(screen.h - innerHeight) > innerHeight * 0.1;
+}
+
+export function useEyeSpeak<T>(select: (s: EyeSpeakState) => T): T {
+  return useSyncExternalStore(eyeSpeakStore.subscribe, () => select(eyeSpeakStore.get()), () => select(initial));
 }

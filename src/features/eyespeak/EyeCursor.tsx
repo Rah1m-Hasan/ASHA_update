@@ -3,17 +3,17 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePerception, usePerceptionEvent } from "@/features/perception/PerceptionProvider";
+import { openDialog } from "@/lib/dialog";
 import type { FrameLandmarks } from "@/lib/engine/types";
 import { CursorPicker } from "./CursorPicker";
-import { Fixation, LongBlink, eyeOpenness, nearTargets, pointBefore } from "./cursor-logic.js";
-import { boardFor, extractGazeFeatures, predictGaze, smoothPoint } from "./gaze";
+import { Fixation, eyeOpenness, nearTargets, pointBefore } from "./cursor-logic.js";
+import { boardFor, cursorOk, extractGazeFeatures, reachRadius, steadyRadius } from "./gaze";
 import type { Features } from "./gaze";
-import { eyeSpeakStore, useEyeSpeak } from "./store";
+import { GazeSession } from "./gaze-session";
+import { eyeSpeakStore, screenChanged, useEyeSpeak } from "./store";
 import { collectTargets, labelOf, press } from "./targets";
 import type { Target } from "./targets";
 
-/** Eyes lost for longer than this (not a blink) hide the pointer. */
-const LOSS_MS = 600;
 const OUTLINES = 8;
 const NOTE_MS = 3500;
 
@@ -27,27 +27,36 @@ const howToClick = (click: "blink" | "dwell" | "both") => (click === "blink" ? "
  * eye or by touch. It needs a calibration good enough for 6 or 9 tiles, checked this visit.
  */
 export function EyeCursor() {
-  const es = useEyeSpeak();
+  const model = useEyeSpeak((s) => s.model);
+  const cursor = useEyeSpeak((s) => s.cursor);
+  const cursorPaused = useEyeSpeak((s) => s.cursorPaused);
+  const cursorClick = useEyeSpeak((s) => s.cursorClick);
+  const dwellMs = useEyeSpeak((s) => s.dwellMs);
+  const mode = useEyeSpeak((s) => s.mode);
   const { state: camera, instance } = usePerception();
-  const size = boardFor(es.checked ? es.model?.validation ?? null : null);
-  const ready = es.cursor && camera === "on" && !!es.model && (size === 9 || size === 6);
-  const active = ready && !es.inUse;
-  const byBlink = es.cursorClick !== "dwell", byDwell = es.cursorClick !== "blink";
+  const size = boardFor(model?.validation ?? null);
+  const ready = cursor && camera === "on" && !!model && cursorOk(size);
+  const active = ready && mode === null;
+  const byBlink = cursorClick !== "dwell", byDwell = cursorClick !== "blink";
   const [host, setHost] = useState<HTMLDivElement | null>(null);
-  const [note, setNote] = useState<{ text: string; at: number } | null>(null);
+  const [note, setNote] = useState<string | null>(null);
   const [lost, setLost] = useState("");
   const [picker, setPicker] = useState<{ choices: Target[]; from: { x: number; y: number } } | null>(null);
   const [scroll, setScroll] = useState({ up: false, down: false });
   const frame = useRef<((f: FrameLandmarks) => void) | null>(null);
-  const pickerFeed = useRef<((f: FrameLandmarks) => void) | null>(null);
   const holdNext = useRef<() => void>(() => {});
   const layer = useRef<HTMLDivElement>(null);
   const ring = useRef<HTMLDivElement>(null);
   const arc = useRef<SVGCircleElement>(null);
   const boxes = useRef<(HTMLDivElement | null)[]>([]);
   const flash = useRef<HTMLDivElement>(null);
+  const sessionRef = useRef<GazeSession | null>(null);
+  const session = (sessionRef.current ??= new GazeSession());
+  const screen = useEyeSpeak((s) => s.screen);
+  /** What the outline boxes were last drawn as, so nothing is written twice. */
+  const drawn = useRef<string[]>([]);
 
-  const say = useCallback((text: string) => setNote({ text, at: Date.now() }), []);
+  const say = useCallback((text: string) => setNote(text), []);
   useEffect(() => {
     if (!note) return;
     const timer = setTimeout(() => setNote(null), NOTE_MS);
@@ -57,11 +66,11 @@ export function EyeCursor() {
   // Everything the cursor draws lives in one holder that moves into an open dialog, because a
   // modal dialog sits above the whole page and makes the rest of it unclickable.
   useEffect(() => {
-    if (!es.cursor) return;
+    if (!cursor) return;
     const el = document.createElement("div");
     el.dataset.eyeCursorRoot = "";
     const place = () => {
-      const into = document.querySelector("dialog[open]") ?? document.body;
+      const into = openDialog() ?? document.body;
       if (el.parentElement !== into) into.append(el);
     };
     place();
@@ -75,7 +84,7 @@ export function EyeCursor() {
       delete document.documentElement.dataset.eyeCursor;
       setHost(null);
     };
-  }, [es.cursor]);
+  }, [cursor]);
 
   // Face points on every page, and only the face model where hands and body aren't needed.
   useEffect(() => {
@@ -86,7 +95,7 @@ export function EyeCursor() {
   }, [active, camera, instance]);
 
   useEffect(() => {
-    if (!es.cursor) return;
+    if (!cursor) return;
     const update = () => {
       const max = document.documentElement.scrollHeight - innerHeight;
       setScroll({ up: scrollY > 2, down: scrollY < max - 2 });
@@ -100,7 +109,7 @@ export function EyeCursor() {
       removeEventListener("resize", update);
       clearInterval(timer);
     };
-  }, [es.cursor]);
+  }, [cursor]);
 
   const closePicker = useCallback(
     (target: Target | null) => {
@@ -124,23 +133,17 @@ export function EyeCursor() {
     },
     [say],
   );
-  const registerPicker = useCallback((fn: ((f: FrameLandmarks) => void) | null) => {
-    pickerFeed.current = fn;
-  }, []);
 
   useEffect(() => {
-    const model = es.model;
-    const p90 = model?.validation?.p90Error;
-    if (!active || !model || p90 === undefined) return;
+    if (!model) return;
+    const p90 = model.validation?.p90Error;
+    if (!active || p90 === undefined) return;
     // Where the eyes may really be looking, at this person's accuracy (9 in 10 looks are within it).
-    const reach = Math.max(0.035, p90);
-    const steady = Math.min(0.14, Math.max(0.06, p90 * 0.8));
-    const fix = new Fixation({ dwellMs: es.dwellMs, radius: steady, graceMs: 400 });
-    const blink = new LongBlink();
-    const paused = es.cursorPaused;
-    let smooth: { x: number; y: number; t: number } | null = null;
-    const trail: { x: number; y: number; t: number }[] = [];
-    let lostSince: number | null = null;
+    const reach = reachRadius(p90);
+    const steady = steadyRadius(p90);
+    const fix = new Fixation({ dwellMs, radius: steady, graceMs: 400 });
+    const paused = cursorPaused;
+    let wasLost = false;
     let targets: Target[] = [];
     let targetsAt = -Infinity;
     holdNext.current = () => fix.hold();
@@ -159,12 +162,17 @@ export function EyeCursor() {
       if (s) ring.current.style.transform = `translate(${s.x * innerWidth}px, ${s.y * innerHeight}px)`;
       arc.current?.setAttribute("stroke-dashoffset", String(100 - progress * 100));
     };
+    // The boxes are drawn around the buttons in reach; nothing is written unless it changed.
     const outline = (list: Target[]) => {
       boxes.current.forEach((box, i) => {
         const t = list[i];
         if (!box) return;
+        const style = t ? { left: `${t.x * innerWidth - 4}px`, top: `${t.y * innerHeight - 4}px`, width: `${t.w * innerWidth + 8}px`, height: `${t.h * innerHeight + 8}px` } : null;
+        const key = style ? `${style.left},${style.top},${style.width},${style.height}` : "";
+        if (drawn.current[i] === key) return;
+        drawn.current[i] = key;
         box.style.display = t ? "block" : "none";
-        if (t) Object.assign(box.style, { left: `${t.x * innerWidth - 4}px`, top: `${t.y * innerHeight - 4}px`, width: `${t.w * innerWidth + 8}px`, height: `${t.h * innerHeight + 8}px` });
+        if (style) Object.assign(box.style, style);
       });
       if (layer.current) layer.current.dataset.near = String(list.length);
     };
@@ -177,7 +185,6 @@ export function EyeCursor() {
       press(t.el);
       say(`Clicked “${t.label}”.`);
     };
-    let picking = false;
     /** Click what the eyes are on, or ask which one. True when the picker opened. */
     const act = (point: { x: number; y: number }, via: "blink" | "dwell") => {
       const near = (nearTargets(pool(), point, reach) as Target[]).map((t) => ({ ...t, label: labelOf(t.el) }));
@@ -192,50 +199,45 @@ export function EyeCursor() {
       fix.hold();
       outline([]);
       showRing(null);
-      picking = true;
       eyeSpeakStore.set({ picking: true });
       setPicker({ choices: near.slice(0, size - 1), from: point });
       return true;
     };
-    const lose = (t: number, reason: string) => {
-      lostSince ??= t;
-      // A blink, even a slow one, keeps the pointer where it was.
-      if (t - lostSince < LOSS_MS || blink.closing) return;
-      smooth = null;
-      fix.reset();
-      showRing(null);
-      outline([]);
-      setLost(reason);
-    };
 
     frame.current = (f) => {
-      if (pickerFeed.current) return pickerFeed.current(f);
-      if (picking) {
-        // The picker is opening; its own pointer takes over once it is on screen.
-        if (!eyeSpeakStore.get().picking) picking = false;
-        else return;
-      }
+      // The picker takes the eyes while it is open.
+      if (eyeSpeakStore.get().picking) return;
       const t = f.faceAt ?? f.timestampMs;
-      const b = blink.update(eyeOpenness(f.face, f.videoSize.width, f.videoSize.height), t);
+      const features = extractGazeFeatures(f.face, f.videoSize.width, f.videoSize.height) as Features;
+      const step = session.step({ features, t, open: eyeOpenness(f.face, f.videoSize.width, f.videoSize.height) }, model);
+      const b = step.blink;
       if (b && byBlink) {
         if (b.kind === "click") {
-          const at = pointBefore(trail, b.closedAt, { radius: steady });
+          const at = pointBefore(session.history, b.closedAt, { radius: steady });
           if (at && act(at, "blink")) return;
           else say("Your eyes were still moving, so nothing was clicked. Rest them on the button for a moment, then blink slowly.");
         } else if (b.kind === "short" && b.ms >= 300) say("That blink was short, so nothing was clicked. Close your eyes for about half a second to click.");
       }
-      const feat = extractGazeFeatures(f.face, f.videoSize.width, f.videoSize.height) as Features;
-      if (!feat.valid) return lose(t, feat.reason);
-      const p = predictGaze(model, feat.values, { requireValidation: false }) as { valid: boolean; x?: number; y?: number; reason?: string };
-      if (!p.valid || p.x === undefined || p.y === undefined) return lose(t, p.reason ?? "");
-      if (lostSince !== null) setLost("");
-      lostSince = null;
-      smooth = smoothPoint(smooth, { x: p.x, y: p.y }, t);
-      trail.push(smooth);
-      while (trail.length && trail[0].t < t - 2000) trail.shift();
+      if (!step.point) {
+        // A blink or a frame or two without irises pauses the pointer; a longer loss hides it.
+        if (step.lost) {
+          fix.reset();
+          showRing(null);
+          outline([]);
+          setLost(step.reason);
+        }
+        wasLost = true;
+        return;
+      }
+      if (wasLost) {
+        wasLost = false;
+        setLost("");
+      }
+      const smooth = step.point;
       const list = pool();
-      const fired = fix.update(smooth, t, byDwell && nearTargets(list, fix.point ?? smooth, reach).length > 0);
-      outline(nearTargets(list, fix.point ?? smooth, reach).slice(0, OUTLINES) as Target[]);
+      const near = nearTargets(list, fix.point ?? smooth, reach) as Target[];
+      const fired = fix.update(smooth, t, byDwell && near.length > 0);
+      outline(near.slice(0, OUTLINES));
       showRing(smooth, byDwell ? fix.progress : 0);
       if (fired && fix.point) act(fix.point, "dwell");
     };
@@ -244,7 +246,7 @@ export function EyeCursor() {
       showRing(null);
       outline([]);
     };
-  }, [active, es.model, es.dwellMs, es.cursorPaused, byBlink, byDwell, size, say]);
+  }, [active, model, dwellMs, cursorPaused, byBlink, byDwell, size, say, session]);
 
   usePerceptionEvent<FrameLandmarks>("landmarks", (f) => frame.current?.(f), active);
 
@@ -254,22 +256,21 @@ export function EyeCursor() {
   }, [active, picker, closePicker]);
   useEffect(() => () => eyeSpeakStore.set({ picking: false }), []);
 
-  if (!es.cursor || !host) return null;
-  const how = howToClick(es.cursorClick);
-  const screenChanged = !!es.screen && (Math.abs(es.screen.w - innerWidth) > innerWidth * 0.1 || Math.abs(es.screen.h - innerHeight) > innerHeight * 0.1);
+  if (!cursor || !host) return null;
+  const how = howToClick(cursorClick);
   const status = !ready
     ? camera !== "on"
       ? "Eye cursor is waiting for the camera."
-      : !es.model || !es.checked
+      : !model || !model.validation
         ? "Eye cursor needs a calibration or a 3-dot check on the EyeSpeak page."
         : "Eye cursor needs a calibration accurate enough for 6 or 9 tiles."
     : note
-      ? note.text
-      : es.cursorPaused
+      ? note
+      : cursorPaused
         ? `Paused. Look at Resume and ${how} to carry on.`
         : lost
           ? lost
-          : screenChanged
+          : screenChanged(screen)
             ? "The window size changed since calibrating, so the pointer may be off. Calibrate again on the EyeSpeak page."
             : `Look at a button and ${how} to click.`;
   const bar = "h-11 rounded-xl px-4 text-sm font-medium ring-1 ring-line disabled:cursor-not-allowed disabled:opacity-40";
@@ -297,19 +298,19 @@ export function EyeCursor() {
           </div>
         </div>
       )}
-      {!es.inUse && (
+      {mode === null && (
         <div role="region" aria-label="Eye cursor" data-testid="cursor-bar" className="fixed inset-x-3 bottom-3 z-[65] mx-auto flex max-w-max flex-wrap items-center justify-center gap-2 rounded-2xl bg-white p-2 shadow-float ring-1 ring-line">
           <p role="status" aria-live="polite" className="min-w-0 flex-1 basis-56 px-2 text-sm text-ink" data-testid="cursor-note">
             {status}
           </p>
           <div className="flex flex-wrap justify-center gap-2">
-            <button className={bar} disabled={!ready || es.cursorPaused || !scroll.up} onClick={() => scrollBy({ top: -Math.round(innerHeight * 0.6), behavior: "smooth" })}>
+            <button className={bar} disabled={!ready || cursorPaused || !scroll.up} onClick={() => scrollBy({ top: -Math.round(innerHeight * 0.6), behavior: "smooth" })}>
               Scroll up
             </button>
-            <button className={bar} disabled={!ready || es.cursorPaused || !scroll.down} onClick={() => scrollBy({ top: Math.round(innerHeight * 0.6), behavior: "smooth" })}>
+            <button className={bar} disabled={!ready || cursorPaused || !scroll.down} onClick={() => scrollBy({ top: Math.round(innerHeight * 0.6), behavior: "smooth" })}>
               Scroll down
             </button>
-            {es.cursorPaused ? (
+            {cursorPaused ? (
               <button className={`${bar} bg-brand text-white ring-brand`} data-gaze-resume onClick={() => eyeSpeakStore.set({ cursorPaused: false })}>
                 Resume
               </button>
@@ -324,8 +325,8 @@ export function EyeCursor() {
           </div>
         </div>
       )}
-      {picker && es.model && (
-        <CursorPicker choices={picker.choices} from={picker.from} model={es.model} dwellMs={es.dwellMs} byBlink={byBlink} byDwell={byDwell} register={registerPicker} onPick={closePicker} />
+      {picker && model && (
+        <CursorPicker choices={picker.choices} from={picker.from} model={model} dwellMs={dwellMs} byBlink={byBlink} byDwell={byDwell} onPick={closePicker} />
       )}
     </>,
     host,

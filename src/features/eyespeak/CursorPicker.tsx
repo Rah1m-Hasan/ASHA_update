@@ -1,15 +1,13 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { usePerceptionEvent } from "@/features/perception/PerceptionProvider";
 import type { FrameLandmarks } from "@/lib/engine/types";
-import { LongBlink, eyeOpenness, placeOf, tileBefore } from "./cursor-logic.js";
-import { DwellSelector, TileTracker, extractGazeFeatures, predictGaze, smoothPoint } from "./gaze";
-import type { Features, GazeModel } from "./gaze";
+import { eyeOpenness, placeOf, tileBefore } from "./cursor-logic.js";
+import { DwellSelector, TileTracker, extractGazeFeatures, inside, measureRects, steadyRadius } from "./gaze";
+import type { Features, GazeModel, Rect } from "./gaze";
+import { GazeSession } from "./gaze-session";
 import type { Target } from "./targets";
-
-type Rect = { id: string; x: number; y: number; w: number; h: number };
-const LOSS_MS = 600;
-const inside = (p: { x: number; y: number }, r: Rect) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
 
 /**
  * Several buttons sit closer together than this person's gaze can tell apart, so the eye cursor
@@ -23,7 +21,6 @@ export function CursorPicker({
   dwellMs,
   byBlink,
   byDwell,
-  register,
   onPick,
 }: {
   choices: Target[];
@@ -33,7 +30,6 @@ export function CursorPicker({
   dwellMs: number;
   byBlink: boolean;
   byDwell: boolean;
-  register: (fn: ((f: FrameLandmarks) => void) | null) => void;
   onPick: (target: Target | null) => void;
 }) {
   const tiles = useMemo(() => [...choices.map((c) => ({ id: c.id, label: c.label ?? "Button", place: placeOf(c), target: c as Target | null })), { id: "cancel", label: "Cancel", place: "Nothing", target: null }], [choices]);
@@ -42,17 +38,21 @@ export function CursorPicker({
   const rects = useRef<Rect[]>([]);
   const dot = useRef<HTMLDivElement>(null);
   const pick = useRef(onPick);
+  const sessionRef = useRef<GazeSession | null>(null);
+  const session = (sessionRef.current ??= new GazeSession());
+  /** The selection state, rebuilt when the layout or the model changes. */
+  const state = useRef<{ tracker: TileTracker; dwell: DwellSelector; steady: number } | null>(null);
   useEffect(() => {
     pick.current = onPick;
   });
 
+  const paint = (id: string | null, progress: number) => {
+    for (const [key, el] of nodes.current) el.style.setProperty("--dwell", key === id ? String(progress) : "0");
+  };
+
   useLayoutEffect(() => {
     const measure = () => {
-      const W = innerWidth, H = innerHeight;
-      rects.current = [...nodes.current.entries()].map(([id, el]) => {
-        const r = el.getBoundingClientRect();
-        return { id, x: r.left / W, y: r.top / H, w: r.width / W, h: r.height / H };
-      });
+      rects.current = measureRects(nodes.current);
     };
     measure();
     addEventListener("resize", measure);
@@ -60,62 +60,54 @@ export function CursorPicker({
   }, [tiles]);
 
   useEffect(() => {
-    const choose = (id: string | null) => {
-      const tile = tiles.find((t) => t.id === id);
-      if (tile) pick.current(tile.target);
-    };
     const tracker = new TileTracker();
     const dwell = new DwellSelector({ dwellMs, maxGapMs: 900 });
+    // The tile the eyes were on when the picker opened waits until they move off it.
     dwell.hold(from ? (rects.current.find((r) => inside(from, r))?.id ?? null) : null);
-    const blink = new LongBlink();
-    let smooth: { x: number; y: number; t: number } | null = null;
-    let lostSince: number | null = null;
-    // Where the eyes were, moment by moment, so a slow blink chooses the tile they had settled on.
-    const trail: { t: number; x: number; y: number }[] = [];
-    const steady = Math.min(0.14, Math.max(0.06, (model.validation?.p90Error ?? 0.1) * 0.8));
-    const paint = (id: string | null, progress: number) => {
-      for (const [key, el] of nodes.current) el.style.setProperty("--dwell", key === id ? String(progress) : "0");
-    };
-    register((f) => {
-      const t = f.faceAt ?? f.timestampMs;
-      const b = blink.update(eyeOpenness(f.face, f.videoSize.width, f.videoSize.height), t);
-      if (byBlink && b?.kind === "click") {
-        const id = tileBefore(trail, rects.current, b.closedAt, { radius: steady });
-        if (id) return choose(id);
-      }
-      const feat = extractGazeFeatures(f.face, f.videoSize.width, f.videoSize.height) as Features;
-      const p = feat.valid ? (predictGaze(model, feat.values, { requireValidation: false }) as { valid: boolean; x?: number; y?: number }) : null;
-      if (!p?.valid || p.x === undefined || p.y === undefined) {
-        lostSince ??= t;
-        if (t - lostSince >= LOSS_MS && !blink.closing) {
-          tracker.reset();
-          dwell.update(null, t, false);
-          smooth = null;
-          paint(null, 0);
-          if (dot.current) dot.current.style.opacity = "0";
-        }
+    state.current = { tracker, dwell, steady: steadyRadius(model.validation?.p90Error ?? 0.1) };
+  }, [tiles, model, dwellMs, from]);
+
+  usePerceptionEvent<FrameLandmarks>("landmarks", (f) => {
+    const { tracker, dwell, steady } = state.current ?? {};
+    if (!tracker || !dwell) return;
+    const t = f.faceAt ?? f.timestampMs;
+    const features = extractGazeFeatures(f.face, f.videoSize.width, f.videoSize.height) as Features;
+    const step = session.step({ features, t, open: eyeOpenness(f.face, f.videoSize.width, f.videoSize.height) }, model);
+    const b = step.blink;
+    if (byBlink && b?.kind === "click") {
+      const id = tileBefore(session.history, rects.current, b.closedAt, { radius: steady });
+      if (id) {
+        const tile = tiles.find((t2) => t2.id === id);
+        if (tile) pick.current(tile.target);
         return;
       }
-      lostSince = null;
-      const s = (smooth = smoothPoint(smooth, { x: p.x, y: p.y }, t));
-      if (dot.current) {
-        dot.current.style.opacity = "1";
-        dot.current.style.transform = `translate(${s.x * innerWidth}px, ${s.y * innerHeight}px)`;
+    }
+    if (!step.point) {
+      if (step.lost) {
+        tracker.reset();
+        dwell.update(null, t, false);
+        paint(null, 0);
+        if (dot.current) dot.current.style.opacity = "0";
       }
-      const over = tracker.update(s, rects.current, t);
-      trail.push(s);
-      while (trail.length && trail[0].t < t - 2500) trail.shift();
-      if (!byDwell) {
-        // Show which tile a blink would choose.
-        for (const [key, el] of nodes.current) el.dataset.over = String(key === over);
-        return;
-      }
-      const chosen = dwell.update(over, t, true);
-      paint((dwell.target as string | null) ?? null, dwell.progress ?? 0);
-      if (chosen) choose(chosen as string);
-    });
-    return () => register(null);
-  }, [tiles, model, dwellMs, byBlink, byDwell, register, from]);
+      return;
+    }
+    if (dot.current) {
+      dot.current.style.opacity = "1";
+      dot.current.style.transform = `translate(${step.point.x * innerWidth}px, ${step.point.y * innerHeight}px)`;
+    }
+    const over = tracker.update(step.point, rects.current, t);
+    if (!byDwell) {
+      // Show which tile a blink would choose.
+      for (const [key, el] of nodes.current) el.dataset.over = String(key === over);
+      return;
+    }
+    const chosen = dwell.update(over, t, true);
+    paint((dwell.target as string | null) ?? null, dwell.progress ?? 0);
+    if (chosen) {
+      const tile = tiles.find((t2) => t2.id === chosen);
+      if (tile) pick.current(tile.target);
+    }
+  });
 
   useEffect(() => {
     const key = (e: KeyboardEvent) => e.key === "Escape" && pick.current(null);

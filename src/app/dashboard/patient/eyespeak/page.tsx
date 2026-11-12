@@ -11,9 +11,9 @@ import { Calibration } from "@/features/eyespeak/Calibration";
 import type { CalibrationResult, Feed } from "@/features/eyespeak/Calibration";
 import { eyeOpenness } from "@/features/eyespeak/cursor-logic.js";
 import { EyeOverlay } from "@/features/eyespeak/EyeOverlay";
-import { BOARD_LABEL, BOARD_LIMITS, boardFor, extractGazeFeatures, predictGaze } from "@/features/eyespeak/gaze";
+import { BOARD_LABEL, BOARD_LIMITS, boardFor, cursorOk, extractGazeFeatures, predictGaze } from "@/features/eyespeak/gaze";
 import type { Features, Sample } from "@/features/eyespeak/gaze";
-import { eyeSpeakStore, useEyeSpeak } from "@/features/eyespeak/store";
+import { eyeSpeakStore, screenChanged, useEyeSpeak } from "@/features/eyespeak/store";
 import type { CursorClick } from "@/features/eyespeak/store";
 import { CameraView } from "@/features/perception/CameraView";
 import { useActiveModule, usePerception, usePerceptionEvent } from "@/features/perception/PerceptionProvider";
@@ -37,7 +37,14 @@ const pill = (on: boolean) => `rounded-full px-3 py-1 text-sm font-medium ${on ?
 export default function EyeSpeakPage() {
   useActiveModule("eyespeak");
   const { state: camera, mirrored } = usePerception();
-  const es = useEyeSpeak();
+  const model = useEyeSpeak((s) => s.model);
+  const screen = useEyeSpeak((s) => s.screen);
+  const remember = useEyeSpeak((s) => s.remember);
+  const dwellMs = useEyeSpeak((s) => s.dwellMs);
+  const showDot = useEyeSpeak((s) => s.showDot);
+  const cursor = useEyeSpeak((s) => s.cursor);
+  const cursorClick = useEyeSpeak((s) => s.cursorClick);
+  const overlay = useEyeSpeak((s) => s.mode);
   const consumer = useRef<((f: Features, t: number, open: number | null) => void) | null>(null);
   const feed: Feed = useCallback((c) => {
     consumer.current = c;
@@ -47,18 +54,16 @@ export default function EyeSpeakPage() {
   // Face results per second, shown so a slow device is visible (gaze selection needs steady results).
   const rate = useRef({ last: 0, fps: 0 });
   const [fps, setFps] = useState(0);
-  const [overlay, setOverlay] = useState<null | "full" | "check" | "board" | "scan">(null);
   const [result, setResult] = useState<CalibrationResult | null>(null);
   const [problem, setProblem] = useState("");
-  useEffect(() => () => eyeSpeakStore.set({ boardOpen: false, inUse: false }), []);
-  useEffect(() => {
-    if (eyeSpeakStore.get().inUse !== (overlay !== null)) eyeSpeakStore.set({ inUse: overlay !== null });
-  }, [overlay]);
+  useEffect(() => () => eyeSpeakStore.set({ mode: null }), []);
 
   usePerceptionEvent<FrameLandmarks>("landmarks", (f) => {
     const features = extractGazeFeatures(f.face, f.videoSize.width, f.videoSize.height) as Features;
     const t = f.faceAt ?? f.timestampMs;
-    consumer.current?.(features, t, eyeOpenness(f.face, f.videoSize.width, f.videoSize.height));
+    // How open the eyes are only matters to the calibration and the board.
+    const c = consumer.current;
+    if (c) c(features, t, eyeOpenness(f.face, f.videoSize.width, f.videoSize.height));
     const r = rate.current;
     if (r.last && t > r.last) r.fps = r.fps ? r.fps * 0.9 + (1000 / (t - r.last)) * 0.1 : 1000 / (t - r.last);
     r.last = t;
@@ -74,28 +79,25 @@ export default function EyeSpeakPage() {
   }, camera === "on");
 
   const tracking = camera === "on" && !!live?.valid;
-  const validation = es.checked ? es.model?.validation ?? null : null;
+  const validation = model?.validation ?? null;
   const size = boardFor(validation);
-  const cursorOk = size === 9 || size === 6;
-  const screenChanged = !!es.screen && typeof window !== "undefined" && (Math.abs(es.screen.w - innerWidth) > innerWidth * 0.1 || Math.abs(es.screen.h - innerHeight) > innerHeight * 0.1);
+  const cursorReady = cursorOk(size);
 
   const finished = (r: CalibrationResult) => {
-    setOverlay(null);
+    eyeSpeakStore.set({ mode: null });
     setProblem("");
     setResult(r);
     eyeSpeakStore.setModel(r.model, { w: innerWidth, h: innerHeight });
   };
   const stopped = (reason?: string) => {
-    setOverlay(null);
+    eyeSpeakStore.set({ mode: null });
     if (reason) setProblem(reason);
   };
   const openBoard = (kind: "board" | "scan" = "board") => {
-    eyeSpeakStore.set({ boardOpen: true });
-    setOverlay(kind);
+    eyeSpeakStore.set({ mode: kind });
   };
   const closeBoard = useCallback(() => {
-    eyeSpeakStore.set({ boardOpen: false });
-    setOverlay(null);
+    eyeSpeakStore.set({ mode: null });
   }, []);
 
   const predictions = useMemo(() => {
@@ -150,16 +152,16 @@ export default function EyeSpeakPage() {
             Calibration stopped: {problem}
           </p>
         )}
-        {es.model && !es.checked && (
+        {model && !model.validation && (
           <p className="mb-3 text-sm text-ink">A calibration from an earlier visit is saved on this device. Run the 3-dot check before using it.</p>
         )}
-        {screenChanged && <p className="mb-3 text-sm text-amber-700">The window size changed since calibrating. Calibrate again for accurate selection.</p>}
+        {screenChanged(screen) && <p className="mb-3 text-sm text-amber-700">The window size changed since calibrating. Calibrate again for accurate selection.</p>}
         <div className="flex flex-wrap gap-2">
-          <Button onClick={() => setOverlay("full")} disabled={!tracking} className={DIM}>
-            {es.model ? "Calibrate again" : "Start calibration"}
+          <Button onClick={() => eyeSpeakStore.set({ mode: "calibrate" })} disabled={!tracking} className={DIM}>
+            {model ? "Calibrate again" : "Start calibration"}
           </Button>
-          {es.model && (
-            <Button variant="secondary" onClick={() => setOverlay("check")} disabled={!tracking} className={DIM}>
+          {model && (
+            <Button variant="secondary" onClick={() => eyeSpeakStore.set({ mode: "check" })} disabled={!tracking} className={DIM}>
               Quick 3-dot check
             </Button>
           )}
@@ -214,11 +216,11 @@ export default function EyeSpeakPage() {
             )}
           </div>
         )}
-        {es.model && (
+        {model && (
           <div className="mt-3 divide-y divide-line">
             <Switch
-              checked={es.remember}
-              onChange={(remember) => eyeSpeakStore.set({ remember })}
+              checked={remember}
+              onChange={(keep) => eyeSpeakStore.set({ remember: keep })}
               label="Remember this calibration on this device"
               description="Saves numbers about your eye positions and the screen size, never video. It must pass the 3-dot check again next time."
             />
@@ -251,17 +253,17 @@ export default function EyeSpeakPage() {
           <div className="flex flex-wrap items-center justify-between gap-3 py-3">
             <span>
               <span className="block font-medium text-ink">Selection time</span>
-              <span className="block text-xs text-muted">Blink scanning lights each word for {((es.dwellMs + 600) / 1000).toFixed(1)} s.</span>
+              <span className="block text-xs text-muted">Blink scanning lights each word for {((dwellMs + 600) / 1000).toFixed(1)} s.</span>
             </span>
             <div className="flex gap-1 rounded-full bg-wash p-1" role="group" aria-label="Selection time">
               {DWELL.map((d) => (
-                <button key={d.ms} aria-pressed={es.dwellMs === d.ms} onClick={() => eyeSpeakStore.setDwell(d.ms)} className={pill(es.dwellMs === d.ms)}>
+                <button key={d.ms} aria-pressed={dwellMs === d.ms} onClick={() => eyeSpeakStore.setDwell(d.ms)} className={pill(dwellMs === d.ms)}>
                   {d.label}
                 </button>
               ))}
             </div>
           </div>
-          <Switch checked={es.showDot} onChange={(showDot) => eyeSpeakStore.set({ showDot })} label="Show where Asha thinks you’re looking" description="A ring follows your gaze on the board." />
+          <Switch checked={showDot} onChange={(showDot) => eyeSpeakStore.set({ showDot })} label="Show where Asha thinks you’re looking" description="A ring follows your gaze on the board." />
         </div>
       </section>
 
@@ -273,21 +275,21 @@ export default function EyeSpeakPage() {
           A ring follows your gaze on every Asha page. Look at a button and blink slowly, with your eyes closed for about half a second, to click it. Normal blinks don’t click. When buttons are too close together for your accuracy, Asha shows them as big tiles to choose from.
         </p>
         <Button
-          onClick={() => eyeSpeakStore.set({ cursor: !es.cursor, cursorPaused: false })}
-          disabled={!es.cursor && (!cursorOk || camera !== "on")}
-          variant={es.cursor ? "secondary" : "primary"}
+          onClick={() => eyeSpeakStore.set({ cursor: !cursor, cursorPaused: false })}
+          disabled={!cursor && (!cursorReady || camera !== "on")}
+          variant={cursor ? "secondary" : "primary"}
           className={DIM}
           data-testid="cursor-toggle"
         >
-          {es.cursor ? "Turn off eye cursor" : "Turn on eye cursor"}
+          {cursor ? "Turn off eye cursor" : "Turn on eye cursor"}
         </Button>
-        {!cursorOk && <p className="mt-2 text-xs text-muted">Available after a calibration accurate enough for 6 or 9 tiles. Ordinary buttons are smaller than board tiles.</p>}
+        {!cursorReady && <p className="mt-2 text-xs text-muted">Available after a calibration accurate enough for 6 or 9 tiles. Ordinary buttons are smaller than board tiles.</p>}
         <div className="mt-4 divide-y divide-line rounded-2xl bg-white px-5 ring-1 ring-line">
           <div className="flex flex-wrap items-center justify-between gap-3 py-3">
             <span className="font-medium text-ink">Click with</span>
             <div className="flex flex-wrap gap-1 rounded-full bg-wash p-1" role="group" aria-label="Click with">
               {CLICKS.map((c) => (
-                <button key={c.value} aria-pressed={es.cursorClick === c.value} onClick={() => eyeSpeakStore.set({ cursorClick: c.value })} className={pill(es.cursorClick === c.value)}>
+                <button key={c.value} aria-pressed={cursorClick === c.value} onClick={() => eyeSpeakStore.set({ cursorClick: c.value })} className={pill(cursorClick === c.value)}>
                   {c.label}
                 </button>
               ))}
@@ -312,9 +314,9 @@ export default function EyeSpeakPage() {
         </Link>
       </section>
 
-      {(overlay === "full" || overlay === "check") && <Calibration mode={overlay} model={es.model} feed={feed} onDone={finished} onCancel={stopped} />}
-      {overlay === "board" && size !== 0 && es.model && <Board size={size} model={es.model} dwellMs={es.dwellMs} showDot={es.showDot} feed={feed} onExit={closeBoard} />}
-      {overlay === "scan" && <Board size={9} mode="scan" model={es.model} dwellMs={es.dwellMs} showDot={false} feed={feed} onExit={closeBoard} />}
+      {(overlay === "calibrate" || overlay === "check") && <Calibration mode={overlay} model={model} feed={feed} onDone={finished} onCancel={stopped} />}
+      {overlay === "board" && size !== 0 && model && <Board size={size} model={model} dwellMs={dwellMs} showDot={showDot} feed={feed} onExit={closeBoard} />}
+      {overlay === "scan" && <Board size={9} mode="scan" model={model} dwellMs={dwellMs} showDot={false} feed={feed} onExit={closeBoard} />}
     </div>
   );
 }

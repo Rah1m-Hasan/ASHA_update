@@ -30,6 +30,7 @@ export class LongBlink {
   reset() {
     this.samples = [];
     this.ref = null;
+    this.refAt = 0;
     this.closedAt = null;
     this.openSince = null;
     this.lastT = null;
@@ -64,7 +65,12 @@ export class LongBlink {
         this.openSince ??= t;
         this.samples.push({ t, v: openness });
         this.samples = this.samples.filter((s) => t - s.t <= 3000);
-        if (this.samples.length >= 5) this.ref = median(this.samples.map((s) => s.v));
+        // The open-eye reference is a baseline, not a reading: it is worth recomputing a few times
+        // a second, not once per camera frame.
+        if (this.samples.length >= 5 && (this.ref === null || t - this.refAt >= 300)) {
+          this.ref = median(this.samples.map((s) => s.v));
+          this.refAt = t;
+        }
       }
       return null;
     }

@@ -238,13 +238,45 @@ export function fitGazeModel(observations, { ridge = 0.05 } = {}) {
   return model;
 }
 
+// The shape of a model does not change once it is fitted, so it is checked once per model rather
+// than once per camera frame.
+const modelShapes = new WeakMap();
+function modelShapeIsValid(model) {
+  if (typeof model !== "object" || model === null) return false;
+  const known = modelShapes.get(model);
+  if (known !== undefined) return known;
+  const ok =
+    model.version === GAZE_MODEL_VERSION &&
+    [model.mean, model.scale].every(
+      (row) =>
+        Array.isArray(row) &&
+        row.length === FEATURE_COUNT &&
+        row.every(Number.isFinite),
+    ) &&
+    model.scale.every((value) => value > 0) &&
+    Array.isArray(model.domain) &&
+    model.domain.length === FEATURE_COUNT &&
+    model.domain.every(
+      (domain) =>
+        Number.isFinite(domain?.min) && Number.isFinite(domain?.max),
+    ) &&
+    [model.weights?.x, model.weights?.y].every(
+      (row) =>
+        Array.isArray(row) &&
+        row.length === FEATURE_COUNT + 1 &&
+        row.every(Number.isFinite),
+    );
+  modelShapes.set(model, ok);
+  return ok;
+}
+
 export function predictGaze(
   model,
   features,
   { requireValidation = true } = {},
 ) {
   const modelShapeValid =
-    model?.version === GAZE_MODEL_VERSION &&
+    modelShapeIsValid(model) &&
     [model.mean, model.scale].every(
       (row) =>
         Array.isArray(row) &&

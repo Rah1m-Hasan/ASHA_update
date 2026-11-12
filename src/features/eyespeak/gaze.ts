@@ -2,6 +2,8 @@
 // tests/everyday-eyespeak.test.mjs): iris position inside each eye plus head position, mapped to the
 // screen by a per-person ridge regression. This file adds what the app needs around it: how a person's
 // measured accuracy decides which board they get, and the tile layouts.
+import { NEEDS } from "@/features/requests/needs";
+import type { NeedKind } from "@/features/requests/needs";
 import {
   CHECK_TARGETS,
   DwellSelector,
@@ -18,7 +20,6 @@ export type Features = { valid: true; values: number[]; openness: number } | { v
 export type Sample = { features: number[]; x: number; y: number };
 export type Validation = { passed: boolean; meanError: number; p90Error: number; targets: number; samples: number; checkedAt: string };
 export type GazeModel = { version: string; validation: Validation | null; fitError?: number; samples: number; targets: number; createdAt: string; [k: string]: unknown };
-export type Prediction = { valid: true; x: number; y: number; error: number | null } | { valid: false; reason: string };
 
 /** Fractions of the screen. Each board needs the person's 90th-percentile error to stay inside its tiles. */
 export type BoardSize = 9 | 6 | 2 | 0;
@@ -34,6 +35,15 @@ export function boardFor(v: Pick<Validation, "meanError" | "p90Error"> | null | 
   return BOARD_LIMITS.find((l) => v.p90Error <= l.p90 && v.meanError <= l.mean)?.size ?? 0;
 }
 
+/** The eye cursor clicks ordinary page buttons, which are smaller than board tiles. */
+export const cursorOk = (size: BoardSize): boolean => size === 9 || size === 6;
+
+/** How far from the gaze point a button can be and still count as under the eyes. */
+export const reachRadius = (p90: number) => Math.max(0.035, p90);
+
+/** How still the eyes must be for a blink to count as a deliberate choice. */
+export const steadyRadius = (p90: number) => Math.min(0.14, Math.max(0.06, p90 * 0.8));
+
 export const BOARD_LABEL: Record<BoardSize, string> = {
   9: "9 tiles",
   6: "6 large tiles",
@@ -41,16 +51,21 @@ export const BOARD_LABEL: Record<BoardSize, string> = {
   0: "Not reliable enough yet",
 };
 
-export type Tile = { id: string; label: string; bn: string; say: string; need?: "water" | "food" | "toilet" | "comfort" | "help" };
+export type Tile = { id: string; label: string; bn: string; say: string; need?: NeedKind };
 
 const YES: Tile = { id: "yes", label: "Yes", bn: "হ্যাঁ", say: "Yes" };
 const NO: Tile = { id: "no", label: "No", bn: "না", say: "No" };
-const WATER: Tile = { id: "water", label: "Water", bn: "পানি", say: "I need water", need: "water" };
-const TOILET: Tile = { id: "toilet", label: "Toilet", bn: "টয়লেট", say: "I need to go to the toilet", need: "toilet" };
-const PAIN: Tile = { id: "pain", label: "Pain", bn: "ব্যথা", say: "I’m in pain", need: "help" };
-const HELP: Tile = { id: "help", label: "Come here", bn: "এখানে আসুন", say: "Please come here", need: "help" };
-const FOOD: Tile = { id: "food", label: "Food", bn: "খাবার", say: "I need food", need: "food" };
-const COMFORT: Tile = { id: "comfort", label: "Comfort", bn: "আরাম", say: "I need help getting comfortable", need: "comfort" };
+/** The words for a need come from the one catalogue every request uses. */
+const needTile = (kind: NeedKind): Tile => {
+  const n = NEEDS.find((x) => x.kind === kind)!;
+  return { id: n.kind, label: n.label, bn: n.bn, say: n.text, need: n.kind };
+};
+const WATER = needTile("water");
+const TOILET = needTile("toilet");
+const PAIN: Tile = { id: "pain", label: "Pain", bn: "ব্থা", say: "I’m in pain", need: "help" };
+const HELP = needTile("help");
+const FOOD = needTile("food");
+const COMFORT = needTile("comfort");
 const THANKS: Tile = { id: "thanks", label: "Thank you", bn: "ধন্যবাদ", say: "Thank you" };
 
 export const BOARDS: Record<Exclude<BoardSize, 0>, { cols: number; rows: number; tiles: Tile[] }> = {
@@ -82,15 +97,22 @@ export const HALF_STEPS: Group = group(
     group("g-rest", "Pain and more", "ব্যথা ও আরও", group("g-ph", "Pain or come here", "ব্যথা বা এখানে আসুন", PAIN, HELP), group("g-ct", "Comfort or thank you", "আরাম বা ধন্যবাদ", COMFORT, THANKS)),
   ),
 );
-/** The group reached by following `path` (group ids) from the top. */
-export function stepAt(path: string[]): Group {
+/** The group reached by following `path` (group ids) from the top, and the labels on the way. */
+export function pathAt(path: string[]): { node: Group; labels: string[] } {
   let node = HALF_STEPS;
+  const labels: string[] = [];
   for (const id of path) {
     const next = node.options.find((o) => o.id === id);
     if (!next || !isGroup(next)) break;
     node = next;
+    labels.push(next.label);
   }
-  return node;
+  return { node, labels };
+}
+
+/** The group reached by following `path` (group ids) from the top. */
+export function stepAt(path: string[]): Group {
+  return pathAt(path).node;
 }
 
 /** Two halves for confirming a request by gaze. */
@@ -109,8 +131,17 @@ export function tileAt(point: { x: number; y: number } | null, rects: { id: stri
   return null;
 }
 
-type Rect = { id: string; x: number; y: number; w: number; h: number };
-const inside = (p: { x: number; y: number }, r: Rect) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
+export type Rect = { id: string; x: number; y: number; w: number; h: number };
+export const inside = (p: { x: number; y: number }, r: Rect) => p.x >= r.x && p.x <= r.x + r.w && p.y >= r.y && p.y <= r.y + r.h;
+
+/** Tile positions as fractions of the screen, the same frame the calibration used. */
+export function measureRects(nodes: Map<string, HTMLElement>): Rect[] {
+  const W = innerWidth, H = innerHeight;
+  return [...nodes.entries()].map(([id, el]) => {
+    const r = el.getBoundingClientRect();
+    return { id, x: r.left / W, y: r.top / H, w: r.width / W, h: r.height / H };
+  });
+}
 
 /**
  * Which tile the person is looking at, steady through normal jitter. A tile is taken when the point

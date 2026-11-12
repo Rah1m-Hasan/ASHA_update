@@ -1,5 +1,7 @@
 // What the eye cursor can click on the page right now, and how it clicks it.
 
+import { activeDialog } from "@/lib/dialog";
+
 export type Target = { id: string; el: HTMLElement; x: number; y: number; w: number; h: number; label?: string };
 
 const CLICKABLE = [
@@ -71,9 +73,10 @@ export function labelOf(el: HTMLElement): string {
  */
 export function collectTargets(): Target[] {
   const W = innerWidth, H = innerHeight;
-  const scope: ParentNode = document.querySelector("dialog[open]") ?? document;
+  const scope: ParentNode = activeDialog() ?? document;
   const out: Target[] = [];
   const seen = new Set<HTMLElement>();
+  const boxes: { el: HTMLElement; r: DOMRect }[] = [];
   for (const found of scope.querySelectorAll<HTMLElement>(CLICKABLE)) {
     let el = found;
     if (el.closest("[data-gaze-ignore]")) continue;
@@ -84,6 +87,11 @@ export function collectTargets(): Target[] {
     if (el.matches(":disabled") || el.getAttribute("aria-disabled") === "true" || el.closest("[inert],[aria-hidden=true]")) continue;
     const r = el.getBoundingClientRect();
     if (r.width < 6 || r.height < 6) continue;
+    boxes.push({ el, r });
+  }
+  // Every rectangle is read before anything is hit-tested, so the page is laid out once rather
+  // than once per button.
+  for (const { el, r } of boxes) {
     const left = Math.max(0, r.left), right = Math.min(W, r.right), top = Math.max(0, r.top), bottom = Math.min(H, r.bottom);
     if (right - left < 6 || bottom - top < 6) continue;
     const hit = document.elementFromPoint((left + right) / 2, (top + bottom) / 2);
