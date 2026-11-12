@@ -29,7 +29,7 @@ export function Modules() {
         <ol className="divide-y divide-line">
           {modules.map((m, i) => (
             <Reveal as="li" key={m.key} className="grid gap-4 py-8 sm:grid-cols-[48px_1fr] sm:gap-6">
-                <span className="grid size-12 place-items-center rounded-2xl bg-white text-brand shadow-card">
+                <span className="grid size-12 place-items-center rounded-2xl bg-surface text-brand shadow-card">
                   <ModuleIcon module={m.key} size={22} />
                 </span>
                 <div>

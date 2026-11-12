@@ -102,10 +102,10 @@ export default function MyPlan() {
               }
             />
             {editing ? (
-              <div className="rounded-2xl bg-white p-5 ring-1 ring-line">
+              <div className="rounded-2xl bg-surface p-5 ring-1 ring-line">
                 <PlanEditor program={draft ?? plan} onChange={setDraft} />
                 {error && (
-                  <p role="alert" className="mt-3 text-sm text-red-700">
+                  <p role="alert" className="mt-3 text-sm text-danger">
                     {error}
                   </p>
                 )}
@@ -127,7 +127,7 @@ export default function MyPlan() {
                 </div>
               </div>
             ) : (
-              <ol className="divide-y divide-line rounded-2xl bg-white ring-1 ring-line">
+              <ol className="divide-y divide-line rounded-2xl bg-surface ring-1 ring-line">
                 {plan.sequence.map((s, i) => {
                   const e = EXERCISES[s.exerciseId];
                   return (
@@ -180,7 +180,7 @@ export default function MyPlan() {
             )}
           </section>
         ) : (
-          <div className="rounded-2xl bg-white ring-1 ring-line">
+          <div className="rounded-2xl bg-surface ring-1 ring-line">
             <EmptyState title={tx(lang, "No plan yet", "এখনো প্ল্যান নেই")} action={<ButtonLink href={`${BASE}/start`}>{tx(lang, "Build a plan", "প্ল্যান তৈরি")}</ButtonLink>}>
               {tx(lang, "Answer a few questions, one at a time, and ASHA suggests a starter plan you can change.", "একটি একটি করে কয়েকটি প্রশ্নের উত্তর দিন, ASHA একটি শুরুর প্ল্যান দেবে যা আপনি বদলাতে পারবেন।")}
             </EmptyState>
@@ -190,7 +190,7 @@ export default function MyPlan() {
         {plan && (
           <section aria-labelledby="plan-days">
             <Heading id="plan-days" title={tx(lang, "Workout days", "ব্যায়ামের দিন")} description={tx(lang, "Leave rest days between workouts.", "দুই ব্যায়ামের মাঝে বিশ্রামের দিন রাখুন।")} />
-            <div className="rounded-2xl bg-white p-5 ring-1 ring-line">
+            <div className="rounded-2xl bg-surface p-5 ring-1 ring-line">
               <div className="flex flex-wrap gap-2" role="group" aria-label="Workout days">
                 {DAYS.map(([en, bn], day) => {
                   const on = schedule.includes(day);
@@ -200,7 +200,7 @@ export default function MyPlan() {
                       type="button"
                       aria-pressed={on}
                       onClick={() => moveStore.set({ schedule: on ? schedule.filter((d) => d !== day) : [...schedule, day].sort() })}
-                      className={cn("h-10 min-w-12 rounded-full px-3 text-sm font-medium ring-1 transition-colors", on ? "bg-brand-soft text-brand ring-brand" : "bg-white text-muted ring-line hover:text-ink")}
+                      className={cn("h-10 min-w-12 rounded-full px-3 text-sm font-medium ring-1 transition-colors", on ? "bg-brand-soft text-brand ring-brand" : "bg-surface text-muted ring-line hover:text-ink")}
                     >
                       {tx(lang, en, bn)}
                     </button>
@@ -217,7 +217,7 @@ export default function MyPlan() {
         <section aria-labelledby="plan-clinician">
           <Heading id="plan-clinician" title={tx(lang, "From your clinician", "চিকিৎসকের দেওয়া")} />
           {clinician.length ? (
-            <ul className="divide-y divide-line rounded-2xl bg-white ring-1 ring-line">
+            <ul className="divide-y divide-line rounded-2xl bg-surface ring-1 ring-line">
               {clinician.map((p) => (
                 <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 px-5 py-4">
                   <div>
@@ -237,7 +237,7 @@ export default function MyPlan() {
               ))}
             </ul>
           ) : (
-            <Link href={`${BASE}/clinician`} className="group flex items-center justify-between gap-4 rounded-2xl bg-white px-5 py-4 ring-1 ring-line transition-colors hover:bg-wash">
+            <Link href={`${BASE}/clinician`} className="group flex items-center justify-between gap-4 rounded-2xl bg-surface px-5 py-4 ring-1 ring-line transition-colors hover:bg-wash">
               <span>
                 <span className="block font-medium text-ink">{tx(lang, "Connect to your clinic", "আপনার ক্লিনিকের সাথে যুক্ত হন")}</span>
                 <span className="block text-sm text-muted">{tx(lang, "If your clinician uses ASHA Clinic, their recovery or heart plan appears here.", "আপনার চিকিৎসক ASHA Clinic ব্যবহার করলে তাঁর দেওয়া প্ল্যান এখানে দেখা যাবে।")}</span>

@@ -7,7 +7,7 @@ type Size = "sm" | "md";
 const base =
   "inline-flex items-center justify-center gap-1.5 rounded-full font-medium whitespace-nowrap transition-colors";
 const variants: Record<Variant, string> = {
-  primary: "bg-brand text-white hover:bg-brand-hover",
+  primary: "bg-brand text-on-brand hover:bg-brand-hover",
   secondary: "bg-brand-soft text-brand hover:bg-brand-mint",
   ghost: "text-ink hover:bg-wash rounded-lg",
 };

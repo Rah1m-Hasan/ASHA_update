@@ -1,25 +1,184 @@
 @import "tailwindcss";
 
-/* Asha theme — light only. Shared by the landing page and Tailwind utilities. */
+/* --- asha-tokens:start --- */
 @theme {
-  --font-sans: var(--font-inter), "Noto Sans Bengali", "Hind Siliguri", system-ui, sans-serif;
+  --font-sans: "Figtree", "Anek Bangla", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Fraunces", "Figtree", "Anek Bangla", Georgia, serif;
 
-  --color-brand: #2563eb;
-  --color-brand-hover: #1d4ed8;
-  --color-brand-soft: #eff6ff;
-  --color-brand-mint: #dbeafe;
-  --color-ink: #172b4d;
-  --color-heading: #15345b;
-  --color-muted: #64748b;
-  --color-line: #dbe5f0;
-  --color-canvas: #ffffff;
-  --color-wash: #f6f8fb;
-  --color-danger: #a63c32;
+  --color-canvas: var(--asha-canvas);
+  --color-surface: var(--asha-surface);
+  --color-sunken: var(--asha-sunken);
+  --color-wash: var(--asha-wash);
+  --color-heading: var(--asha-heading);
+  --color-ink: var(--asha-ink);
+  --color-muted: var(--asha-muted);
+  --color-subtle: var(--asha-subtle);
+  --color-line: var(--asha-line);
+  --color-line-strong: var(--asha-line-strong);
+  --color-brand: var(--asha-brand);
+  --color-brand-hover: var(--asha-brand-hover);
+  --color-brand-soft: var(--asha-brand-soft);
+  --color-brand-mint: var(--asha-brand-mint);
+  --color-on-brand: var(--asha-on-brand);
+  --color-good: var(--asha-good);
+  --color-good-soft: var(--asha-good-soft);
+  --color-good-line: var(--asha-good-line);
+  --color-good-strong: var(--asha-good-strong);
+  --color-on-good: var(--asha-on-good);
+  --color-warn: var(--asha-warn);
+  --color-warn-soft: var(--asha-warn-soft);
+  --color-warn-line: var(--asha-warn-line);
+  --color-warn-strong: var(--asha-warn-strong);
+  --color-danger: var(--asha-danger);
+  --color-danger-soft: var(--asha-danger-soft);
+  --color-danger-line: var(--asha-danger-line);
+  --color-danger-strong: var(--asha-danger-strong);
+  --color-danger-hover: var(--asha-danger-hover);
+  --color-on-danger: var(--asha-on-danger);
+  --color-veil: var(--asha-veil);
+  --color-on-veil: var(--asha-on-veil);
+  --color-deep: var(--asha-deep);
+  --color-on-deep: var(--asha-on-deep);
+  --color-deep-accent: var(--asha-deep-accent);
+  --color-deep-muted: var(--asha-deep-muted);
 
-  --shadow-card: 0 16px 50px #15345b12;
-  --shadow-float: 0 24px 80px #15345b1f;
+  --text-display: 3.5rem;
+    --text-display--line-height: 1.02;
+    --text-display--letter-spacing: -0.03em;
+  --text-display-lg: 4.25rem;
+    --text-display-lg--line-height: 0.98;
+    --text-display-lg--letter-spacing: -0.035em;
+  --text-display-sm: 2.5rem;
+    --text-display-sm--line-height: 1.06;
+    --text-display-sm--letter-spacing: -0.025em;
+  --text-title: 2rem;
+    --text-title--line-height: 1.15;
+    --text-title--letter-spacing: -0.02em;
+  --text-title-lg: 2.5rem;
+    --text-title-lg--line-height: 1.1;
+    --text-title-lg--letter-spacing: -0.025em;
+  --text-title-sm: 2.125rem;
+    --text-title-sm--line-height: 1.18;
+    --text-title-sm--letter-spacing: -0.02em;
+  --text-lead: 1.125rem;
+    --text-lead--line-height: 1.65;
+  --text-label: 0.875rem;
+    --text-label--line-height: 1.45;
+  --text-caption: 0.75rem;
+    --text-caption--line-height: 1.4;
 
+  --radius-xs: 0.375rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.125rem;
+  --radius-2xl: 1.25rem;
+  --radius-3xl: 1.75rem;
+
+  --shadow-xs: var(--asha-shadow-xs);
+  --shadow-sm: var(--asha-shadow-sm);
+  --shadow-md: var(--asha-shadow-md);
+  --shadow-lg: var(--asha-shadow-lg);
+  --shadow-card: var(--asha-shadow-card);
+  --shadow-float: var(--asha-shadow-float);
+
+  --ease-out-quart: cubic-bezier(0.22, 0.61, 0.36, 1);
 }
+
+/* The colour values. These are the ones the theme switches: the dark block
+   below redefines them, and every utility above reads through var(). */
+:root {
+  --asha-canvas: #ffffff;
+  --asha-surface: #ffffff;
+  --asha-sunken: #e9eef5;
+  --asha-wash: #f2f5f9;
+  --asha-heading: #0b1728;
+  --asha-ink: #0e1c2f;
+  --asha-muted: #5a6b80;
+  --asha-subtle: #8494a6;
+  --asha-line: #dde4ed;
+  --asha-line-strong: #c3cedd;
+  --asha-brand: #1b57c9;
+  --asha-brand-hover: #1647a8;
+  --asha-brand-soft: #eff5fe;
+  --asha-brand-mint: #dce9fb;
+  --asha-on-brand: #ffffff;
+  --asha-good: #0f7a4f;
+  --asha-good-soft: #e7f5ee;
+  --asha-good-line: #b9e0cd;
+  --asha-good-strong: #0f7a4f;
+  --asha-on-good: #ffffff;
+  --asha-warn: #9a5b06;
+  --asha-warn-soft: #fdf3e3;
+  --asha-warn-line: #f0d9ae;
+  --asha-warn-strong: #b26a00;
+  --asha-danger: #a63c32;
+  --asha-danger-soft: #fbedeb;
+  --asha-danger-line: #edc4be;
+  --asha-danger-strong: #a63c32;
+  --asha-danger-hover: #8f332b;
+  --asha-on-danger: #ffffff;
+  --asha-veil: #0b1728;
+  --asha-on-veil: #ffffff;
+  --asha-deep: #15345b;
+  --asha-on-deep: #f1f5f9;
+  --asha-deep-accent: #93c5fd;
+  --asha-deep-muted: #cbd9ed;
+
+  --asha-shadow-xs: 0 1px 2px #0e1c2f0a;
+  --asha-shadow-sm: 0 1px 3px #0e1c2f12, 0 1px 2px #0e1c2f0a;
+  --asha-shadow-md: 0 6px 16px -4px #0e1c2f1a, 0 2px 6px -2px #0e1c2f0f;
+  --asha-shadow-lg: 0 18px 48px -12px #0e1c2f26, 0 4px 10px -4px #0e1c2f12;
+  --asha-shadow-card: 0 6px 16px -4px #0e1c2f1a, 0 2px 6px -2px #0e1c2f0f;
+  --asha-shadow-float: 0 18px 48px -12px #0e1c2f26, 0 4px 10px -4px #0e1c2f12;
+}
+
+:root[data-theme="dark"] {
+  --asha-canvas: #0b1424;
+  --asha-surface: #16263d;
+  --asha-sunken: #1d3049;
+  --asha-wash: #0e1b2d;
+  --asha-heading: #f4f8fc;
+  --asha-ink: #e8eff7;
+  --asha-muted: #a3b4c8;
+  --asha-subtle: #7c8fa6;
+  --asha-line: #263850;
+  --asha-line-strong: #354c68;
+  --asha-brand: #6fa8ff;
+  --asha-brand-hover: #8fbdff;
+  --asha-brand-soft: #16273f;
+  --asha-brand-mint: #1e3a5c;
+  --asha-on-brand: #08111f;
+  --asha-on-veil: #ffffff;
+  --asha-good: #5fd3a0;
+  --asha-good-soft: #12281d;
+  --asha-good-line: #1f5b44;
+  --asha-good-strong: #14795a;
+  --asha-on-good: #ffffff;
+  --asha-warn: #f0b95c;
+  --asha-warn-soft: #2b2113;
+  --asha-warn-line: #5c4718;
+  --asha-warn-strong: #f7cd8b;
+  --asha-danger: #f28b7f;
+  --asha-danger-soft: #2b1613;
+  --asha-danger-line: #5e2b23;
+  --asha-danger-strong: #c0392f;
+  --asha-danger-hover: #cf4438;
+  --asha-on-danger: #ffffff;
+  --asha-veil: #0b1728;
+  --asha-deep: #15345b;
+  --asha-on-deep: #f1f5f9;
+  --asha-deep-accent: #93c5fd;
+  --asha-deep-muted: #cbd9ed;
+
+  --asha-shadow-xs: 0 1px 2px #00000040;
+  --asha-shadow-sm: 0 1px 3px #00000059, 0 1px 2px #00000040;
+  --asha-shadow-md: 0 6px 16px -4px #00000066, 0 2px 6px -2px #0000004d;
+  --asha-shadow-lg: 0 18px 48px -12px #00000080, 0 4px 10px -4px #00000059;
+  --asha-shadow-card: 0 6px 16px -4px #00000066, 0 2px 6px -2px #0000004d;
+  --asha-shadow-float: 0 18px 48px -12px #00000080, 0 4px 10px -4px #00000059;
+}
+/* --- asha-tokens:end --- */
 
 @layer base {
   html {
@@ -27,12 +186,27 @@
     scroll-behavior: smooth;
     -webkit-font-smoothing: antialiased;
   }
+  html[data-theme="dark"] {
+    color-scheme: dark;
+  }
   body {
     @apply bg-canvas text-ink font-sans;
   }
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-brand;
   }
+}
+
+/* The wordmark ships in two colours. Only the one that reads on the current
+   background is shown. */
+.asha-wordmark--dark {
+  display: none;
+}
+html[data-theme="dark"] .asha-wordmark--light {
+  display: none;
+}
+html[data-theme="dark"] .asha-wordmark--dark {
+  display: block;
 }
 
 /* Scroll reveal — progressive enhancement, no JavaScript. */

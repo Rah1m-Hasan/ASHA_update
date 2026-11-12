@@ -18,7 +18,7 @@ function AreaCard({ area, suggested }: { area: Area; suggested: boolean }) {
     <li>
       <Link
         href={area.href}
-        className="group flex h-full items-start gap-4 rounded-2xl bg-white p-5 ring-1 ring-line transition hover:ring-brand focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
+        className="group flex h-full items-start gap-4 rounded-2xl bg-surface p-5 ring-1 ring-line transition hover:ring-brand focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none"
       >
         <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-brand-soft text-brand">
           <Icon size={22} />
@@ -61,7 +61,7 @@ export default function PatientHome() {
 
       {last && (
         <Link href={last.href} className="group mb-8 flex items-center gap-4 rounded-2xl bg-brand-soft p-4 ring-1 ring-brand-mint transition hover:ring-brand" data-testid="home-continue">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-brand">
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-surface text-brand">
             <last.icon size={20} />
           </span>
           <span className="min-w-0 flex-1">
@@ -92,7 +92,7 @@ export default function PatientHome() {
         </div>
 
         {customising && (
-          <fieldset className="mb-4 rounded-2xl bg-white p-5 ring-1 ring-line">
+          <fieldset className="mb-4 rounded-2xl bg-surface p-5 ring-1 ring-line">
             <legend className="sr-only">Areas on your home</legend>
             <p className="mb-3 text-sm text-muted">Choose what appears on your home. Everything stays in the menu, and nothing is deleted.</p>
             <ul className="grid gap-2 sm:grid-cols-2">

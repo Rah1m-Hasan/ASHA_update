@@ -73,7 +73,7 @@ export default function SenseAssistPage() {
               <MicIcon size={20} />
               {speech.listening ? "Stop listening" : "Start listening"}
             </Button>
-            <select value={lang} onChange={(e) => setLang(e.target.value)} className="h-11 rounded-xl border border-line bg-white px-3" aria-label="Speech language">
+            <select value={lang} onChange={(e) => setLang(e.target.value)} className="h-11 rounded-xl border border-line bg-surface px-3" aria-label="Speech language">
               {LANGS.map((l) => (
                 <option key={l.value} value={l.value}>
                   {l.label}
@@ -119,7 +119,7 @@ export default function SenseAssistPage() {
           {!result ? (
             <p className="py-10 text-center text-sm text-muted">Asha’s suggestion appears here.</p>
           ) : result.safety?.level === "emergency" ? (
-            <p className="rounded-xl bg-red-50 p-4 text-lg text-danger" role="alert">{result.question}</p>
+            <p className="rounded-xl bg-danger-soft p-4 text-lg text-danger" role="alert">{result.question}</p>
           ) : (
             <>
               <p className="text-sm text-muted">{result.question}</p>

@@ -1,17 +1,8 @@
+/* The palette lives in asha-tokens.css, which is loaded before this file.
+   The names below are the ones this stylesheet has always used; they are
+   aliases for the shared tokens, so the two apps and the React app cannot
+   drift apart. */
 :root {
-  --bg: #f8fafc;
-  --card: #ffffff;
-  --soft: #eff6ff;
-  --ink: #172b4d;
-  --muted: #64748b;
-  --line: #dbe5f0;
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
-  --accent-ink: #fff;
-  --mint: #dbeafe;
-  --lavender: #eff6ff;
-  --danger: #a63c32;
-  --shadow: 0 16px 50px #15345b12;
   --space-1: 8px;
   --space-2: 12px;
   --space-3: 16px;
@@ -20,30 +11,7 @@
   --space-6: 32px;
   --page-gutter: clamp(16px, 3vw, 40px);
   --bottom-nav-clearance: calc(104px + env(safe-area-inset-bottom));
-  color-scheme: light;
-  font:
-    16px Inter,
-    "Noto Sans Bengali",
-    "Hind Siliguri",
-    "Nirmala UI",
-    system-ui,
-    sans-serif;
-}
-:root[data-theme="dark"] {
-  --bg: #0b1424;
-  --card: #17263d;
-  --soft: #111e32;
-  --ink: #f1f5f9;
-  --muted: #a8b8cc;
-  --line: #293b54;
-  --accent: #60a5fa;
-  --accent-hover: #93c5fd;
-  --accent-ink: #0b1424;
-  --mint: #17345b;
-  --lavender: #1d3150;
-  --danger: #fca5a5;
-  --shadow: 0 16px 50px #0002;
-  color-scheme: dark;
+  font: 16px var(--asha-font-sans);
 }
 * {
   box-sizing: border-box;
@@ -666,10 +634,10 @@ html {
 }
 .device-frame {
   width: min(100%, 350px);
-  border: 8px solid #15345b;
+  border: 8px solid var(--deep);
   border-radius: 35px;
   padding: 9px;
-  background: #15345b;
+  background: var(--deep);
   box-shadow: 0 22px 45px #15345b2e;
   transform: rotate(3deg);
 }
@@ -686,7 +654,7 @@ html {
 .device-top span {
   width: 74px;
   height: 8px;
-  background: #0b1424;
+  background: var(--canvas);
   border-radius: 20px;
 }
 .device-screen {
@@ -694,20 +662,20 @@ html {
   overflow: hidden;
   border-radius: 22px;
   padding: 18px;
-  background: #f8fafc;
-  color: #172b4d;
+  background: var(--bg);
+  color: var(--ink);
 }
 .preview-topline {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 24px;
-  font-family: Manrope, sans-serif;
+  font-family: var(--asha-font-sans);
 }
 .preview-topline strong {
   font-size: 1.28rem;
   letter-spacing: -0.06em;
-  color: #15345b;
+  color: var(--heading);
 }
 .preview-brand-logo {
   display: block;
@@ -716,8 +684,8 @@ html {
   object-fit: contain;
 }
 .preview-live {
-  color: #24745d;
-  background: #e6f7ef;
+  color: var(--good);
+  background: var(--good-soft);
   border-radius: 999px;
   padding: 4px 8px;
   font-size: 0.65rem;
@@ -735,12 +703,12 @@ html {
   border-radius: 16px;
   object-fit: cover;
   object-position: top;
-  background: #dbeafe;
+  background: var(--mint);
 }
 .preview-welcome small,
 .preview-request small {
   display: block;
-  color: #64748b;
+  color: var(--muted);
   font-size: 0.55rem;
   font-weight: 800;
   letter-spacing: 0.09em;
@@ -754,8 +722,8 @@ html {
   display: flex;
   gap: 11px;
   padding: 17px 13px;
-  background: #eaf3ff;
-  border: 1px solid #c9defb;
+  background: var(--soft);
+  border: 1px solid var(--brand-mint);
   border-radius: 16px;
 }
 .preview-icon {
@@ -765,17 +733,17 @@ html {
   place-items: center;
   flex: none;
   border-radius: 10px;
-  background: #2563eb;
-  color: #fff;
+  background: var(--accent);
+  color: var(--accent-ink);
   font-size: 1.15rem;
 }
 .preview-request strong {
   display: block;
-  font-family: Manrope, sans-serif;
+  font-family: var(--asha-font-sans);
   font-size: 1.08rem;
 }
 .preview-request p {
-  color: #64748b;
+  color: var(--muted);
   font-size: 0.68rem;
   line-height: 1.4;
   margin: 5px 0 0;
@@ -786,9 +754,9 @@ html {
   align-items: center;
   margin: 16px 0;
   padding: 9px 10px;
-  border: 1px solid #dbe5f0;
+  border: 1px solid var(--line);
   border-radius: 10px;
-  color: #46627f;
+  color: var(--muted);
   font-size: 0.7rem;
   font-weight: 600;
 }
@@ -804,7 +772,7 @@ html {
 .preview-actions span {
   min-width: 0;
   overflow-wrap: anywhere;
-  border: 1px solid #dbe5f0;
+  border: 1px solid var(--line);
   border-radius: 9px;
   padding: 9px 4px;
   font-size: 0.64rem;
@@ -1014,23 +982,23 @@ html {
   display: grid;
   grid-template-columns: 55px 1fr;
   min-height: 270px;
-  background: #15345b;
-  color: #f1f5f9;
-  border-color: #15345b;
+  background: var(--deep);
+  color: var(--on-deep);
+  border-color: var(--deep);
 }
 .feature-primary .feature-number {
-  color: #93c5fd;
+  color: var(--deep-accent);
   font-size: 0.73rem;
   letter-spacing: 0.1em;
   font-weight: 800;
 }
 .feature-primary .landing-icon {
   background: #ffffff1a;
-  color: #bfdbfe;
+  color: var(--deep-accent);
   margin-bottom: 25px;
 }
 .feature-primary p {
-  color: #cbd9ed;
+  color: var(--deep-muted);
 }
 .touch-preview {
   display: flex;
@@ -1187,22 +1155,22 @@ html {
   padding-top: clamp(48px, 7vw, 80px);
   padding-bottom: clamp(48px, 7vw, 80px);
   border-radius: 24px;
-  background: #15345b;
-  color: #f1f5f9;
+  background: var(--deep);
+  color: var(--on-deep);
 }
 .closing-cta .eyebrow {
-  color: #93c5fd;
+  color: var(--deep-accent);
 }
 .closing-cta h2 {
   max-width: 630px;
 }
 .closing-cta p {
-  color: #cbd9ed;
+  color: var(--deep-muted);
   margin: 0;
 }
 .closing-cta .primary {
-  background: #60a5fa;
-  color: #0b1424;
+  background: var(--deep-accent);
+  color: var(--deep);
   gap: 9px;
 }
 .closing-cta .secondary {
@@ -1524,23 +1492,14 @@ body.app-active .landing-try {
   }
 }
 
-/* Shared ASHA icon system: local outline SVGs use these context-aware tokens. */
+/* Shared ASHA icon system: local outline SVGs use these context-aware tokens.
+   The colours come from asha-tokens.css. */
 :root {
   --icon-xs: 16px;
   --icon-sm: 18px;
   --icon-md: 20px;
   --icon-nav: 22px;
   --icon-module: 28px;
-  --icon-primary: #2563eb;
-  --icon-secondary: #64748b;
-  --icon-ink: #172b4d;
-  --icon-soft: #eff6ff;
-}
-html[data-theme="dark"] {
-  --icon-primary: #60a5fa;
-  --icon-secondary: #a8b8cc;
-  --icon-ink: #f1f5f9;
-  --icon-soft: #17263d;
 }
 .asha-icon {
   display: inline-block;
@@ -1783,13 +1742,14 @@ p {
 h1,
 h2,
 h3 {
-  font-family:
-    Inter, "Noto Sans Bengali", "Hind Siliguri", "Nirmala UI", system-ui,
-    sans-serif;
+  font-family: var(--asha-font-sans);
   letter-spacing: -0.045em;
   line-height: 1.18;
 }
+/* The page title carries the display face. Bangla falls through to Anek
+   Bangla on its own, because Fraunces has no Bangla letterforms. */
 h1 {
+  font-family: var(--asha-font-display);
   font-size: clamp(2.2rem, 4vw, 3.5rem);
   font-weight: 600;
 }
@@ -1838,7 +1798,7 @@ em {
   display: flex;
   align-items: center;
   gap: 12px;
-  font-family: Manrope, sans-serif;
+  font-family: var(--asha-font-sans);
   font-weight: 800;
   font-size: 1.9rem;
   line-height: 1;
@@ -2271,7 +2231,7 @@ em {
   min-height: 164px;
 }
 .need strong {
-  font-family: Manrope, sans-serif;
+  font-family: var(--asha-font-sans);
   font-size: 1.32rem;
   letter-spacing: -0.04em;
   margin: 11px 0 3px;
@@ -2290,7 +2250,7 @@ em {
   color: #15345b;
 }
 .water {
-  background: #dbeafe;
+  background: var(--mint);
 }
 .violet {
   background: #eff6ff;
@@ -2299,7 +2259,7 @@ em {
   background: #f5e5d5;
 }
 .green {
-  background: #dbeafe;
+  background: var(--mint);
 }
 .latest-request {
   margin: 18px 0;
@@ -2514,7 +2474,7 @@ em {
   display: block;
   font-size: 1.3rem;
   margin-top: 5px;
-  font-family: Manrope, sans-serif;
+  font-family: var(--asha-font-sans);
 }
 .chart {
   width: 100%;
@@ -2794,7 +2754,7 @@ progress {
 }
 .speech-result {
   font-size: 1.6rem;
-  font-family: Manrope, sans-serif;
+  font-family: var(--asha-font-sans);
   letter-spacing: -0.025em;
   white-space: pre-wrap;
 }
@@ -3341,7 +3301,7 @@ html[data-theme="dark"] .footer-brand-logo--dark {
 
 /* Active application layout quality pass: parent-level rhythm prevents card collisions. */
 body.app-active {
-  font-family: Inter, "Noto Sans Bengali", "Hind Siliguri", "Nirmala UI", system-ui, sans-serif;
+  font-family: var(--asha-font-sans);
   line-height: 1.55;
 }
 body.app-active #main {

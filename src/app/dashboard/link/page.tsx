@@ -22,7 +22,7 @@ export default function LinkPage() {
   }, [router]);
   return (
     <main className="grid min-h-dvh place-items-center bg-wash p-5 sm:p-8">
-      <section className="w-full max-w-xl rounded-3xl border border-line bg-white p-6 shadow-card sm:p-8">
+      <section className="w-full max-w-xl rounded-3xl border border-line bg-surface p-6 shadow-card sm:p-8">
         <Link
           href="/"
           className="text-sm font-medium text-brand hover:underline"

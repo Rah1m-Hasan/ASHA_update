@@ -1,10 +1,11 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ButtonLink } from "@/components/ui/Button";
 import { CloseIcon, MenuIcon } from "@/components/ui/icons";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
+import { Wordmark } from "@/components/ui/Wordmark";
 import { nav, site } from "@/content/landing";
 import { cn } from "@/lib/cn";
 
@@ -22,13 +23,13 @@ export function Navbar() {
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 bg-white/85 backdrop-blur-xl transition-shadow",
-        scrolled && "shadow-[0_1px_0_#dbe5f0]",
+        "sticky top-0 z-50 bg-surface/85 backdrop-blur-xl transition-shadow",
+        scrolled && "shadow-[0_1px_0_var(--asha-line)]",
       )}
     >
       <div className="mx-auto flex h-[68px] max-w-[1300px] items-center justify-between px-4 sm:px-8">
         <Link href="/" aria-label="Asha home" className="flex items-center">
-          <Image src="/assets/brand/asha-wordmark-light.png" style={{ width: "auto" }} alt="Asha" width={156} height={26} priority className="h-[26px] w-auto" />
+          <Wordmark height={26} priority />
         </Link>
 
         <nav aria-label="Primary" className="hidden items-center gap-1 md:flex">
@@ -37,12 +38,14 @@ export function Navbar() {
               {item.label}
             </a>
           ))}
+          <ThemeToggle className="size-9" />
           <ButtonLink href={site.appUrl} size="sm">
             Try Asha
           </ButtonLink>
         </nav>
 
         <div className="flex items-center gap-2 md:hidden">
+          <ThemeToggle className="size-9" />
           <ButtonLink href={site.appUrl} size="sm">
             Try Asha
           </ButtonLink>
@@ -60,7 +63,7 @@ export function Navbar() {
       </div>
 
       {open && (
-        <nav id="mobile-menu" aria-label="Mobile" className="border-t border-line bg-white px-4 pb-6 md:hidden">
+        <nav id="mobile-menu" aria-label="Mobile" className="border-t border-line bg-surface px-4 pb-6 md:hidden">
           {nav.map((item) => (
             <a
               key={item.href}

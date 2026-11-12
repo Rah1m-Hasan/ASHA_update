@@ -16,7 +16,7 @@ export function NeedButtons({ size = "lg" }: { size?: "md" | "lg" }) {
           key={n.kind}
           onClick={() => propose(n.kind, n.text)}
           className={cn(
-            "group flex flex-col items-start rounded-2xl bg-white text-left ring-1 ring-line transition hover:ring-2 hover:ring-brand focus-visible:ring-2 focus-visible:ring-brand",
+            "group flex flex-col items-start rounded-2xl bg-surface text-left ring-1 ring-line transition hover:ring-2 hover:ring-brand focus-visible:ring-2 focus-visible:ring-brand",
             size === "lg" ? "min-h-36 p-5" : "min-h-24 p-4",
           )}
         >

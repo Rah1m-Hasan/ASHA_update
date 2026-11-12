@@ -8,7 +8,7 @@ export function Closing() {
     <section className="py-24 sm:py-40">
       <Container width="text" className="text-center">
         <Reveal>
-          <h2 className="text-[40px] leading-[1.05] font-medium tracking-tight text-balance text-ink sm:text-[64px] sm:leading-[1]">
+          <h2 className="font-display text-display-sm text-balance text-ink sm:text-display-lg">
             {closing.title}
           </h2>
           <div className="mt-10 flex flex-wrap justify-center gap-3">

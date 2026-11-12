@@ -61,7 +61,7 @@ export function RoleSelect({
               className={cn(
                 "grid size-8 place-items-center rounded-full",
                 value === v
-                  ? "bg-brand text-white"
+                  ? "bg-brand text-on-brand"
                   : "bg-brand-soft text-brand",
               )}
             >

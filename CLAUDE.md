@@ -31,6 +31,7 @@ Scripts:
 - `npm run test:everyday` — Everyday workspace + offline/service-worker checks.
 - `npm run benchmark:everyday` — `scripts/everyday-benchmark.mjs --browser`, model/asset inventory and real CPU/WASM inference.
 - `npm run okf` — `okf/compile.mjs`, regenerates `okf/generated.js` from `okf/*.md`. **Run this after editing any OKF markdown.**
+- `npm run tokens` — `scripts/tokens.mjs`, writes the one palette to `src/app/globals.css`, `src/app/asha-fonts.css`, `public/app/asha-tokens.css` and `public/app/asha-fonts.css`. **Run this after changing a colour or a font**; `npm run tokens:check` fails if the generated files are stale. Edit the palette in `scripts/tokens.mjs`, never the generated CSS.
 - `node scripts/secret-scan.mjs` — scans tracked files for leaked provider/Vercel/Supabase keys. Exits non-zero on findings.
 
 Local dev without cloud storage: `ASHA_MEMORY_STORE=1 LOCAL_DEV=1 npm run dev` (in-memory only, ignored when `NODE_ENV=production`).
@@ -83,7 +84,7 @@ English → Gemini Flash profile, unclear speech → GPT profile, Bangla/Bangla-
 
 - **TypeScript for app code**, but the domain-logic modules that the legacy engine shares are plain `.js` with JSDoc types (`src/features/*/catalog.js`, `detectors.js`, `safety.js`, `src/server/**`). Keep a file's existing language when editing it.
 - Path alias `@/*` → `src/*`.
-- Tailwind v4 with the theme tokens defined once in `src/app/globals.css` (`--color-brand`, `--color-ink`, `--color-heading`, `--color-muted`, `--color-line`, `--color-canvas`, `--color-wash`, `--color-danger`). Use those tokens; do not introduce raw colours or a second palette.
+- Tailwind v4 with the theme tokens defined once in `scripts/tokens.mjs` and written out to `src/app/globals.css` (`--color-brand`, `--color-ink`, `--color-heading`, `--color-muted`, `--color-line`, `--color-canvas`, `--color-surface`, `--color-wash`, `--color-good`, `--color-warn`, `--color-danger`, and the rest). The values live in `--asha-*` variables under `:root` and `:root[data-theme="dark"]`, so the light and dark themes share one palette and an opacity modifier such as `bg-brand/20` follows the theme. Use those tokens; do not introduce raw colours or a second palette. The legacy apps read the same palette from `public/app/asha-tokens.css`.
 - English/Bangla strings live inline or in the feature's own catalogue; the landing copy is centralised in `src/content/landing.ts`.
 - Server secrets are environment variables only, read server-side. Never place them in client code, `NEXT_PUBLIC_*`, HTML, logs or URLs.
 - `scripts/provision.mjs` and `scripts/provider-check.mjs` contain **Windows absolute paths** (`D:/mairaapi.json`) and are operator helpers for the original workstation — they will not run here as-is.

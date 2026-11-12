@@ -8,7 +8,7 @@ export function PhonePreview() {
   return (
     <figure className="mx-auto max-w-[560px]">
       <div className="rounded-[36px] bg-gradient-to-b from-brand-mint to-brand-soft p-3 shadow-float sm:p-4">
-        <div className="rounded-[28px] bg-white px-6 py-8 text-center sm:px-10">
+        <div className="rounded-[28px] bg-surface px-6 py-8 text-center sm:px-10">
           <span className="text-xs font-semibold tracking-wide text-brand uppercase">Your space · Here with you</span>
           <Image
             src="/assets/assets/images/asha-avatar.png"
@@ -25,7 +25,7 @@ export function PhonePreview() {
                 key={n}
                 className={
                   i === 0
-                    ? "rounded-full bg-brand px-4 py-2 text-sm font-medium text-white"
+                    ? "rounded-full bg-brand px-4 py-2 text-sm font-medium text-on-brand"
                     : "rounded-full bg-brand-soft px-4 py-2 text-sm font-medium text-brand"
                 }
               >
@@ -34,7 +34,7 @@ export function PhonePreview() {
             ))}
           </div>
           <div className="mt-6 flex items-center justify-center gap-3 rounded-2xl bg-wash px-4 py-3 text-left">
-            <span className="grid size-8 place-items-center rounded-full bg-brand text-white">
+            <span className="grid size-8 place-items-center rounded-full bg-brand text-on-brand">
               <CheckIcon size={16} />
             </span>
             <span className="text-sm">

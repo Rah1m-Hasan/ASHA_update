@@ -24,10 +24,8 @@ export function SectionHeading({
       {eyebrow && <Eyebrow className="mb-5">{eyebrow}</Eyebrow>}
       <Tag
         className={cn(
-          "font-medium tracking-tight text-ink text-balance",
-          level === 1
-            ? "text-[40px] leading-[1.05] sm:text-[64px] sm:leading-[1]"
-            : "text-[34px] leading-[1.15] sm:text-[48px] sm:leading-[1.25]",
+          "font-display font-medium text-ink text-balance",
+          level === 1 ? "text-display-sm sm:text-display-lg" : "text-title-sm sm:text-title-lg",
         )}
       >
         {title}

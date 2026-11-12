@@ -32,7 +32,7 @@ const CLICKS: { value: CursorClick; label: string }[] = [
   { value: "dwell", label: "Hold your look" },
   { value: "both", label: "Either" },
 ];
-const pill = (on: boolean) => `rounded-full px-3 py-1 text-sm font-medium ${on ? "bg-white text-ink shadow-sm" : "text-muted"}`;
+const pill = (on: boolean) => `rounded-full px-3 py-1 text-sm font-medium ${on ? "bg-surface text-ink shadow-sm" : "text-muted"}`;
 
 export default function EyeSpeakPage() {
   useActiveModule("eyespeak");
@@ -123,11 +123,11 @@ export default function EyeSpeakPage() {
         </CameraView>
         <div className="mt-3 flex flex-wrap items-center gap-x-6 gap-y-3">
           <p className="flex min-w-0 basis-full items-center gap-2 text-sm sm:basis-0 sm:flex-1" role="status" data-testid="eye-status">
-            <span className={`size-2 shrink-0 rounded-full ${tracking ? "bg-emerald-500" : camera === "on" ? "bg-amber-500" : "bg-line"}`} />
+            <span className={`size-2 shrink-0 rounded-full ${tracking ? "bg-good-strong" : camera === "on" ? "bg-warn-strong" : "bg-line"}`} />
             <span>
               {camera !== "on" ? "Camera off" : !live ? "Looking for your face…" : live.valid ? "Both eyes and irises tracked" : live.reason}
               {camera === "on" && live && fps > 0 && (
-                <span className={fps < 5 ? "text-amber-700" : "text-muted"} data-testid="eye-rate" data-fps={fps}>
+                <span className={fps < 5 ? "text-warn" : "text-muted"} data-testid="eye-rate" data-fps={fps}>
                   {" "}· {fps} per second{fps < 5 ? ". Slow: close other apps for steadier selection." : ""}
                 </span>
               )}
@@ -148,14 +148,14 @@ export default function EyeSpeakPage() {
         </h2>
         <p className="mt-0.5 mb-3 text-sm text-muted">Look at 12 dots, one at a time, for about 25 seconds. The last 3 dots measure how accurate gaze is for you, on this screen.</p>
         {problem && (
-          <p className="mb-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800 ring-1 ring-amber-200" role="alert">
+          <p className="mb-3 rounded-xl bg-warn-soft px-4 py-3 text-sm text-warn ring-1 ring-warn-line" role="alert">
             Calibration stopped: {problem}
           </p>
         )}
         {model && !model.validation && (
           <p className="mb-3 text-sm text-ink">A calibration from an earlier visit is saved on this device. Run the 3-dot check before using it.</p>
         )}
-        {screenChanged(screen) && <p className="mb-3 text-sm text-amber-700">The window size changed since calibrating. Calibrate again for accurate selection.</p>}
+        {screenChanged(screen) && <p className="mb-3 text-sm text-warn">The window size changed since calibrating. Calibrate again for accurate selection.</p>}
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => eyeSpeakStore.set({ mode: "calibrate" })} disabled={!tracking} className={DIM}>
             {model ? "Calibrate again" : "Start calibration"}
@@ -169,7 +169,7 @@ export default function EyeSpeakPage() {
         {!tracking && <p className="mt-2 text-xs text-muted">Available once both eyes are tracked.</p>}
 
         {validation && (
-          <div className="mt-5 rounded-2xl bg-white p-5 ring-1 ring-line" data-testid="accuracy">
+          <div className="mt-5 rounded-2xl bg-surface p-5 ring-1 ring-line" data-testid="accuracy">
             <div className="flex flex-wrap items-start gap-6">
               <dl className="grid min-w-0 flex-1 grid-cols-2 gap-4">
                 <div>
@@ -240,7 +240,7 @@ export default function EyeSpeakPage() {
           {size ? `Open the board (${BOARD_LABEL[size]})` : "Open the board"}
         </Button>
         {!size && <p className="mt-2 text-xs text-muted">Available after a calibration that is accurate enough.</p>}
-        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3 rounded-2xl bg-white px-5 py-4 ring-1 ring-line">
+        <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3 rounded-2xl bg-surface px-5 py-4 ring-1 ring-line">
           <span className="min-w-0 flex-1 basis-60">
             <span className="block font-medium text-ink">Blink scanning</span>
             <span className="block text-sm text-muted">No calibration needed. A light moves over all 9 words, one at a time, and a slow blink chooses the lit word. Slower than looking, but it works at any accuracy.</span>
@@ -249,7 +249,7 @@ export default function EyeSpeakPage() {
             Start blink scanning
           </Button>
         </div>
-        <div className="mt-4 divide-y divide-line rounded-2xl bg-white px-5 ring-1 ring-line">
+        <div className="mt-4 divide-y divide-line rounded-2xl bg-surface px-5 ring-1 ring-line">
           <div className="flex flex-wrap items-center justify-between gap-3 py-3">
             <span>
               <span className="block font-medium text-ink">Selection time</span>
@@ -284,7 +284,7 @@ export default function EyeSpeakPage() {
           {cursor ? "Turn off eye cursor" : "Turn on eye cursor"}
         </Button>
         {!cursorReady && <p className="mt-2 text-xs text-muted">Available after a calibration accurate enough for 6 or 9 tiles. Ordinary buttons are smaller than board tiles.</p>}
-        <div className="mt-4 divide-y divide-line rounded-2xl bg-white px-5 ring-1 ring-line">
+        <div className="mt-4 divide-y divide-line rounded-2xl bg-surface px-5 ring-1 ring-line">
           <div className="flex flex-wrap items-center justify-between gap-3 py-3">
             <span className="font-medium text-ink">Click with</span>
             <div className="flex flex-wrap gap-1 rounded-full bg-wash p-1" role="group" aria-label="Click with">
@@ -305,7 +305,7 @@ export default function EyeSpeakPage() {
         <h2 id="spell-title" className="mb-3 text-base font-semibold text-ink">
           Spell a message
         </h2>
-        <Link href="/dashboard/patient/eyespeak/keyboard" className="group flex items-center gap-4 rounded-2xl bg-white px-5 py-4 ring-1 ring-line hover:bg-wash">
+        <Link href="/dashboard/patient/eyespeak/keyboard" className="group flex items-center gap-4 rounded-2xl bg-surface px-5 py-4 ring-1 ring-line hover:bg-wash">
           <span className="min-w-0 flex-1">
             <span className="block font-medium text-ink">Letters and phrases</span>
             <span className="block text-sm text-muted">English and Bangla letters, word suggestions and switch scanning. Letter keys are small, so use touch or a switch there.</span>

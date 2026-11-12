@@ -1,6 +1,8 @@
-const CACHE = "asha-live-v1";
-const EVERYDAY_CACHE = 'asha-everyday-v1';
+const CACHE = "asha-live-v2";
+const EVERYDAY_CACHE = 'asha-everyday-v2';
 const EVERYDAY_ASSETS = ['/everyday.html', '/app/everyday/main.js', '/app/everyday/style.css', '/app/everyday/fonts.css',
+  '/app/asha-tokens.css', '/app/asha-fonts.css',
+  '/fonts/figtree-latin.woff2', '/fonts/figtree-latin-ext.woff2', '/fonts/fraunces-latin.woff2', '/fonts/fraunces-latin-ext.woff2', '/fonts/anek-bangla-latin.woff2', '/fonts/anek-bangla-bangla.woff2',
   '/app/everyday/contracts.js', '/app/everyday/evidence.js', '/app/everyday/platform.js', '/app/everyday/model-registry.js',
   '/app/everyday/safety.js', '/app/everyday/companion-safety.js', '/app/everyday/care.js', '/app/everyday/clinic.js', '/app/everyday/nutrition.js', '/app/everyday/foods.js',
   '/app/everyday/move.js', '/app/everyday/move-engine.js', '/app/everyday/eyespeak.js', '/app/everyday/gaze-engine.js',
@@ -10,7 +12,7 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(CACHE)
-      .then((c) => c.addAll(["./app/style.css", "./engine/icon.svg"]))
+      .then((c) => c.addAll(["./app/style.css", "./app/asha-tokens.css", "./app/asha-fonts.css", "./engine/icon.svg"]))
       .then(() => caches.open(EVERYDAY_CACHE).then((c) => c.addAll(EVERYDAY_ASSETS)))
       .catch(() => {}),
   );

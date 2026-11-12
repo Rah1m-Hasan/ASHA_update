@@ -6,7 +6,7 @@ import { buildEnquiryDraft, INTERESTS } from "./enquiry.js";
 import { INTEREST_EVENT } from "./interest";
 
 const field =
-  "mt-2 block w-full rounded-xl border border-line bg-white px-4 py-3 text-base text-ink placeholder:text-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20";
+  "mt-2 block w-full rounded-xl border border-line bg-surface px-4 py-3 text-base text-ink placeholder:text-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20";
 
 type Draft = { emailUrl: string; whatsappUrl: string };
 
@@ -48,7 +48,7 @@ export function EnquiryForm() {
 
   return (
     <form
-      className="rounded-[28px] bg-white p-6 ring-1 ring-line sm:p-8"
+      className="rounded-[28px] bg-surface p-6 ring-1 ring-line sm:p-8"
       noValidate
       onSubmit={(e) => {
         e.preventDefault();

@@ -40,7 +40,7 @@ export default function CommunicatePage() {
           Ways to send a message
         </h2>
         <p className="mb-3 mt-0.5 text-sm text-muted">Use the one that is most comfortable. You can switch at any time.</p>
-        <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-white ring-1 ring-line">
+        <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-surface ring-1 ring-line">
           {ways.map((m) => (
             <li key={m.id}>
               <Link href={m.href} className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-wash focus-visible:bg-wash focus-visible:outline-none">

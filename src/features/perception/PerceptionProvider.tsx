@@ -85,7 +85,7 @@ export function PerceptionProvider({
   const stage = useCallback(() => {
     if (!stageEl.current && typeof document !== "undefined") {
       const wrap = document.createElement("div");
-      wrap.className = "relative size-full overflow-hidden bg-heading";
+      wrap.className = "relative size-full overflow-hidden bg-veil";
       const video = document.createElement("video");
       video.muted = true;
       video.playsInline = true;

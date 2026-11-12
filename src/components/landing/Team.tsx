@@ -34,7 +34,7 @@ export function Team() {
                   alt={m.name}
                   width={112}
                   height={112}
-                  className="mx-auto size-28 rounded-full object-cover ring-8 ring-white"
+                  className="mx-auto size-28 rounded-full object-cover ring-8 ring-surface"
                 />
                 <h3 className="mt-5 text-xl font-medium text-ink">{m.name}</h3>
                 <p className="mt-1 text-muted">{m.role}</p>
@@ -50,7 +50,7 @@ export function Team() {
                             target="_blank"
                             rel="noopener noreferrer"
                             aria-label={`${m.name} on ${label}`}
-                            className="grid size-9 place-items-center rounded-full bg-white text-muted ring-1 ring-line transition hover:text-brand hover:ring-brand"
+                            className="grid size-9 place-items-center rounded-full bg-surface text-muted ring-1 ring-line transition hover:text-brand hover:ring-brand"
                           >
                             <Icon size={16} />
                           </a>

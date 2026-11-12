@@ -299,7 +299,7 @@ export function EyeCursor() {
         </div>
       )}
       {mode === null && (
-        <div role="region" aria-label="Eye cursor" data-testid="cursor-bar" className="fixed inset-x-3 bottom-3 z-[65] mx-auto flex max-w-max flex-wrap items-center justify-center gap-2 rounded-2xl bg-white p-2 shadow-float ring-1 ring-line">
+        <div role="region" aria-label="Eye cursor" data-testid="cursor-bar" className="fixed inset-x-3 bottom-3 z-[65] mx-auto flex max-w-max flex-wrap items-center justify-center gap-2 rounded-2xl bg-surface p-2 shadow-float ring-1 ring-line">
           <p role="status" aria-live="polite" className="min-w-0 flex-1 basis-56 px-2 text-sm text-ink" data-testid="cursor-note">
             {status}
           </p>
@@ -311,7 +311,7 @@ export function EyeCursor() {
               Scroll down
             </button>
             {cursorPaused ? (
-              <button className={`${bar} bg-brand text-white ring-brand`} data-gaze-resume onClick={() => eyeSpeakStore.set({ cursorPaused: false })}>
+              <button className={`${bar} bg-brand text-on-brand ring-brand`} data-gaze-resume onClick={() => eyeSpeakStore.set({ cursorPaused: false })}>
                 Resume
               </button>
             ) : (

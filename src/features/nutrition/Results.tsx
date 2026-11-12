@@ -24,8 +24,8 @@ export const EATEN_TEXT: Record<string, Text> = {
 const TONE: Record<string, string> = {
   estimate: "bg-brand-soft text-brand",
   range: "bg-brand-soft text-brand",
-  lower_bound: "bg-amber-100 text-amber-900",
-  uncertain: "bg-amber-100 text-amber-900",
+  lower_bound: "bg-warn-soft text-warn",
+  uncertain: "bg-warn-soft text-warn",
   unavailable: "bg-wash text-muted",
 };
 
@@ -44,7 +44,7 @@ function why(meal: Meal, lang: string) {
 export function MealSummary({ meal, lang }: { meal: Meal; lang: string }) {
   const counted = meal.counted.length > 0;
   return (
-    <section className="rounded-2xl bg-white p-5 ring-1 ring-line" aria-labelledby="meal-total" data-testid="nutrition-total" data-status={meal.status}>
+    <section className="rounded-2xl bg-surface p-5 ring-1 ring-line" aria-labelledby="meal-total" data-testid="nutrition-total" data-status={meal.status}>
       <div className="flex flex-wrap items-center gap-2">
         <h2 id="meal-total" className="text-sm font-medium text-muted">
           {tx(lang, "Meal estimate", "খাবারের আনুমানিক হিসাব")}
@@ -89,7 +89,7 @@ export function ItemCard({ r, lang, eaten, onEaten }: { r: ItemResult; lang: str
   const counted = r.status !== "uncertain" && r.status !== "unavailable";
   const tips = storageTips(r.storage, lang) as string[];
   return (
-    <article className="rounded-2xl bg-white p-5 ring-1 ring-line" data-testid="nutrition-item" data-dish={r.dishId} data-status={r.status}>
+    <article className="rounded-2xl bg-surface p-5 ring-1 ring-line" data-testid="nutrition-item" data-dish={r.dishId} data-status={r.status}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <h3 className="text-lg font-semibold text-ink">{L(lang, r.label) || tx(lang, "Food", "খাবার")}</h3>
         <StatusBadge status={r.status} lang={lang} />
@@ -105,7 +105,7 @@ export function ItemCard({ r, lang, eaten, onEaten }: { r: ItemResult; lang: str
         </p>
       )}
       {r.notes.length > 0 && (
-        <ul className="mt-2 space-y-1 text-sm text-amber-900">
+        <ul className="mt-2 space-y-1 text-sm text-warn">
           {r.notes.map((n, i) => (
             <li key={i}>{L(lang, n)}</li>
           ))}
@@ -133,7 +133,7 @@ export function ItemCard({ r, lang, eaten, onEaten }: { r: ItemResult; lang: str
           <legend className="text-sm font-medium text-ink">{tx(lang, "How much of it did you eat?", "এর কতটা খেয়েছেন?")}</legend>
           <div className="mt-2 flex flex-wrap gap-2">
             {(EATEN_CHOICES as string[]).map((c) => (
-              <button key={c} type="button" aria-pressed={eaten === c} onClick={() => onEaten(c)} className={cn("min-h-11 rounded-full px-4 text-sm font-medium ring-1", eaten === c ? "bg-brand text-white ring-brand" : "bg-white text-ink ring-line hover:bg-wash")}>
+              <button key={c} type="button" aria-pressed={eaten === c} onClick={() => onEaten(c)} className={cn("min-h-11 rounded-full px-4 text-sm font-medium ring-1", eaten === c ? "bg-brand text-on-brand ring-brand" : "bg-surface text-ink ring-line hover:bg-wash")}>
                 {L(lang, EATEN_TEXT[c])}
               </button>
             ))}
@@ -192,7 +192,7 @@ export function Assumptions({ meal, lang }: { meal: Meal; lang: string }) {
   const all = [...new Map(meal.items.flatMap((r) => r.assumptions).map((a) => [a.en, a])).values()];
   if (!all.length) return null;
   return (
-    <section className="rounded-2xl bg-white p-5 ring-1 ring-line" aria-labelledby="assumed" data-testid="nutrition-assumptions">
+    <section className="rounded-2xl bg-surface p-5 ring-1 ring-line" aria-labelledby="assumed" data-testid="nutrition-assumptions">
       <h2 id="assumed" className="font-semibold text-ink">
         {tx(lang, "What ASHA assumed", "আশা যা ধরে নিয়েছে")}
       </h2>

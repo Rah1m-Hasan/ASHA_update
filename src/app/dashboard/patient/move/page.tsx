@@ -80,7 +80,7 @@ export default function MoveExplore() {
         <h2 id="move-self" className="mb-3 text-sm font-semibold text-ink">
           {tx(lang, "Start on your own", "নিজে শুরু করুন")}
         </h2>
-        <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-white ring-1 ring-line">
+        <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-surface ring-1 ring-line">
           {selfGuided.map((c) => (
             <ProgramRow key={c.id} c={c} lang={lang} />
           ))}
@@ -92,14 +92,14 @@ export default function MoveExplore() {
           {tx(lang, "With your clinician", "চিকিৎসকের সাথে")}
         </h2>
         <p className="mb-3 mt-0.5 text-sm text-muted">{tx(lang, "For recovery or a heart condition, follow the plan your clinician gives you.", "রিকভারি বা হৃদরোগের জন্য চিকিৎসকের দেওয়া প্ল্যান মেনে চলুন।")}</p>
-        <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-white ring-1 ring-line">
+        <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-surface ring-1 ring-line">
           {clinicianLed.map((c) => (
             <ProgramRow key={c.id} c={c} lang={lang} />
           ))}
         </ul>
       </section>
 
-      <details className="group mt-8 rounded-2xl bg-white ring-1 ring-line">
+      <details className="group mt-8 rounded-2xl bg-surface ring-1 ring-line">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 font-medium text-ink">
           <span>
             {tx(lang, "Browse all exercises", "সব ব্যায়াম দেখুন")} <span className="font-normal text-muted">({Object.keys(EXERCISES).length})</span>
@@ -114,7 +114,7 @@ export default function MoveExplore() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder={tx(lang, "Search, e.g. squat or shoulder", "খুঁজুন, যেমন স্কোয়াট")}
-              className="h-11 w-full rounded-xl bg-white px-3 ring-1 ring-line focus:outline-none focus:ring-2 focus:ring-brand"
+              className="h-11 w-full rounded-xl bg-surface px-3 ring-1 ring-line focus:outline-none focus:ring-2 focus:ring-brand"
             />
           </label>
           <p className="mt-2 text-xs text-muted">{tx(lang, "“Manual” exercises are guided and timed; you count them yourself.", "“Manual” ব্যায়াম সময় ধরে দেখানো হয়, আপনি নিজে গুনবেন।")}</p>

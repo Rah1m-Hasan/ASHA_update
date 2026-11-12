@@ -26,9 +26,9 @@ const RULES = [
     bn: "থামুন, জরুরি সহায়তা নিন",
     noteEn: "Call 999. Move pauses for 12 hours.",
     noteBn: "৯৯৯ নম্বরে কল করুন। মুভ ১২ ঘণ্টা বন্ধ থাকবে।",
-    tone: "text-red-700",
+    tone: "text-danger",
   },
-  { action: "stop_rest", en: "Stop and rest", bn: "থামুন, বিশ্রাম নিন", noteEn: "Move pauses for 15 minutes.", noteBn: "মুভ ১৫ মিনিট বন্ধ থাকবে।", tone: "text-amber-800" },
+  { action: "stop_rest", en: "Stop and rest", bn: "থামুন, বিশ্রাম নিন", noteEn: "Move pauses for 15 minutes.", noteBn: "মুভ ১৫ মিনিট বন্ধ থাকবে।", tone: "text-warn" },
   {
     action: "stop_exercise",
     en: "Stop that exercise",
@@ -40,7 +40,7 @@ const RULES = [
   { action: "end", en: "End gently", bn: "ধীরে শেষ করুন", noteEn: "ASHA moves to a slow cool-down.", noteBn: "ASHA ধীর কুল-ডাউনে যাবে।", tone: "text-ink" },
 ] as const;
 
-const field = "mt-1 h-11 w-full rounded-xl bg-white px-3 text-ink ring-1 ring-line focus:outline-none focus:ring-2 focus:ring-brand";
+const field = "mt-1 h-11 w-full rounded-xl bg-surface px-3 text-ink ring-1 ring-line focus:outline-none focus:ring-2 focus:ring-brand";
 
 function Section({ id, title, description, children, className }: { id?: string; title: string; description?: string; children: React.ReactNode; className?: string }) {
   return (
@@ -49,7 +49,7 @@ function Section({ id, title, description, children, className }: { id?: string;
         {title}
       </h2>
       {description && <p className="mt-0.5 text-sm text-muted">{description}</p>}
-      <div className="mt-3 rounded-2xl bg-white px-5 ring-1 ring-line">{children}</div>
+      <div className="mt-3 rounded-2xl bg-surface px-5 ring-1 ring-line">{children}</div>
     </section>
   );
 }
@@ -70,7 +70,7 @@ function LanguagePicker({ lang }: { lang: Lang }) {
             type="button"
             aria-pressed={lang === id}
             onClick={() => moveStore.set({ language: id })}
-            className={cn("h-9 rounded-full px-4 text-sm font-medium transition-colors", lang === id ? "bg-white text-ink shadow-sm ring-1 ring-line" : "text-muted hover:text-ink")}
+            className={cn("h-9 rounded-full px-4 text-sm font-medium transition-colors", lang === id ? "bg-surface text-ink shadow-sm ring-1 ring-line" : "text-muted hover:text-ink")}
           >
             {label}
           </button>
@@ -321,7 +321,7 @@ export default function MoveSafety() {
               <>
                 <Button
                   size="sm"
-                  className="bg-red-600 hover:bg-red-700"
+                  className="bg-danger-strong hover:bg-danger-strong"
                   onClick={() => {
                     const keep = s.lockout && lockoutActive(s.lockout, Date.now()) ? s.lockout : null;
                     moveStore.clear();
@@ -338,14 +338,14 @@ export default function MoveSafety() {
                 </Button>
               </>
             ) : (
-              <Button size="sm" variant="ghost" className="text-red-700" onClick={() => setConfirmDelete(true)}>
+              <Button size="sm" variant="ghost" className="text-danger" onClick={() => setConfirmDelete(true)}>
                 Delete all Move data
               </Button>
             )}
           </div>
         </Section>
 
-        <details className="group rounded-2xl bg-white ring-1 ring-line">
+        <details className="group rounded-2xl bg-surface ring-1 ring-line">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 font-medium text-ink">
             {tx(lang, "Technical details", "কারিগরি তথ্য")}
             <ChevronIcon size={18} className="text-muted transition-transform group-open:rotate-90" />

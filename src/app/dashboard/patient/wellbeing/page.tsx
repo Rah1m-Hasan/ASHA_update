@@ -10,7 +10,7 @@ export default function WellbeingPage() {
   return (
     <div className="max-w-3xl">
       <PageHeader title={area.label} description="Gentle checks and a private journal for your care. Camera checks are estimates for awareness, not medical measurements." />
-      <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-white ring-1 ring-line">
+      <ul className="divide-y divide-line overflow-hidden rounded-2xl bg-surface ring-1 ring-line">
         {area.modules.map((m) => (
           <li key={m.id}>
             <Link href={m.href} className="group flex items-center gap-4 px-5 py-4 transition-colors hover:bg-wash focus-visible:bg-wash focus-visible:outline-none">

@@ -12,7 +12,7 @@ import type { Settings } from "@/features/session/types";
 import { usePatientProfile } from "@/features/session/usePatientProfile";
 import { speak } from "@/features/speech/speak";
 
-const field = "mt-1 block h-11 w-full rounded-xl border border-line bg-white px-3";
+const field = "mt-1 block h-11 w-full rounded-xl border border-line bg-surface px-3";
 
 export default function PatientSettings() {
   const settings = useSession((s) => s.settings);

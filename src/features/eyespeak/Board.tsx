@@ -271,16 +271,16 @@ export function Board({
           {note}
         </p>
         {steps && !confirming && path.length > 0 && (
-          <button onClick={back} className="shrink-0 rounded-full px-4 py-2 font-medium text-ink ring-1 ring-line hover:bg-white" data-testid="board-back">
+          <button onClick={back} className="shrink-0 rounded-full px-4 py-2 font-medium text-ink ring-1 ring-line hover:bg-surface" data-testid="board-back">
             Back
           </button>
         )}
-        <button onClick={onExit} className="shrink-0 rounded-full px-4 py-2 font-medium text-muted ring-1 ring-line hover:bg-white">
+        <button onClick={onExit} className="shrink-0 rounded-full px-4 py-2 font-medium text-muted ring-1 ring-line hover:bg-surface">
           Close
         </button>
       </div>
       {status && (
-        <p className="px-4 pt-1 text-sm text-amber-800" data-testid="board-status">
+        <p className="px-4 pt-1 text-sm text-warn" data-testid="board-status">
           {status}
         </p>
       )}
@@ -302,13 +302,13 @@ export function Board({
               onClick={() => choose(t)}
               className={cn(
                 "relative grid place-items-center overflow-hidden rounded-3xl text-center transition-[box-shadow,opacity] duration-150",
-                yes ? "bg-brand text-white" : "bg-white text-ink",
+                yes ? "bg-brand text-on-brand" : "bg-surface text-ink",
                 on ? (yes ? "ring-[6px] ring-ink" : "ring-[6px] ring-brand") : yes ? "ring-1 ring-brand" : "ring-1 ring-line",
                 scan && !on && "opacity-55",
               )}
               style={{ ["--dwell" as string]: "0" }}
             >
-              <span aria-hidden="true" className={cn("absolute inset-x-0 bottom-0 origin-bottom transition-transform duration-100", yes ? "bg-white/30" : "bg-brand/20")} style={{ height: "100%", transform: "scaleY(var(--dwell))" }} />
+              <span aria-hidden="true" className={cn("absolute inset-x-0 bottom-0 origin-bottom transition-transform duration-100", yes ? "bg-surface/30" : "bg-brand/20")} style={{ height: "100%", transform: "scaleY(var(--dwell))" }} />
               <span className="relative px-[2vmin]">
                 <span className="block text-[clamp(1.5rem,5vmin,3.5rem)] leading-tight font-semibold">{t.label}</span>
                 <span className={cn("mt-1 block text-[clamp(1rem,3vmin,1.75rem)]", yes ? "text-white/80" : "text-muted")}>{t.bn}</span>
@@ -319,7 +319,7 @@ export function Board({
         })}
       </div>
       {showDot && !scan && (
-        <div ref={dot} data-testid="gaze-dot" aria-hidden="true" className="pointer-events-none fixed top-0 left-0 z-[61] -mt-4 -ml-4 size-8 rounded-full border-4 border-brand/70 bg-brand/15 opacity-0 ring-2 ring-white transition-opacity" />
+        <div ref={dot} data-testid="gaze-dot" aria-hidden="true" className="pointer-events-none fixed top-0 left-0 z-[61] -mt-4 -ml-4 size-8 rounded-full border-4 border-brand/70 bg-brand/15 opacity-0 ring-2 ring-surface transition-opacity" />
       )}
     </div>
   );

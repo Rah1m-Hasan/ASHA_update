@@ -25,14 +25,14 @@ export default function RequestsPage() {
   return (
     <>
       <PageHeader title="Requests" description={`From ${data?.profile.label ?? active.label}. Acknowledging lets them know you’re coming.`} />
-      <div role="tablist" aria-label="Filter requests" className="mb-5 inline-flex rounded-xl bg-white p-1 ring-1 ring-line">
+      <div role="tablist" aria-label="Filter requests" className="mb-5 inline-flex rounded-xl bg-surface p-1 ring-1 ring-line">
         {FILTERS.map((f) => (
           <button
             key={f.id}
             role="tab"
             aria-selected={filter === f.id}
             onClick={() => setFilter(f.id)}
-            className={cn("h-9 rounded-lg px-4 text-sm font-medium", filter === f.id ? "bg-brand text-white" : "text-ink hover:bg-wash")}
+            className={cn("h-9 rounded-lg px-4 text-sm font-medium", filter === f.id ? "bg-brand text-on-brand" : "text-ink hover:bg-wash")}
           >
             {f.label}
             {f.id === "open" && open.length > 0 && ` (${open.length})`}
@@ -46,7 +46,7 @@ export default function RequestsPage() {
           ))}
         </div>
       ) : (
-        <div className="rounded-2xl bg-white ring-1 ring-line">
+        <div className="rounded-2xl bg-surface ring-1 ring-line">
           <EmptyState icon={<InboxIcon />} title={filter === "open" ? "Nothing waiting" : "No requests yet"} />
         </div>
       )}

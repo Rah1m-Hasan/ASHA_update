@@ -381,7 +381,7 @@ export default function LiveSession() {
           <h2 id="precheck-title" className="mb-3 text-base font-semibold text-ink">
             {tx(lang, "Safety check", "নিরাপত্তা যাচাই")}
           </h2>
-          <ol className="divide-y divide-line rounded-2xl bg-white ring-1 ring-line">
+          <ol className="divide-y divide-line rounded-2xl bg-surface ring-1 ring-line">
             {ask.map((q: { id: string; en: string; bn: string }) => (
               <li key={q.id} className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between md:gap-6">
                 <p className="text-ink md:max-w-md">{lang === "bn" ? q.bn : q.en}</p>
@@ -392,7 +392,7 @@ export default function LiveSession() {
                       type="button"
                       aria-pressed={precheck[q.id] === v}
                       onClick={() => setPrecheck((p) => ({ ...p, [q.id]: v }))}
-                      className={cn("h-9 min-w-14 rounded-full px-3 text-sm font-medium transition-colors", precheck[q.id] === v ? "bg-white text-ink shadow-sm ring-1 ring-line" : "text-muted hover:text-ink")}
+                      className={cn("h-9 min-w-14 rounded-full px-3 text-sm font-medium transition-colors", precheck[q.id] === v ? "bg-surface text-ink shadow-sm ring-1 ring-line" : "text-muted hover:text-ink")}
                     >
                       {v === "no" ? tx(lang, "No", "না") : v === "yes" ? tx(lang, "Yes", "হ্যাঁ") : tx(lang, "Not sure", "নিশ্চিত নই")}
                     </button>
@@ -402,7 +402,7 @@ export default function LiveSession() {
             ))}
           </ol>
           {(precheck.pain === "yes" || precheck.pain === "unsure") && (
-            <div className="mt-4 rounded-2xl bg-white p-5 ring-1 ring-line">
+            <div className="mt-4 rounded-2xl bg-surface p-5 ring-1 ring-line">
               <p className="text-ink">{tx(lang, "Where is the pain?", "কোথায় ব্যথা?")}</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 {PAIN_AREAS.map((p: { id: string; en: string; bn: string }) => (
@@ -411,7 +411,7 @@ export default function LiveSession() {
                     type="button"
                     aria-pressed={pain.includes(p.id)}
                     onClick={() => setPain((x) => (x.includes(p.id) ? x.filter((y) => y !== p.id) : [...x, p.id]))}
-                    className={cn("h-10 rounded-full px-4 text-sm ring-1 transition-colors", pain.includes(p.id) ? "bg-brand-soft text-brand ring-brand" : "bg-white text-ink ring-line hover:bg-wash")}
+                    className={cn("h-10 rounded-full px-4 text-sm ring-1 transition-colors", pain.includes(p.id) ? "bg-brand-soft text-brand ring-brand" : "bg-surface text-ink ring-line hover:bg-wash")}
                   >
                     {tx(lang, p.en, p.bn)}
                   </button>
@@ -546,7 +546,7 @@ export default function LiveSession() {
                 </Choice>
               ))}
               <Choice selected={false} onClick={() => setUnwell(true)} className="p-3">
-                <span className="text-red-700">Unwell</span>
+                <span className="text-danger">Unwell</span>
               </Choice>
             </div>
             <Button
@@ -631,7 +631,7 @@ export default function LiveSession() {
             {flow.map((f, i) => {
               const at = flow.indexOf(flowAt);
               return (
-                <li key={f} aria-current={f === flowAt ? "step" : undefined} className={cn("rounded-full px-2.5 py-1 ring-1", f === flowAt ? "bg-brand text-white ring-brand" : i < at ? "bg-brand-soft text-brand ring-brand-mint" : "bg-white text-muted ring-line")}>
+                <li key={f} aria-current={f === flowAt ? "step" : undefined} className={cn("rounded-full px-2.5 py-1 ring-1", f === flowAt ? "bg-brand text-on-brand ring-brand" : i < at ? "bg-brand-soft text-brand ring-brand-mint" : "bg-surface text-muted ring-line")}>
                   {i + 1}. {stage[f]}
                 </li>
               );
@@ -649,7 +649,7 @@ export default function LiveSession() {
               <CameraView offMessage={tx(lang, "The camera stays off until you turn it on. Video never leaves this device.", "আপনি চালু না করা পর্যন্ত ক্যামেরা বন্ধ থাকে। ভিডিও এই ডিভাইসের বাইরে যায় না।")}>
                 <MoveOverlay exerciseId={ex.id} showAll={showAll} mirrored={mirrored} framing={phase === "CAMERA_SETUP" || phase === "PRACTICE" ? FRAMING[lesson.viewpoint as keyof typeof FRAMING] : null} ready={view?.status === "READY"} />
                 {cue && (
-                  <div className={cn("absolute inset-x-3 top-3 rounded-xl px-3 py-2 text-center text-base font-semibold text-white sm:text-lg", lost ? "bg-red-700/85" : "bg-black/65")} data-testid="move-cue" aria-live="polite" lang={lang}>
+                  <div className={cn("absolute inset-x-3 top-3 rounded-xl px-3 py-2 text-center text-base font-semibold text-on-veil sm:text-lg", lost ? "bg-danger-strong/85" : "bg-veil/65")} data-testid="move-cue" aria-live="polite" lang={lang}>
                     {cue}
                     {cueDetail && <span className="mt-0.5 block text-sm font-normal">{cueDetail}</span>}
                   </div>
@@ -740,7 +740,7 @@ export default function LiveSession() {
                       <dd className="text-muted">{lesson.topErrors.map((e) => pick(e, lang)).join("; ")}</dd>
                     </div>
                   </dl>
-                  <div className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-900 ring-1 ring-red-200">
+                  <div className="mt-3 rounded-xl bg-danger-soft p-3 text-sm text-danger ring-1 ring-danger-line">
                     <p className="font-medium">{tx(lang, "Safety", "নিরাপত্তা")}</p>
                     <ul className="mt-1 list-disc space-y-0.5 pl-5">
                       {lesson.cautions.map((c) => (
@@ -765,7 +765,7 @@ export default function LiveSession() {
               {s.state === "CAMERA_SETUP" && lesson && (
                 <Panel title={tx(lang, "Set up your camera", "ক্যামেরা ঠিক করুন")} description={pick(VIEWPOINTS[lesson.viewpoint as keyof typeof VIEWPOINTS], lang)}>
                   {camera === "error" ? (
-                    <div role="alert" className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900 ring-1 ring-amber-200">
+                    <div role="alert" className="rounded-xl bg-warn-soft p-3 text-sm text-warn ring-1 ring-warn-line">
                       <p className="font-medium">{tx(lang, "Camera unavailable. You can log the workout manually.", "ক্যামেরা পাওয়া যাচ্ছে না। আপনি নিজে গুনে ব্যায়াম লিখতে পারেন।")}</p>
                       {cameraStatus && <p className="mt-1">{cameraStatus}</p>}
                     </div>
@@ -906,7 +906,7 @@ export default function LiveSession() {
           )}
 
           {upNext && s.state !== "REST" && (
-            <details className="rounded-2xl bg-white p-4 text-sm ring-1 ring-line" data-testid="move-next-up">
+            <details className="rounded-2xl bg-surface p-4 text-sm ring-1 ring-line" data-testid="move-next-up">
               <summary className="cursor-pointer font-medium text-ink">
                 {tx(lang, "Next up", "এরপর")}: {title(EXERCISES[upNext.exerciseId], lang)}
                 {upNext.set > 1 ? ` · ${tx(lang, "set", "সেট")} ${upNext.set}` : ""}
@@ -924,7 +924,7 @@ export default function LiveSession() {
         </div>
       </div>
 
-      <div className="sticky bottom-0 z-20 -mx-4 mt-6 border-t border-line bg-white/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8" data-testid="move-toolbar">
+      <div className="sticky bottom-0 z-20 -mx-4 mt-6 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8" data-testid="move-toolbar">
         <div className="flex flex-wrap items-center justify-center gap-2">
           {paused ? (
             <Button onClick={() => act((cur) => cur.resume(performance.now()))}>{tx(lang, "Resume", "আবার শুরু")}</Button>
@@ -936,7 +936,7 @@ export default function LiveSession() {
           <Button variant="ghost" onClick={() => act((cur) => cur.stop())}>
             {tx(lang, "End", "শেষ করুন")}
           </Button>
-          <Button className="bg-red-600 hover:bg-red-700" onClick={() => setUnwell(true)}>
+          <Button className="bg-danger-strong hover:bg-danger-strong" onClick={() => setUnwell(true)}>
             {tx(lang, "Stop for symptoms", "উপসর্গের জন্য থামুন")}
           </Button>
         </div>
@@ -963,15 +963,15 @@ function VisibilityList({ view, lang }: { view: View | null; lang: Lang }) {
   return (
     <ul className="mt-3 grid gap-1 text-sm sm:grid-cols-2" data-testid="move-visibility">
       {view.points.map((p) => (
-        <li key={p.name} className={cn("flex items-center gap-2", p.visible ? "text-emerald-700" : "text-amber-800")}>
+        <li key={p.name} className={cn("flex items-center gap-2", p.visible ? "text-good" : "text-warn")}>
           <span aria-hidden="true">{p.visible ? "✓" : "✕"}</span>
           <span>
             {name(p.name)}: {p.visible ? tx(lang, "seen", "দেখা যাচ্ছে") : p.inFrame ? tx(lang, "unclear", "অস্পষ্ট") : tx(lang, "out of view", "ছবির বাইরে")}
           </span>
         </li>
       ))}
-      {view.points.length === 0 && <li className="text-amber-800">{view.hint ? pick(view.hint, lang) : tx(lang, "Nothing seen yet", "এখনো কিছু দেখা যায়নি")}</li>}
-      <li className={cn("flex items-center gap-2", view.lighting === "ok" || view.lighting === null ? "text-emerald-700" : "text-amber-800")}>
+      {view.points.length === 0 && <li className="text-warn">{view.hint ? pick(view.hint, lang) : tx(lang, "Nothing seen yet", "এখনো কিছু দেখা যায়নি")}</li>}
+      <li className={cn("flex items-center gap-2", view.lighting === "ok" || view.lighting === null ? "text-good" : "text-warn")}>
         <span aria-hidden="true">{view.lighting === "ok" || view.lighting === null ? "✓" : "✕"}</span>
         <span>
           {tx(lang, "Light", "আলো")}: {view.lighting === "dark" ? tx(lang, "too dark", "খুব অন্ধকার") : view.lighting === "bright" ? tx(lang, "too bright behind you", "পেছনে খুব উজ্জ্বল") : view.lighting === "ok" ? tx(lang, "good", "ভালো") : tx(lang, "not measured", "মাপা হয়নি")}
@@ -985,7 +985,7 @@ function AdvancedPanel({ lang, view, result, frame, showAll }: { lang: Lang; vie
   const counts = view?.counts ?? { pose: 0, face: 0, hands: 0, total: 0 };
   const measured = result?.angle ?? result?.value;
   return (
-    <details className="rounded-2xl bg-white p-4 text-sm ring-1 ring-line">
+    <details className="rounded-2xl bg-surface p-4 text-sm ring-1 ring-line">
       <summary className="cursor-pointer font-medium text-ink">{tx(lang, "Advanced tracking details", "ট্র্যাকিংয়ের বিস্তারিত")}</summary>
       <label className="mt-3 flex min-h-11 items-center gap-2 text-ink">
         <input type="checkbox" className="size-5" data-testid="move-show-all" checked={showAll} onChange={(e) => moveStore.set({ showAllLandmarks: e.target.checked })} />
@@ -1019,14 +1019,14 @@ function AdvancedPanel({ lang, view, result, frame, showAll }: { lang: Lang; vie
 function SymptomPicker({ onPick, onClose, text, setText }: { onPick: (v: string) => void; onClose: () => void; text: string; setText: (v: string) => void }) {
   const lang = useMove((s) => s.language);
   return (
-    <Panel className="mb-6 ring-2 ring-red-300" title={tx(lang, "What are you feeling?", "কেমন লাগছে?")} description="Choose one. ASHA's safety rules decide what happens next.">
+    <Panel className="mb-6 ring-2 ring-danger-line" title={tx(lang, "What are you feeling?", "কেমন লাগছে?")} description="Choose one. ASHA's safety rules decide what happens next.">
       <div className="grid gap-2 sm:grid-cols-2">
         {SESSION_SYMPTOMS.map((x: { id: string; en: string; bn: string; action: string }) => (
           <button
             key={x.id}
             type="button"
             onClick={() => onPick(x.id)}
-            className={cn("min-h-12 rounded-2xl p-3 text-left font-medium ring-1", x.action === "emergency" ? "bg-red-50 text-red-900 ring-red-200 hover:bg-red-100" : "bg-white text-ink ring-line hover:bg-wash")}
+            className={cn("min-h-12 rounded-2xl p-3 text-left font-medium ring-1", x.action === "emergency" ? "bg-danger-soft text-danger ring-danger-line hover:bg-danger-soft" : "bg-surface text-ink ring-line hover:bg-wash")}
           >
             {tx(lang, x.en, x.bn)}
           </button>

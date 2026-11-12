@@ -74,7 +74,7 @@ export default function AssistantPage() {
             {messages.map((m, i) => (
               <div key={i} className={cn("flex gap-3", m.role === "user" && "justify-end")}>
                 {m.role === "assistant" && <Image src="/assets/assets/images/asha-avatar.png" alt="" width={32} height={32} className="size-8 shrink-0 rounded-full" />}
-                <div className={cn("max-w-[80%] rounded-2xl px-4 py-3", m.role === "user" ? "rounded-br-md bg-brand text-white" : "rounded-bl-md bg-wash text-ink")}>
+                <div className={cn("max-w-[80%] rounded-2xl px-4 py-3", m.role === "user" ? "rounded-br-md bg-brand text-on-brand" : "rounded-bl-md bg-wash text-ink")}>
                   <p>{m.text}</p>
                   {m.reply?.proposal && (
                     <Button size="sm" className="mt-3" onClick={() => propose(m.reply!.proposal!.kind, m.reply!.proposal!.text, "asha")}>

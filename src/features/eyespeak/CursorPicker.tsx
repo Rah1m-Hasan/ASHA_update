@@ -131,7 +131,7 @@ export function CursorPicker({
             }}
             data-pick={t.id === "cancel" ? "cancel" : t.label}
             onClick={() => pick.current(t.target)}
-            className={`relative grid place-items-center overflow-hidden rounded-3xl text-center ring-1 data-[over=true]:ring-4 data-[over=true]:ring-brand ${t.id === "cancel" ? "bg-wash text-muted ring-line" : "bg-white text-ink ring-line"}`}
+            className={`relative grid place-items-center overflow-hidden rounded-3xl text-center ring-1 data-[over=true]:ring-4 data-[over=true]:ring-brand ${t.id === "cancel" ? "bg-wash text-muted ring-line" : "bg-surface text-ink ring-line"}`}
             style={{ ["--dwell" as string]: "0" }}
           >
             <span aria-hidden="true" className="absolute inset-x-0 bottom-0 origin-bottom bg-brand/20 transition-transform duration-100" style={{ height: "100%", transform: "scaleY(var(--dwell))" }} />
@@ -142,7 +142,7 @@ export function CursorPicker({
           </button>
         ))}
       </div>
-      <div ref={dot} aria-hidden="true" className="pointer-events-none fixed top-0 left-0 z-[67] -mt-4 -ml-4 size-8 rounded-full border-4 border-brand/70 bg-brand/15 opacity-0 ring-2 ring-white" />
+      <div ref={dot} aria-hidden="true" className="pointer-events-none fixed top-0 left-0 z-[67] -mt-4 -ml-4 size-8 rounded-full border-4 border-brand/70 bg-brand/15 opacity-0 ring-2 ring-surface" />
     </div>
   );
 }

@@ -19,7 +19,7 @@ export function PatientSwitcher() {
         Viewing
       </label>
       <div className="mt-1 flex items-center gap-2">
-        <span className={cn("size-2 shrink-0 rounded-full", online ? "bg-emerald-500" : "bg-line")} aria-label={online ? "Online" : "Not active"} />
+        <span className={cn("size-2 shrink-0 rounded-full", online ? "bg-good-strong" : "bg-line")} aria-label={online ? "Online" : "Not active"} />
         <select
           id="patient-switch"
           value={active?.patientId}

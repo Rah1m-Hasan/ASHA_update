@@ -4,7 +4,7 @@ import { useId, useState } from "react";
 import { cn } from "@/lib/cn";
 
 const input =
-  "block h-12 w-full rounded-xl border bg-white px-4 text-base text-ink placeholder:text-muted/70 focus:outline-none focus:ring-2 focus:ring-brand/20";
+  "block h-12 w-full rounded-xl border bg-surface px-4 text-base text-ink placeholder:text-muted/70 focus:outline-none focus:ring-2 focus:ring-brand/20";
 
 type FieldProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, "id"> & {
   label: string;

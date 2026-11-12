@@ -43,7 +43,7 @@ export default function NewPatientPage() {
       <PageHeader title="Add a patient" description="Creates a private care circle. Links expire after 7 days of setup and can be renewed." />
       <ol className="mb-6 flex gap-2" aria-label="Progress">
         {STEPS.map((s, i) => (
-          <li key={s} aria-current={i === step ? "step" : undefined} className={cn("flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium", i === step ? "bg-brand text-white" : i < step ? "bg-brand-soft text-brand" : "bg-white text-muted ring-1 ring-line")}>
+          <li key={s} aria-current={i === step ? "step" : undefined} className={cn("flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-medium", i === step ? "bg-brand text-on-brand" : i < step ? "bg-brand-soft text-brand" : "bg-surface text-muted ring-1 ring-line")}>
             <span>{i + 1}</span>
             {s}
           </li>

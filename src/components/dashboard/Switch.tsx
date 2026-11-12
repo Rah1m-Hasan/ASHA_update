@@ -12,7 +12,7 @@ export function Switch({ checked, onChange, label, description }: { checked: boo
       <span className="relative mt-0.5 shrink-0">
         <input type="checkbox" role="switch" className="peer sr-only" checked={checked} onChange={(e) => onChange(e.target.checked)} />
         <span className={cn("block h-6 w-11 rounded-full transition peer-focus-visible:ring-2 peer-focus-visible:ring-brand/40", checked ? "bg-brand" : "bg-line")} />
-        <span className={cn("absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow transition", checked && "translate-x-5")} />
+        <span className={cn("absolute top-0.5 left-0.5 size-5 rounded-full bg-surface shadow transition", checked && "translate-x-5")} />
       </span>
     </label>
   );

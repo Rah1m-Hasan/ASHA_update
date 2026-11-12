@@ -124,12 +124,12 @@ export function Calibration({ mode, model: existing, feed, onDone, onCancel }: {
   const step = steps.current[index];
   const total = steps.current.length;
   return (
-    <div className="fixed inset-0 z-[60] bg-white" role="dialog" aria-modal="true" aria-label="Gaze calibration" data-testid="calibration">
+    <div className="fixed inset-0 z-[60] bg-surface" role="dialog" aria-modal="true" aria-label="Gaze calibration" data-testid="calibration">
       <p className="absolute inset-x-0 top-5 text-center text-sm text-muted">
         {step?.check ? "Checking accuracy" : "Calibrating"} · dot {index + 1} of {total}. Look at the centre of the dot.
       </p>
       {hint && (
-        <p role="status" className="absolute inset-x-0 top-12 mx-auto w-fit max-w-[90vw] rounded-full bg-amber-50 px-4 py-1.5 text-center text-sm text-amber-800 ring-1 ring-amber-200">
+        <p role="status" className="absolute inset-x-0 top-12 mx-auto w-fit max-w-[90vw] rounded-full bg-warn-soft px-4 py-1.5 text-center text-sm text-warn ring-1 ring-warn-line">
           {hint}
         </p>
       )}

@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { CloseIcon, MenuIcon, SwapIcon } from "@/components/ui/icons";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { titleFor } from "@/features/dashboard/nav";
 import { sessionStore } from "@/features/session/store";
 import type { Role } from "@/features/session/types";
@@ -41,24 +42,24 @@ export function DashboardShell({
 
   return (
     <div className="min-h-dvh bg-wash lg:grid lg:grid-cols-[272px_1fr]">
-      <a href="#dashboard-main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-white focus:px-3 focus:py-2">
+      <a href="#dashboard-main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-surface focus:px-3 focus:py-2">
         Skip to content
       </a>
-      <aside className="sticky top-0 hidden h-dvh border-r border-line bg-white lg:block">
+      <aside className="sticky top-0 hidden h-dvh border-r border-line bg-surface lg:block">
         <Sidebar role={role} badges={badges} footer={sidebarFooter} />
       </aside>
 
       {open && (
         <div className="fixed inset-0 z-40 lg:hidden">
-          <button className="absolute inset-0 bg-heading/40" aria-label="Close menu" onClick={() => setOpen(false)} />
-          <aside className="absolute inset-y-0 left-0 w-[86%] max-w-[300px] bg-white shadow-float">
+          <button className="absolute inset-0 bg-veil/40" aria-label="Close menu" onClick={() => setOpen(false)} />
+          <aside className="absolute inset-y-0 left-0 w-[86%] max-w-[300px] bg-surface shadow-float">
             <Sidebar role={role} badges={badges} footer={sidebarFooter} onNavigate={() => setOpen(false)} />
           </aside>
         </div>
       )}
 
       <div className="flex min-w-0 flex-col">
-        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-line bg-white/90 px-4 backdrop-blur sm:px-6">
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-line bg-surface/90 px-4 backdrop-blur sm:px-6">
           <button className="grid size-10 place-items-center rounded-xl hover:bg-wash lg:hidden" aria-label="Open menu" onClick={() => setOpen(true)}>
             {open ? <CloseIcon /> : <MenuIcon />}
           </button>
@@ -66,6 +67,7 @@ export function DashboardShell({
           <p className="hidden text-sm text-muted lg:block">{role === "patient" ? "Patient space" : "Caregiver space"}</p>
           <div className="ml-auto flex items-center gap-2">
             {topbarExtra}
+            <ThemeToggle className="size-10" />
             <button
               onClick={switchRole}
               className="flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-medium text-ink ring-1 ring-line hover:bg-wash"

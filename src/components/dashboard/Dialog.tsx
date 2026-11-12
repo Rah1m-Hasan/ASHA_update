@@ -33,7 +33,7 @@ export function Dialog({
       }}
       aria-label={title}
       className={cn(
-        "m-auto w-[min(92vw,480px)] rounded-3xl bg-white p-0 text-ink shadow-float backdrop:bg-heading/40 backdrop:backdrop-blur-sm",
+        "m-auto w-[min(92vw,480px)] rounded-3xl bg-surface p-0 text-ink shadow-float backdrop:bg-veil/40 backdrop:backdrop-blur-sm",
         className,
       )}
     >

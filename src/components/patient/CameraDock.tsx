@@ -38,8 +38,8 @@ export function CameraDock() {
       {on && (
         <ul className="mt-3 grid grid-cols-2 gap-1.5" aria-label="Signals being tracked">
           {signals.map((s) => (
-            <li key={s.label} className={cn("flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs", s.ok ? "bg-white text-ink" : "text-muted")}>
-              <span className={cn("size-1.5 rounded-full", s.ok ? "bg-emerald-500" : "bg-line")} />
+            <li key={s.label} className={cn("flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs", s.ok ? "bg-surface text-ink" : "text-muted")}>
+              <span className={cn("size-1.5 rounded-full", s.ok ? "bg-good-strong" : "bg-line")} />
               {s.label}
             </li>
           ))}

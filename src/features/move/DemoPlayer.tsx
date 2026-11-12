@@ -109,16 +109,16 @@ export function DemoPlayer({ exerciseId, lang, className, compact = false }: { e
         ) : (
           <div className="grid h-full grid-cols-2 gap-2 p-2" role="img" aria-label={label}>
             {still.slice(0, 2).map((k, i) => (
-              <div key={i} className="relative rounded-xl bg-white ring-1 ring-line">
+              <div key={i} className="relative rounded-xl bg-surface ring-1 ring-line">
                 <DemoSvg shapes={demoShapes(k) as Shape[]} label={captions[k.cap]} />
                 <span className="absolute bottom-1 left-2 text-xs font-medium text-muted">{i === 0 ? tx(lang, "Start", "শুরু") : tx(lang, "Then", "তারপর")}</span>
               </div>
             ))}
           </div>
         )}
-        <span className="absolute right-2 top-2 rounded-full bg-white/90 px-2 py-0.5 text-[11px] font-medium text-muted ring-1 ring-line">{tx(lang, "Illustration", "চিত্র")}</span>
+        <span className="absolute right-2 top-2 rounded-full bg-surface/90 px-2 py-0.5 text-[11px] font-medium text-muted ring-1 ring-line">{tx(lang, "Illustration", "চিত্র")}</span>
       </div>
-      <figcaption className="border-t border-line bg-white px-4 py-3">
+      <figcaption className="border-t border-line bg-surface px-4 py-3">
         <p className="min-h-12 text-base font-medium text-ink" aria-live="polite" data-testid="demo-caption" lang={lang === "bn" ? "bn" : "en"}>
           {caption}
         </p>

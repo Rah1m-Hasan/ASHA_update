@@ -525,7 +525,7 @@ export default function NutritionPage() {
       actions={
         <div className="flex rounded-full bg-wash p-1" role="group" aria-label="Language / ভাষা">
           {(["en", "bn"] as const).map((l) => (
-            <button key={l} type="button" aria-pressed={lang === l} onClick={() => setLang(l)} className={cn("min-h-9 rounded-full px-3 text-sm font-medium", lang === l ? "bg-white text-ink shadow" : "text-muted")} lang={l}>
+            <button key={l} type="button" aria-pressed={lang === l} onClick={() => setLang(l)} className={cn("min-h-9 rounded-full px-3 text-sm font-medium", lang === l ? "bg-surface text-ink shadow" : "text-muted")} lang={l}>
               {l === "en" ? "English" : "বাংলা"}
             </button>
           ))}
@@ -549,14 +549,14 @@ export default function NutritionPage() {
 
       {(screen === "IDLE" || screen === "MODE_SELECTED") && (
         <div className="space-y-6">
-          {notice && <p className="rounded-xl bg-amber-50 px-4 py-3 text-amber-900 ring-1 ring-amber-200">{notice}</p>}
+          {notice && <p className="rounded-xl bg-warn-soft px-4 py-3 text-warn ring-1 ring-warn-line">{notice}</p>}
           <div className="grid gap-4 sm:grid-cols-2">
-            <button type="button" onClick={() => void startLive()} className="flex min-h-36 flex-col items-start gap-3 rounded-2xl bg-brand p-5 text-left text-white shadow-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-brand/40" data-testid="nutrition-scan">
+            <button type="button" onClick={() => void startLive()} className="flex min-h-36 flex-col items-start gap-3 rounded-2xl bg-brand p-5 text-left text-on-brand shadow-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-brand/40" data-testid="nutrition-scan">
               <CameraIcon size={28} />
               <span className="text-xl font-semibold">{tx(lang, "Scan food live", "লাইভ স্ক্যান")}</span>
               <span className="text-white/85">{tx(lang, "Point your camera at the plate. ASHA takes the photo when it's steady.", "প্লেটের দিকে ক্যামেরা ধরুন। স্থির হলে আশা ছবি তোলে।")}</span>
             </button>
-            <button type="button" onClick={startUpload} className="flex min-h-36 flex-col items-start gap-3 rounded-2xl bg-white p-5 text-left ring-1 ring-line shadow-sm hover:bg-wash focus:outline-none focus-visible:ring-4 focus-visible:ring-brand/40" data-testid="nutrition-upload">
+            <button type="button" onClick={startUpload} className="flex min-h-36 flex-col items-start gap-3 rounded-2xl bg-surface p-5 text-left ring-1 ring-line shadow-sm hover:bg-wash focus:outline-none focus-visible:ring-4 focus-visible:ring-brand/40" data-testid="nutrition-upload">
               <NutritionIcon size={28} className="text-brand" />
               <span className="text-xl font-semibold text-ink">{tx(lang, "Upload a photo", "ছবি আপলোড")}</span>
               <span className="text-muted">{tx(lang, "Choose a photo of your meal from the gallery.", "গ্যালারি থেকে খাবারের ছবি বাছুন।")}</span>
@@ -579,15 +579,15 @@ export default function NutritionPage() {
 
       {showCamera && (
         <div className="mx-auto max-w-xl space-y-4">
-          <div className="relative mx-auto aspect-square w-full max-w-[min(100%,70vh)] overflow-hidden rounded-2xl bg-heading" data-testid="nutrition-viewfinder">
+          <div className="relative mx-auto aspect-square w-full max-w-[min(100%,70vh)] overflow-hidden rounded-2xl bg-veil" data-testid="nutrition-viewfinder">
             <video ref={video} muted playsInline className={cn("absolute inset-0 size-full object-cover", screen === "SNAPSHOT_FROZEN" && photo && "invisible")} aria-label={tx(lang, "Camera view", "ক্যামেরার দৃশ্য")} />
             {screen === "SNAPSHOT_FROZEN" && photo && (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={photo} alt={tx(lang, "The photo ASHA took", "আশার তোলা ছবি")} className="absolute inset-0 size-full object-cover" />
             )}
-            <div aria-hidden="true" className={cn("pointer-events-none absolute left-[10%] top-[10%] size-[80%] rounded-2xl border-4", scanInfo.tentative ? "border-emerald-300" : "border-white/80", screen === "SNAPSHOT_FROZEN" && "border-white")} />
+            <div aria-hidden="true" className={cn("pointer-events-none absolute left-[10%] top-[10%] size-[80%] rounded-2xl border-4", scanInfo.tentative ? "border-good-line" : "border-surface/80", screen === "SNAPSHOT_FROZEN" && "border-surface")} />
             {scanInfo.tentative && SCANNING.includes(screen) && (
-              <span className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-white/95 px-3 py-1 text-sm font-medium text-ink" data-testid="nutrition-tentative">
+              <span className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-surface/95 px-3 py-1 text-sm font-medium text-ink" data-testid="nutrition-tentative">
                 {tx(lang, "Possible: ", "সম্ভবত: ")}
                 {L(lang, DISH[scanInfo.tentative])} · {tx(lang, "experimental", "পরীক্ষামূলক")}
               </span>
@@ -600,11 +600,11 @@ export default function NutritionPage() {
                 {notice || scanMessage}
               </p>
               <div className="flex justify-center">
-                <button type="button" onClick={() => void freeze()} className="grid size-20 place-items-center rounded-full bg-brand text-white shadow-lg ring-4 ring-brand-soft focus:outline-none focus-visible:ring-brand/50" aria-label={tx(lang, "Capture photo now", "এখনই ছবি তুলুন")} data-testid="nutrition-shutter">
+                <button type="button" onClick={() => void freeze()} className="grid size-20 place-items-center rounded-full bg-brand text-on-brand shadow-lg ring-4 ring-brand-soft focus:outline-none focus-visible:ring-brand/50" aria-label={tx(lang, "Capture photo now", "এখনই ছবি তুলুন")} data-testid="nutrition-shutter">
                   <CameraIcon size={30} />
                 </button>
               </div>
-              <div className="rounded-2xl bg-white px-4 ring-1 ring-line">
+              <div className="rounded-2xl bg-surface px-4 ring-1 ring-line">
                 <Switch checked={autoFreeze} onChange={(v) => {
                   nutritionStore.set({ autoFreeze: v });
                   setArmed(v);
@@ -694,7 +694,7 @@ export default function NutritionPage() {
       )}
 
       {(screen === "ERROR" || screen === "PERMISSION_DENIED") && (
-        <div className="mx-auto max-w-xl space-y-4 rounded-2xl bg-white p-5 ring-1 ring-line" role="alert" data-testid="nutrition-error">
+        <div className="mx-auto max-w-xl space-y-4 rounded-2xl bg-surface p-5 ring-1 ring-line" role="alert" data-testid="nutrition-error">
           <h2 className="text-lg font-semibold text-ink">{screen === "PERMISSION_DENIED" ? tx(lang, "Camera permission is off", "ক্যামেরার অনুমতি বন্ধ") : tx(lang, "Something didn't work", "কিছু একটা কাজ করেনি")}</h2>
           <p className="text-muted">{screen === "PERMISSION_DENIED" ? tx(lang, "ASHA can't use the camera. You can allow it in your browser's site settings, upload a photo instead, or enter the food without a photo.", "আশা ক্যামেরা ব্যবহার করতে পারছে না। ব্রাউজারের সাইট সেটিংসে অনুমতি দিন, ছবি আপলোড করুন, বা ছবি ছাড়া খাবার লিখুন।") : error}</p>
           <div className="flex flex-wrap gap-2">
@@ -764,7 +764,7 @@ export default function NutritionPage() {
           <h2 className="text-xl font-semibold text-ink">{screen === "EDIT_ANSWERS" ? tx(lang, "Improve the estimate", "অনুমান আরও ঠিক করুন") : tx(lang, "Check your answers", "উত্তরগুলো দেখুন")}</h2>
           <p className="text-muted">{tx(lang, "Change anything that isn't right. Each food is counted once.", "যা ঠিক নয় বদলান। প্রতিটি খাবার একবারই গোনা হয়।")}</p>
           {items.map((it) => (
-            <section key={it.uid} className="rounded-2xl bg-white p-4 ring-1 ring-line" data-testid="review-item" data-dish={it.dishId}>
+            <section key={it.uid} className="rounded-2xl bg-surface p-4 ring-1 ring-line" data-testid="review-item" data-dish={it.dishId}>
               <h3 className="font-semibold text-ink">{L(lang, DISH[it.dishId])}</h3>
               <dl className="mt-2 divide-y divide-line">
                 {(applicable(it) as Question[]).map((q) => (
@@ -822,7 +822,7 @@ export default function NutritionPage() {
           </div>
           <Assumptions meal={meal} lang={lang} />
           {screen === "RESULT" ? (
-            <div className="sticky bottom-0 -mx-4 flex flex-wrap gap-2 border-t border-line bg-white/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0">
+            <div className="sticky bottom-0 -mx-4 flex flex-wrap gap-2 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur sm:static sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0">
               <Button onClick={logMeal} disabled={meal.counted.length > 0 && !meal.eaten} data-testid="nutrition-log">
                 {tx(lang, "Log this meal", "খাবারটি লিখে রাখুন")}
               </Button>
@@ -844,7 +844,7 @@ export default function NutritionPage() {
                 <Button onClick={reset} disabled={!settled}>
                   {tx(lang, "Log another meal", "আরেকটি খাবার লিখুন")}
                 </Button>
-                <Link href={askHref} className="inline-flex h-11 items-center rounded-full px-5 font-medium text-brand hover:bg-white">
+                <Link href={askHref} className="inline-flex h-11 items-center rounded-full px-5 font-medium text-brand hover:bg-surface">
                   {tx(lang, "Ask ASHA about this meal", "এই খাবার নিয়ে আশাকে জিজ্ঞেস করুন")}
                 </Link>
               </div>
@@ -854,7 +854,7 @@ export default function NutritionPage() {
       )}
 
       {screen === "DISCARDED" && (
-        <div className="mx-auto max-w-xl rounded-2xl bg-white p-5 ring-1 ring-line" role="status" data-testid="nutrition-discarded">
+        <div className="mx-auto max-w-xl rounded-2xl bg-surface p-5 ring-1 ring-line" role="status" data-testid="nutrition-discarded">
           <p className="font-semibold text-ink">{tx(lang, "Discarded. Nothing was saved.", "বাদ দেওয়া হয়েছে। কিছুই সংরক্ষণ হয়নি।")}</p>
           <Button className="mt-3" onClick={reset}>
             {tx(lang, "Start again", "আবার শুরু করুন")}
@@ -870,18 +870,18 @@ function StillFindings({ still, lang }: { still: { suggestions: Suggestion[]; vi
   const v = still.vision;
   const warn = [...(v?.quality?.warnings ?? []).filter((w) => QUALITY_TEXT[w]).map((w) => L(lang, QUALITY_TEXT[w])), ...((v?.faceCount ?? 0) > 0 ? [tx(lang, "A face is in this photo. It isn't saved, but you may want to retake it with only the food.", "ছবিতে মুখ আছে। এটি সংরক্ষণ হয় না, তবু শুধু খাবার রেখে আবার তুলতে পারেন।")] : [])];
   return (
-    <div className="rounded-2xl bg-white p-4 ring-1 ring-line" aria-live="polite" data-testid="nutrition-still-findings">
+    <div className="rounded-2xl bg-surface p-4 ring-1 ring-line" aria-live="polite" data-testid="nutrition-still-findings">
       {still.suggestions.length ? (
         <p className="text-lg text-ink">
           {tx(lang, "ASHA's camera suggests: ", "আশার ক্যামেরার পরামর্শ: ")}
           <strong>{still.suggestions.map((s) => L(lang, DISH[s.dishId])).join(", ")}</strong>
-          <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">{tx(lang, "experimental, check it", "পরীক্ষামূলক, যাচাই করুন")}</span>
+          <span className="ml-2 rounded-full bg-warn-soft px-2 py-0.5 text-xs font-semibold text-warn">{tx(lang, "experimental, check it", "পরীক্ষামূলক, যাচাই করুন")}</span>
         </p>
       ) : (
         <p className="text-lg text-ink">{v?.unavailable || v?.timeout || v?.error ? tx(lang, "No camera suggestion this time. You'll choose the foods next.", "এবার ক্যামেরার পরামর্শ নেই। এরপর আপনি খাবার বাছবেন।") : tx(lang, "ASHA's camera didn't recognise a food it knows. You'll choose the foods next.", "আশার ক্যামেরা চেনা কোনো খাবার পায়নি। এরপর আপনি খাবার বাছবেন।")}</p>
       )}
       {warn.map((w) => (
-        <p key={w} className="mt-1 text-sm text-amber-900">
+        <p key={w} className="mt-1 text-sm text-warn">
           {w}
         </p>
       ))}
@@ -897,7 +897,7 @@ function FoodReview({ lang, photo, still, items, method, onRemove, onAdd, onNext
         <img src={photo} alt={tx(lang, "Your meal photo", "আপনার খাবারের ছবি")} className="max-h-64 w-full rounded-2xl object-cover" />
       )}
       {method !== "manual" && <StillFindings still={still} lang={lang} />}
-      <section className="rounded-2xl bg-white p-4 ring-1 ring-line">
+      <section className="rounded-2xl bg-surface p-4 ring-1 ring-line">
         <h2 className="text-lg font-semibold text-ink">{tx(lang, "What's on the plate?", "প্লেটে কী আছে?")}</h2>
         <p className="text-sm text-muted">{tx(lang, "Add each food separately (for example rice, dal and fish curry), so each one is counted once.", "প্রতিটি খাবার আলাদা করে যোগ করুন (যেমন ভাত, ডাল, মাছের ঝোল), যাতে প্রতিটি একবার গোনা হয়।")}</p>
         <ul className="mt-3 space-y-2" data-testid="nutrition-chips">
@@ -917,7 +917,7 @@ function FoodReview({ lang, photo, still, items, method, onRemove, onAdd, onNext
         <h3 className="mt-4 text-sm font-medium text-ink">{tx(lang, "Add a food", "খাবার যোগ করুন")}</h3>
         <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4" data-testid="nutrition-add">
           {ADDABLE.map((id) => (
-            <button key={id} type="button" onClick={() => onAdd(id)} className="min-h-12 rounded-xl bg-white px-3 py-2 text-left font-medium text-ink ring-1 ring-line hover:bg-wash focus:outline-none focus-visible:ring-2 focus-visible:ring-brand" data-dish={id}>
+            <button key={id} type="button" onClick={() => onAdd(id)} className="min-h-12 rounded-xl bg-surface px-3 py-2 text-left font-medium text-ink ring-1 ring-line hover:bg-wash focus:outline-none focus-visible:ring-2 focus-visible:ring-brand" data-dish={id}>
               + {L(lang, DISH[id])}
             </button>
           ))}
@@ -949,7 +949,7 @@ function MealHistory({ log, lang }: { log: MealLog[]; lang: string }) {
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   };
   return (
-    <section aria-labelledby="meal-log" className="rounded-2xl bg-white p-4 ring-1 ring-line" data-testid="nutrition-history">
+    <section aria-labelledby="meal-log" className="rounded-2xl bg-surface p-4 ring-1 ring-line" data-testid="nutrition-history">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="meal-log" className="text-lg font-semibold text-ink">
           {tx(lang, "Your meal log (this device)", "আপনার খাবারের তালিকা (এই ডিভাইস)")}
@@ -960,7 +960,7 @@ function MealHistory({ log, lang }: { log: MealLog[]; lang: string }) {
               {tx(lang, "Export", "এক্সপোর্ট")}
             </Button>
             {confirmClear ? (
-              <Button size="sm" variant="ghost" className="text-red-700" onClick={() => {
+              <Button size="sm" variant="ghost" className="text-danger" onClick={() => {
                 nutritionStore.clear();
                 setConfirmClear(false);
               }}>

@@ -71,7 +71,7 @@ export default function ClinicianPrograms() {
         actions={access ? <Button variant="ghost" onClick={disconnect}>Disconnect</Button> : undefined}
       />
       {error && (
-        <p role="alert" className="mb-4 rounded-xl bg-red-50 p-3 text-sm text-red-800">
+        <p role="alert" className="mb-4 rounded-xl bg-danger-soft p-3 text-sm text-danger">
           {error}
         </p>
       )}
@@ -80,7 +80,7 @@ export default function ClinicianPrograms() {
           <form onSubmit={connect} className="space-y-3">
             <label className="block text-sm text-ink">
               Private invitation link
-              <input value={invite} onChange={(e) => setInvite(e.target.value)} autoComplete="off" spellCheck={false} className="mt-1 h-11 w-full rounded-xl bg-white px-3 ring-1 ring-line focus:outline-none focus:ring-2 focus:ring-brand" />
+              <input value={invite} onChange={(e) => setInvite(e.target.value)} autoComplete="off" spellCheck={false} className="mt-1 h-11 w-full rounded-xl bg-surface px-3 ring-1 ring-line focus:outline-none focus:ring-2 focus:ring-brand" />
             </label>
             <Button type="submit" disabled={!invite.trim()}>
               Connect
@@ -93,7 +93,7 @@ export default function ClinicianPrograms() {
       ) : data && data.role !== "patient" ? (
         <Panel className="max-w-2xl" title={`Signed in as ${data.role} · ${data.name ?? "clinic"}`}>
           <p className="text-ink">Clinicians set Move plans in the Clinic workspace, for patients who have shared Move with them. This patient dashboard never shows other patients' data.</p>
-          <a href="/everyday.html#clinic" className="mt-4 inline-flex h-11 items-center rounded-full bg-brand px-5 font-medium text-white">
+          <a href="/everyday.html#clinic" className="mt-4 inline-flex h-11 items-center rounded-full bg-brand px-5 font-medium text-on-brand">
             Open Clinic workspace
           </a>
         </Panel>
@@ -103,7 +103,7 @@ export default function ClinicianPrograms() {
             {!moveShared ? (
               <div className="space-y-3 text-ink">
                 <p>Your clinician can only assign Move plans after you share Move with them. You can stop sharing at any time, and access ends after 30 days unless you renew it.</p>
-                <a href="/everyday.html#clinic" className="inline-flex h-11 items-center rounded-full bg-brand px-5 font-medium text-white">
+                <a href="/everyday.html#clinic" className="inline-flex h-11 items-center rounded-full bg-brand px-5 font-medium text-on-brand">
                   Manage sharing in Clinic
                 </a>
               </div>

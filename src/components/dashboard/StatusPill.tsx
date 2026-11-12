@@ -4,16 +4,16 @@ export type Tone = "neutral" | "good" | "warn" | "alert" | "brand";
 
 const tones: Record<Tone, string> = {
   neutral: "bg-wash text-muted ring-line",
-  good: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  warn: "bg-amber-50 text-amber-700 ring-amber-200",
-  alert: "bg-red-50 text-red-700 ring-red-200",
+  good: "bg-good-soft text-good ring-good-line",
+  warn: "bg-warn-soft text-warn ring-warn-line",
+  alert: "bg-danger-soft text-danger ring-danger-line",
   brand: "bg-brand-soft text-brand ring-brand-mint",
 };
 const dots: Record<Tone, string> = {
   neutral: "bg-muted/60",
-  good: "bg-emerald-500",
-  warn: "bg-amber-500",
-  alert: "bg-red-500",
+  good: "bg-good-strong",
+  warn: "bg-warn-strong",
+  alert: "bg-danger-strong",
   brand: "bg-brand",
 };
 

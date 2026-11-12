@@ -20,7 +20,7 @@ function NumberField({ label, value, min, max, onChange, disabled }: { label: st
           const v = Math.round(Number(e.target.value));
           if (Number.isFinite(v)) onChange(Math.min(max, Math.max(min, v)));
         }}
-        className="mt-1 h-10 w-20 rounded-lg bg-white px-2 text-base text-ink ring-1 ring-line focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-wash"
+        className="mt-1 h-10 w-20 rounded-lg bg-surface px-2 text-base text-ink ring-1 ring-line focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-wash"
       />
     </label>
   );
@@ -63,7 +63,7 @@ export function PlanEditor({ program, onChange, screening, readOnly }: { program
                 {alternatives.length > 0 && (
                   <label className="block text-xs text-muted">
                     Swap for
-                    <select className="mt-1 h-10 rounded-lg bg-white px-2 text-sm text-ink ring-1 ring-line" value="" onChange={(ev) => ev.target.value && swap(i, ev.target.value)}>
+                    <select className="mt-1 h-10 rounded-lg bg-surface px-2 text-sm text-ink ring-1 ring-line" value="" onChange={(ev) => ev.target.value && swap(i, ev.target.value)}>
                       <option value="">Easier or different…</option>
                       {alternatives.map((id: string) => (
                         <option key={id} value={id}>
@@ -74,7 +74,7 @@ export function PlanEditor({ program, onChange, screening, readOnly }: { program
                   </label>
                 )}
                 {program.sequence.length > 1 && (
-                  <button type="button" onClick={() => remove(i)} className="h-10 rounded-lg px-3 text-sm font-medium text-red-700 hover:bg-red-50">
+                  <button type="button" onClick={() => remove(i)} className="h-10 rounded-lg px-3 text-sm font-medium text-danger hover:bg-danger-soft">
                     Remove
                   </button>
                 )}

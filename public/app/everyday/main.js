@@ -73,7 +73,7 @@ try {
   language =
     localStorage.getItem("asha_everyday_language") === "bn" ? "bn" : "en";
   document.documentElement.dataset.theme =
-    localStorage.getItem("asha_everyday_theme") ||
+    localStorage.getItem("asha_theme") ||
     (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
 } catch {}
 $("#language").value = language;
@@ -505,7 +505,7 @@ $("#theme").onclick = () => {
     document.documentElement.dataset.theme === "dark" ? "light" : "dark";
   document.documentElement.dataset.theme = theme;
   try {
-    localStorage.setItem("asha_everyday_theme", theme);
+    localStorage.setItem("asha_theme", theme);
   } catch {}
 };
 $("#readGuide").onclick = () => speak(guide());

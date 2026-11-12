@@ -168,9 +168,15 @@ window.addEventListener("message", (e) => {
   }
 });
 let settings = read("settings", {
-    theme: matchMedia("(prefers-color-scheme: dark)").matches
-      ? "dark"
-      : "light",
+    theme:
+      (() => {
+        try {
+          return localStorage.getItem("asha_theme");
+        } catch {
+          return null;
+        }
+      })() ||
+      (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"),
     cloud: false,
     proactive: true,
     scan: false,
@@ -182,6 +188,14 @@ let settings = read("settings", {
   trained = read("calibration_" + patient?.patientId, null),
   handMaps = read("handmap_" + patient?.patientId, {}),
   pendingHandTraining = null;
+// One theme for the whole of Asha. The key in localStorage is the truth, so a
+// change made in the React app or in Everyday shows up here too; the copy
+// inside the saved settings is only a fallback for a first visit.
+try {
+  const storedTheme = localStorage.getItem("asha_theme");
+  if (storedTheme === "dark" || storedTheme === "light")
+    settings.theme = storedTheme;
+} catch {}
 const conversation = [];
 const ashaResponseSessions = new WeakMap();
 const gate = new RequestGate(),
@@ -205,10 +219,15 @@ function toast(t) {
   clearTimeout(toast.timer);
   toast.timer = setTimeout(() => ($("toast").hidden = true), 5500);
 }
-// The assistive shell keeps its own light/dark toggle (the Next.js dashboard is light-only).
+// The colour theme is one choice for the whole of Asha: the React app, the
+// assistive shell and Everyday all read and write the same key, so switching
+// the theme in one place switches it everywhere.
 function theme() {
   if (settings.theme !== "dark") settings.theme = "light";
   document.documentElement.dataset.theme = settings.theme;
+  try {
+    localStorage.setItem("asha_theme", settings.theme);
+  } catch {}
   const button = $("themeButton");
   if (button) {
     const next = settings.theme === "dark" ? "light" : "dark";

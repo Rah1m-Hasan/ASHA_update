@@ -30,7 +30,7 @@ export function RequestCard({ event, onAcknowledge }: { event: CareEvent; onAckn
   const [busy, setBusy] = useState(false);
   const done = !!event.receipt?.acknowledgedAt;
   return (
-    <article className={cn("flex flex-wrap items-center gap-4 rounded-2xl p-4 ring-1", done ? "bg-white ring-line" : "bg-white ring-2 ring-brand")}>
+    <article className={cn("flex flex-wrap items-center gap-4 rounded-2xl p-4 ring-1", done ? "bg-surface ring-line" : "bg-surface ring-2 ring-brand")}>
       <div className="min-w-0 flex-1">
         <p className="text-lg font-semibold text-ink">{event.text || EVENT_TEXT[event.kind] || event.kind}</p>
         <p className="mt-0.5 text-sm text-muted">

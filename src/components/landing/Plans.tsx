@@ -27,7 +27,7 @@ export function Plans() {
               <Reveal key={p.name}>
                 <article
                   className={cn(
-                    "flex h-full flex-col rounded-[28px] bg-white p-7",
+                    "flex h-full flex-col rounded-[28px] bg-surface p-7",
                     featured ? "shadow-float ring-2 ring-brand" : "ring-1 ring-line",
                   )}
                 >

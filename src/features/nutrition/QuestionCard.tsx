@@ -29,7 +29,7 @@ export function NumberField({ id, label, value, onChange, min, max, step, onEnte
             onEnter?.();
           }
         }}
-        className="h-12 w-full rounded-xl border border-line bg-white px-3 text-lg text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
+        className="h-12 w-full rounded-xl border border-line bg-surface px-3 text-lg text-ink focus:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
       />
     </label>
   );
@@ -82,7 +82,7 @@ export function QuestionCard({
   const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
 
   return (
-    <section aria-labelledby={`q-${question.id}`} className="rounded-2xl bg-white p-5 ring-1 ring-line sm:p-6" data-testid="nutrition-question" data-question={question.id}>
+    <section aria-labelledby={`q-${question.id}`} className="rounded-2xl bg-surface p-5 ring-1 ring-line sm:p-6" data-testid="nutrition-question" data-question={question.id}>
       <div className="mb-4">
         <div className="flex items-center justify-between gap-3 text-sm text-muted">
           <span>{heading}</span>
@@ -172,7 +172,7 @@ export function QuestionCard({
                 }}
                 className={cn(
                   "min-h-12 rounded-xl px-4 py-3 text-left text-base font-medium ring-1 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-brand",
-                  choice === o.id ? "bg-brand-soft text-brand ring-brand" : "bg-white text-ink ring-line hover:bg-wash",
+                  choice === o.id ? "bg-brand-soft text-brand ring-brand" : "bg-surface text-ink ring-line hover:bg-wash",
                 )}
               >
                 {L(lang, o)}
@@ -189,7 +189,7 @@ export function QuestionCard({
           </div>
         )}
         {error && (
-          <p role="alert" className="text-sm font-medium text-red-700">
+          <p role="alert" className="text-sm font-medium text-danger">
             {error}
           </p>
         )}
@@ -226,7 +226,7 @@ export function FoodSearch({ lang, onPick }: { lang: string; onPick: (a: Answer)
       <ul className="mt-3 space-y-2" aria-live="polite">
         {results.map((r) => (
           <li key={`${r.kind}:${r.id}`}>
-            <button type="button" onClick={() => onPick(r.kind === "dish" ? { dishId: r.id } : { recordId: r.id })} className="flex min-h-12 w-full items-center justify-between rounded-xl bg-white px-4 py-2 text-left ring-1 ring-line hover:bg-wash focus:outline-none focus-visible:ring-2 focus-visible:ring-brand">
+            <button type="button" onClick={() => onPick(r.kind === "dish" ? { dishId: r.id } : { recordId: r.id })} className="flex min-h-12 w-full items-center justify-between rounded-xl bg-surface px-4 py-2 text-left ring-1 ring-line hover:bg-wash focus:outline-none focus-visible:ring-2 focus-visible:ring-brand">
               <span className="font-medium text-ink">{lang === "bn" ? r.bn : r.en}</span>
               <span className="text-xs text-muted">{r.kind === "dish" ? tx(lang, "dish", "পদ") : "USDA"}</span>
             </button>

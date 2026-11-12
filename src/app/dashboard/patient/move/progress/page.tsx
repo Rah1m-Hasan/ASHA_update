@@ -56,7 +56,7 @@ export default function MoveProgress() {
     return (
       <div className="max-w-3xl">
         <PageHeader title={tx(lang, "Progress", "অগ্রগতি")} />
-        <div className="rounded-2xl bg-white ring-1 ring-line">
+        <div className="rounded-2xl bg-surface ring-1 ring-line">
           <EmptyState title={tx(lang, "No workouts yet", "এখনো কোনো ব্যায়াম নেই")} action={<ButtonLink href={`${BASE}/session`}>{tx(lang, "Start a workout", "ব্যায়াম শুরু করুন")}</ButtonLink>}>
             {tx(lang, "Your completed workouts, reps and hold times will show here. They stay on this device.", "শেষ করা ব্যায়াম, কতবার ও কত সেকেন্ড ধরে রেখেছেন তা এখানে দেখা যাবে। এগুলো এই ডিভাইসেই থাকে।")}
           </EmptyState>
@@ -81,7 +81,7 @@ export default function MoveProgress() {
         description={tx(lang, "What you did, counted by the camera or by you. ASHA doesn't estimate calories, body fat or medical outcomes.", "আপনি যা করেছেন, ক্যামেরা বা আপনি যা গুনেছেন। ASHA ক্যালরি, চর্বি বা চিকিৎসার ফলাফল অনুমান করে না।")}
       />
 
-      <dl className="grid grid-cols-3 divide-x divide-line rounded-2xl bg-white ring-1 ring-line">
+      <dl className="grid grid-cols-3 divide-x divide-line rounded-2xl bg-surface ring-1 ring-line">
         {summary.map((s) => (
           <div key={s.label} className="px-4 py-4 sm:px-5">
             <dt className="text-sm text-muted">{s.label}</dt>
@@ -96,7 +96,7 @@ export default function MoveProgress() {
           {tx(lang, "By exercise", "ব্যায়াম অনুযায়ী")}
         </h2>
         <p className="mb-3 mt-0.5 text-sm text-muted">{tx(lang, "Reps (or seconds held) in each workout, oldest to newest.", "প্রতি ব্যায়ামে কতবার (বা কত সেকেন্ড), পুরোনো থেকে নতুন।")}</p>
-        <ul className="divide-y divide-line rounded-2xl bg-white ring-1 ring-line">
+        <ul className="divide-y divide-line rounded-2xl bg-surface ring-1 ring-line">
           {Object.entries(stats.perExercise).map(([id, values]) => (
             <li key={id} className="flex items-center gap-4 px-5 py-3">
               <span className="min-w-0 flex-1 font-medium text-ink">{title(EXERCISES[id], lang)}</span>
@@ -114,7 +114,7 @@ export default function MoveProgress() {
         <h2 id="progress-history" className="mb-3 text-base font-semibold text-ink">
           {tx(lang, "History", "ইতিহাস")}
         </h2>
-        <ul className="divide-y divide-line rounded-2xl bg-white ring-1 ring-line">
+        <ul className="divide-y divide-line rounded-2xl bg-surface ring-1 ring-line">
           {[...history].reverse().map((h) => {
             const ended = ENDED[h.endedBy ?? ""] ?? { en: h.endedBy ?? "—", bn: h.endedBy ?? "—" };
             return (
@@ -127,7 +127,7 @@ export default function MoveProgress() {
                   <span className="text-sm text-muted">{when(h.startedAt)}</span>
                 </div>
                 <p className="mt-0.5 text-sm text-muted">
-                  <span className={cn(ended.alert ? "font-medium text-red-700" : "text-ink")}>{tx(lang, ended.en, ended.bn)}</span> · {h.setsDone}/{h.setsPlanned} sets · {h.activeMinutes} min ·{" "}
+                  <span className={cn(ended.alert ? "font-medium text-danger" : "text-ink")}>{tx(lang, ended.en, ended.bn)}</span> · {h.setsDone}/{h.setsPlanned} sets · {h.activeMinutes} min ·{" "}
                   {h.mode === "camera" ? tx(lang, "camera", "ক্যামেরা") : tx(lang, "manual", "নিজে")}
                   {h.effort != null ? ` · effort ${h.effort}/10` : ""}
                   {h.feltAfter ? ` · felt ${h.feltAfter.toLowerCase()}` : ""}
@@ -138,7 +138,7 @@ export default function MoveProgress() {
                     .map((e) => `${title(EXERCISES[e.exerciseId], lang)} ${e.seconds ? `${e.seconds}s` : `${e.reps} reps`}`)
                     .join(" · ")}
                 </p>
-                {h.safety && <p className="mt-1 text-xs text-red-700">Stopped for: {h.safety.reasons.join(", ")}</p>}
+                {h.safety && <p className="mt-1 text-xs text-danger">Stopped for: {h.safety.reasons.join(", ")}</p>}
               </li>
             );
           })}

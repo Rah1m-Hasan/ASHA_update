@@ -65,7 +65,7 @@ function AbnormalStretch({ a, on }: { a: Analysis | undefined; on: boolean }) {
             </span>
           </div>
           <div className="relative mt-1.5 h-2 overflow-hidden rounded-full bg-wash ring-1 ring-line/70">
-            <div className={`h-full rounded-full transition-[width] duration-150 ${over ? "bg-amber-500" : "bg-brand"}`} style={{ width: `${Math.min(1, dev / scale) * 100}%` }} />
+            <div className={`h-full rounded-full transition-[width] duration-150 ${over ? "bg-warn-strong" : "bg-brand"}`} style={{ width: `${Math.min(1, dev / scale) * 100}%` }} />
             <span aria-hidden="true" className="absolute inset-y-0 w-0.5 bg-ink/60" style={{ left: `${(limit / scale) * 100}%` }} />
           </div>
         </div>
@@ -77,7 +77,7 @@ function AbnormalStretch({ a, on }: { a: Analysis | undefined; on: boolean }) {
             </span>
           </div>
           <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-wash ring-1 ring-line/70">
-            <div className={`h-full rounded-full transition-[width] duration-300 ${lip?.latched ? "bg-amber-600" : "bg-brand"}`} style={{ width: `${(held / HOLD_SECONDS) * 100}%` }} />
+            <div className={`h-full rounded-full transition-[width] duration-300 ${lip?.latched ? "bg-warn-strong" : "bg-brand"}`} style={{ width: `${(held / HOLD_SECONDS) * 100}%` }} />
           </div>
         </div>
         <p className="text-sm text-muted" role="status" data-testid="stretch-status">
@@ -120,7 +120,7 @@ export default function FaceSpeakPage() {
             </Button>
             <Link
               href="/dashboard/patient/calibration"
-              className="inline-flex h-9 items-center rounded-full bg-brand px-3 text-sm font-medium text-white hover:bg-brand-hover"
+              className="inline-flex h-9 items-center rounded-full bg-brand px-3 text-sm font-medium text-on-brand hover:bg-brand-hover"
             >
               {trained ? "Recalibrate" : "Calibrate"}
             </Link>

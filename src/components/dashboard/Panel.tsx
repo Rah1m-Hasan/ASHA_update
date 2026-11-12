@@ -17,7 +17,7 @@ export function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className={cn("rounded-2xl bg-white ring-1 ring-line", className)}>
+    <section className={cn("rounded-2xl bg-surface ring-1 ring-line", className)}>
       {(title || action) && (
         <header className="flex items-start justify-between gap-4 px-5 pt-5">
           <div>

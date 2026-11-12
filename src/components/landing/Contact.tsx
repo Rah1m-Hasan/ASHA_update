@@ -29,7 +29,7 @@ export function Contact() {
                   href={c.href}
                   target={c.href.startsWith("http") ? "_blank" : undefined}
                   rel="noopener noreferrer"
-                  className="block rounded-2xl bg-white p-5 ring-1 ring-line transition hover:ring-brand"
+                  className="block rounded-2xl bg-surface p-5 ring-1 ring-line transition hover:ring-brand"
                 >
                   <span className="text-xs font-semibold tracking-wide text-muted uppercase">{c.label}</span>
                   <span className="mt-1 block font-medium text-ink">{c.value} ↗</span>

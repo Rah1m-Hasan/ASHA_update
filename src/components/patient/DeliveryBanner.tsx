@@ -19,7 +19,7 @@ export function DeliveryBanner() {
   } as const;
   const m = map[delivery.state];
   return (
-    <div className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl bg-white p-4 ring-1 ring-line" role="status">
+    <div className="mb-6 flex flex-wrap items-center gap-3 rounded-2xl bg-surface p-4 ring-1 ring-line" role="status">
       <StatusPill tone={m.tone}>{m.text}</StatusPill>
       <p className="font-medium text-ink">{delivery.text}</p>
       {delivery.state === "failed" && cred && (

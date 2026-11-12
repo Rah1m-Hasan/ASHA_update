@@ -79,7 +79,7 @@ export function QuickGestures() {
           <select
             value={pose}
             onChange={(e) => setPose(e.target.value)}
-            className="mt-1 block h-11 w-full rounded-xl border border-line bg-white px-3"
+            className="mt-1 block h-11 w-full rounded-xl border border-line bg-surface px-3"
           >
             {POSES.map((p) => (
               <option key={p}>{p}</option>
@@ -91,7 +91,7 @@ export function QuickGestures() {
           <select
             value={kind}
             onChange={(e) => setKind(e.target.value)}
-            className="mt-1 block h-11 w-full rounded-xl border border-line bg-white px-3"
+            className="mt-1 block h-11 w-full rounded-xl border border-line bg-surface px-3"
           >
             {NEEDS.map((n) => (
               <option key={n.kind} value={n.kind}>
@@ -124,7 +124,7 @@ export function QuickGestures() {
               </span>
               <button
                 onClick={() => remove(p)}
-                className="text-sm font-medium text-muted hover:text-red-600"
+                className="text-sm font-medium text-muted hover:text-danger"
               >
                 Remove
               </button>

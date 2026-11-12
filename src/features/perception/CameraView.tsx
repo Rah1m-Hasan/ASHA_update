@@ -14,11 +14,11 @@ export function CameraView({ className, compact = false, children, offMessage }:
   useEffect(() => (host.current ? attach(host.current) : undefined), [attach]);
 
   return (
-    <div className={cn("relative overflow-hidden rounded-2xl bg-heading", compact ? "aspect-[16/9]" : "aspect-video", className)}>
+    <div className={cn("relative overflow-hidden rounded-2xl bg-veil", compact ? "aspect-[16/9]" : "aspect-video", className)}>
       <div ref={host} className="absolute inset-0" />
       {state === "on" && children}
       {state !== "on" && (
-        <div className="absolute inset-0 grid place-items-center bg-heading p-4 text-center text-white">
+        <div className="absolute inset-0 grid place-items-center bg-veil p-4 text-center text-on-veil">
           <div className="max-w-xs">
             <CameraIcon size={compact ? 20 : 28} className="mx-auto text-white/70" />
             {!compact && (
