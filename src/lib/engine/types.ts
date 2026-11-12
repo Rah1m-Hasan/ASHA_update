@@ -55,6 +55,7 @@ export interface PerceptionInstance extends EventTarget {
   pulse: PulseValue;
   start(): Promise<void>;
   stop(): void;
+  destroy?(): void;
   setActiveModule(name: string): void;
   setCalibration(baseline: unknown, enabled?: string[]): void;
   resetFaceReference(): void;

@@ -3,6 +3,39 @@ import assert from "node:assert/strict";
 import { Perception } from "../public/engine/perception.js";
 import { VitalSense } from "../public/engine/vitalsense.js";
 
+test("destroy removes the perception visibility listener after stopping", (t) => {
+  const saved = Object.getOwnPropertyDescriptor(globalThis, "document");
+  t.after(() => {
+    if (saved) Object.defineProperty(globalThis, "document", saved);
+    else delete globalThis.document;
+  });
+  let added, removed, stopped = 0;
+  Object.defineProperty(globalThis, "document", {
+    configurable: true,
+    value: {
+      hidden: false,
+      addEventListener(type, listener) {
+        assert.equal(type, "visibilitychange");
+        added = listener;
+      },
+      removeEventListener(type, listener) {
+        assert.equal(type, "visibilitychange");
+        removed = listener;
+      },
+    },
+  });
+  const perception = Object.assign(Object.create(Perception.prototype), {
+    onVisibilityChange: () => {},
+  });
+  added = perception.onVisibilityChange;
+  perception.stop = () => {
+    stopped++;
+  };
+  perception.destroy();
+  assert.equal(stopped, 1);
+  assert.equal(removed, added);
+});
+
 test("shared video samples VitalSense at 30fps with 3fps landmarks and no second camera", async (t) => {
   // Exercise the real Perception loop and ROI sampler without loading vision
   // models. A deterministic camera RGB fixture contains a known 78-bpm pulse.

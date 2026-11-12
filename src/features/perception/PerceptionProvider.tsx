@@ -233,7 +233,10 @@ export function PerceptionProvider({
     document.addEventListener("visibilitychange", hidden);
     return () => {
       generation.current++;
-      engine.current?.stop();
+      const perception = engine.current;
+      if (perception?.destroy) perception.destroy();
+      else perception?.stop();
+      engine.current = null;
       stageEl.current?.remove();
       window.removeEventListener("pagehide", stop);
       document.removeEventListener("visibilitychange", hidden);

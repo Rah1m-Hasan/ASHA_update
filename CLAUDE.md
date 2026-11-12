@@ -14,8 +14,15 @@ It is a **demonstration app, not a validated clinical device**. See "Claims and 
 npm install
 npm run dev                     # Next dev server (default :3000)
 npm run build && npm start       # production build + serve
+npm run serve:lan               # production build + HTTP :3000 and HTTPS :8443 for LAN devices
 npm test                        # unit tests: node --test tests/*.test.mjs
 ```
+
+`npm run serve:lan` (scripts/serve-lan.mjs) serves the production build on
+`0.0.0.0:3000` (HTTP) and `0.0.0.0:8443` (HTTPS, mkcert cert in `.certs/`).
+Phones must use the HTTPS URL — camera, microphone and the push service worker
+need a secure context, which a plain `http://<lan-ip>` origin is not. The CA
+cert is downloadable at `/asha-ca.pem`. See `docs/LAN_SETUP.md`.
 
 Single unit test file: `node --test tests/blink-counter.test.mjs` (or `node --test tests/<name>.test.mjs`).
 

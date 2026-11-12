@@ -24,11 +24,12 @@ export class Perception extends EventTarget {
     this.enabled = [];
     this.handStates = {};
     this.yoloEnabled = false;
-    document.addEventListener("visibilitychange", () => {
+    this.onVisibilityChange = () => {
       if (document.hidden) {
         this.invalidateVitals("Monitoring paused while this page is hidden");
       }
-    });
+    };
+    document.addEventListener("visibilitychange", this.onVisibilityChange);
   }
   emit(type, detail) {
     this.dispatchEvent(new CustomEvent(type, { detail }));
@@ -722,5 +723,12 @@ export class Perception extends EventTarget {
     this.luma = null;
     this.pulseGeometry = null;
     this.emit("status", "Monitoring paused");
+  }
+  // stop() is intentionally reusable for module navigation. destroy() is only
+  // for the owning React provider unmounting, so its document listener cannot
+  // retain an obsolete engine instance.
+  destroy() {
+    this.stop();
+    document.removeEventListener("visibilitychange", this.onVisibilityChange);
   }
 }
