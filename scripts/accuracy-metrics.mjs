@@ -21,7 +21,7 @@ import { faceTrace } from "../tests/fixtures/face.mjs";
 import { calibrationCapture, distort, gazeTrace } from "../tests/fixtures/gaze.mjs";
 import { vitalTrace, noiseOnlyTrace, faceMotionStream } from "../tests/fixtures/vitals.mjs";
 import { poseTrace } from "../tests/fixtures/posture.mjs";
-import { handSequence } from "../tests/fixtures/hands.mjs";
+import { handLandmarks, handSequence, partialHandLandmarks } from "../tests/fixtures/hands.mjs";
 import { intentCases, retrievalGapQueries, retrievalQueries, speechPairs } from "../tests/fixtures/language.mjs";
 import { MotionMeter } from "../public/engine/motion-meter.js";
 
@@ -773,9 +773,10 @@ export function fingerSpeakMetrics() {  // A stable open hand, and the same hand
     }
   }
 
-  // How long after a dropout does the stable pose come back?
+  // How long after a dropout does the stable pose come back? The dropout
+  // happens after the pose has settled, so this is the flicker case.
   const recovery = [];
-  for (const dropout of [10, 20, 30]) {
+  for (const dropout of [30, 40, 50]) {
     const sequence = handSequence({
       fps: 20,
       durationMs: 4000,
@@ -787,8 +788,10 @@ export function fingerSpeakMetrics() {  // A stable open hand, and the same hand
     let recoveredAt = null;
     const dropoutFrame = sequence[dropout];
     for (const frame of sequence) {
-      if (frame.t < dropoutFrame.t) continue;
+      // The tracker sees every frame; the recovery is only looked for from
+      // the dropout onwards.
       const states = tracker.update(frame.hands, frame.t);
+      if (frame.t < dropoutFrame.t) continue;
       if (states.length && states[0].pose === "Open palm") {
         recoveredAt = frame.t - dropoutFrame.t;
         break;
@@ -797,11 +800,86 @@ export function fingerSpeakMetrics() {  // A stable open hand, and the same hand
     recovery.push({ dropoutFrame, recoveryMs: recoveredAt });
   }
 
+  // The same measurement before the grace: a hand that was missed for one
+  // frame lost its pose, so it had to be held again before it counted.
+  const legacyTracker = (holdMs) => {
+    const states = new Map();
+    return (hands, t) => {
+      const seen = new Set();
+      const result = hands.map((hand, i) => {
+        const key = hand.id || hand.label || `slot-${i}`;
+        const pose = FS.classifyPose(hand.lm);
+        seen.add(key);
+        let state = states.get(key);
+        if (!state || state.candidate !== pose.name) state = { candidate: pose.name, since: t, stable: "Observing…" };
+        if (t - state.since >= holdMs) state.stable = pose.name;
+        states.set(key, state);
+        return { id: key, pose: state.stable, stale: false };
+      });
+      for (const key of Array.from(states.keys())) if (!seen.has(key)) states.delete(key);
+      return result;
+    };
+  };
+  const legacyRecovery = [];
+  for (const dropout of [30, 40, 50]) {
+    const sequence = handSequence({
+      fps: 20,
+      durationMs: 4000,
+      open: true,
+      seed: 70,
+      dropouts: [dropout],
+    });
+    const tracker = legacyTracker(800);
+    let recoveredAt = null;
+    const dropoutFrame = sequence[dropout];
+    for (const frame of sequence) {
+      const states = tracker(frame.hands, frame.t);
+      if (frame.t < dropoutFrame.t) continue;
+      if (states.length && states[0].pose === "Open palm") {
+        recoveredAt = frame.t - dropoutFrame.t;
+        break;
+      }
+    }
+    legacyRecovery.push(recoveredAt);
+  }
+
+  // The score the distance-based models used to produce, and the score they
+  // produce now. The old score depended on the model's own distance scale,
+  // so one cut-off meant something different for every model.
+  const scoreComparability = { legacy: {}, normalised: {} };
+  for (const scale of [0.1, 1, 10]) {
+    const distances = [scale, 2 * scale, 3 * scale, 4 * scale, 5 * scale];
+    const legacy = distances.map((d) => 1 / (1 + d));
+    const legacyTotal = legacy.reduce((a, b) => a + b, 0) || 1;
+    scoreComparability.legacy[scale] = round(legacy[0] / legacyTotal, 4);
+    const normalised = distances.map((d) => FS.distanceSimilarity(d, scale));
+    const normalisedTotal = normalised.reduce((a, b) => a + b, 0) || 1;
+    scoreComparability.normalised[scale] = round(normalised[0] / normalisedTotal, 4);
+  }
+
+  // A person whose fingers do not straighten fully: the fixed levels are
+  // never reached, the person's own levels are.
+  const partialTracker = new FS.PoseTracker(180);
+  let partialT = 0;
+  for (let i = 0; i < 5; i++) {
+    partialT += 200;
+    partialTracker.update([{ lm: handLandmarks({ open: false }), label: "right" }], partialT);
+  }
+  let partialPose = null;
+  for (let i = 0; i < 10; i++) {
+    partialT += 200;
+    partialPose = partialTracker.update([{ lm: partialHandLandmarks({ amount: 0.6 }), label: "right" }], partialT)[0].pose;
+  }
+  const fixedPose = FS.classifyPose(partialHandLandmarks({ amount: 0.6 })).name;
+
   return {
     steadyPoseFlips: steadyFlips,
     flickerPoseFlips: flickerFlips,
     observingFrameRate: rate(observingFrames, totalFrames),
     recoveryAfterDropoutMs: recovery.map((r) => round(r.recoveryMs, 1)),
+    legacyRecoveryAfterDropoutMs: legacyRecovery.map((r) => round(r, 1)),
+    scoreComparability: scoreComparability,
+    partialOpenness: { fixedLevels: fixedPose, ownLevels: partialPose },
   };
 }
 

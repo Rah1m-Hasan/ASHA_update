@@ -146,5 +146,10 @@ test("built-in pose preview recognizes simple shapes after a short stable hold",
     hands = [{ lm: hand(), label: "left" }];
   assert.equal(tracker.update(hands, 0)[0].pose, "Observing…");
   assert.equal(tracker.update(hands, 200)[0].pose, "Open palm");
-  assert.equal(tracker.update([], 250).length, 0);
+  // A detection that flickers for a moment keeps the pose, marked stale so
+  // it is never taken for a fresh reading. A hand that is really gone is
+  // cleared once the grace has passed.
+  assert.equal(tracker.update([], 250)[0].pose, "Open palm");
+  assert.equal(tracker.update([], 250)[0].stale, true);
+  assert.equal(tracker.update([], 700).length, 0);
 });

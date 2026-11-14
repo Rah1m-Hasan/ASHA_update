@@ -275,6 +275,41 @@ test("FingerSpeak does not flap its pose under detection flicker", () => {
   );
 });
 
+test("FingerSpeak keeps a pose through a dropout instead of losing it", () => {
+  const recovery = metrics.fingerSpeak.recoveryAfterDropoutMs;
+  const legacy = metrics.fingerSpeak.legacyRecoveryAfterDropoutMs;
+  assert.equal(recovery.length, 3);
+  for (const ms of recovery) {
+    assert.ok(ms <= 100, `pose recovery took ${ms}ms after a dropout`);
+  }
+  // The rule before the grace cost a whole hold time on every flicker.
+  assert.ok(
+    legacy.every((ms) => ms >= 800),
+    `the old rule recovered in ${JSON.stringify(legacy)}ms, which is not a regression baseline`,
+  );
+});
+
+test("FingerSpeak scores mean the same thing on every model's own scale", () => {
+  const { legacy, normalised } = metrics.fingerSpeak.scoreComparability;
+  const legacyValues = Object.values(legacy);
+  const normalisedValues = Object.values(normalised);
+  assert.ok(
+    new Set(legacyValues).size > 1,
+    `the old score did not depend on the model scale: ${JSON.stringify(legacy)}`,
+  );
+  assert.equal(
+    new Set(normalisedValues).size,
+    1,
+    `the score still depends on the model scale: ${JSON.stringify(normalised)}`,
+  );
+});
+
+test("FingerSpeak recognises a hand that does not straighten fully", () => {
+  const partial = metrics.fingerSpeak.partialOpenness;
+  assert.equal(partial.fixedLevels, "Other hand pose");
+  assert.equal(partial.ownLevels, "Open palm");
+});
+
 // ---------------------------------------------------------------- Posture
 
 test("Posture keeps a stable label under landmark noise", () => {

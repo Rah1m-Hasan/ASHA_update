@@ -542,7 +542,9 @@ export class Perception extends EventTarget {
       const seen = new Set();
       for (const h of this.hands) {
         seen.add(h.id);
-        if (this.handStates[h.id] !== h.pose && h.pose !== "Observing…")
+        // A pose kept through a detection flicker is stale: it may be
+        // shown, but it is never emitted as a proposal.
+        if (!h.stale && this.handStates[h.id] !== h.pose && h.pose !== "Observing…")
           this.emit("hand", { ...h, t });
         this.handStates[h.id] = h.pose;
       }

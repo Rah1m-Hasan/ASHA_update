@@ -47,6 +47,21 @@ export function handLandmarks({ open = true, x = 0.5, y = 0.5, scale = 0.1, nois
 }
 
 /**
+ * A hand part-way between folded and straight. `amount` 1 is a straight
+ * hand, 0 a folded one. Used for a person whose fingers do not straighten
+ * fully: their open hand never reaches the fixed open level.
+ */
+export function partialHandLandmarks({ amount = 0.6, x = 0.5, y = 0.5, scale = 0.1, noise = 0, seed = 6 } = {}) {
+  const straight = handLandmarks({ open: true, x, y, scale, noise: 0, seed });
+  const folded = handLandmarks({ open: false, x, y, scale, noise: 0, seed });
+  return straight.map((point, index) => ({
+    x: folded[index].x + (point.x - folded[index].x) * amount,
+    y: folded[index].y + (point.y - folded[index].y) * amount,
+    z: 0,
+  }));
+}
+
+/**
  * A sequence of hand detections with dropouts.
  *
  * `dropouts` lists frame indices where the detector returned nothing — the

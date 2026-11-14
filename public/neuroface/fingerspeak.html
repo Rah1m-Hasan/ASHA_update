@@ -459,7 +459,13 @@ let vitalsHistory = new Array(80).fill(0);
 let liveBuffer = [];
 let recording = null;
 let lastInferenceAt = 0;
-let lastTrackedCount = 0, lastAutoDrawAt = 0;
+let lastAutoDrawAt = 0;
+// The number of hands flickers: one frame with a second hand, one frame
+// with none. The buffer is only cleared when the count has held a moment,
+// and a frame whose hand count is not the confirmed one is left out of the
+// buffer rather than ending the capture.
+const HAND_COUNT_CONFIRM_MS = 400;
+let confirmedHandCount = null, pendingHandCount = 0, pendingHandCountAt = 0;
 const autoPoseTracker = new window.NF_fingerspeakSignal.PoseTracker(180);
 const INFERENCE_INTERVAL_MS = 120;
 let wizardActive = false;
@@ -570,7 +576,14 @@ function processHandResult(result, now){
     octx.clearRect(0,0,overlay.width, overlay.height);
 
     const hands = window.NF_fingerspeakSignal.orderedHands(result);
-    if (hands.length !== lastTrackedCount){ liveBuffer = []; lastTrackedCount = hands.length; }
+    if (confirmedHandCount === null){ confirmedHandCount = hands.length; pendingHandCount = hands.length; pendingHandCountAt = now; }
+    else if (hands.length !== pendingHandCount){ pendingHandCount = hands.length; pendingHandCountAt = now; }
+    else if (pendingHandCount !== confirmedHandCount && now - pendingHandCountAt >= HAND_COUNT_CONFIRM_MS){
+      liveBuffer = []; confirmedHandCount = pendingHandCount;
+    }
+    // A frame with a hand count that has not held long enough is left out of
+    // the buffer: the capture keeps going instead of restarting.
+    const handCountMatches = hands.length === confirmedHandCount;
     const autoHands = autoPoseTracker.update(hands, now);
     if (now - lastAutoDrawAt > 100 || hands.length === 0){ renderAutoHands(autoHands); lastAutoDrawAt = now; }
 
@@ -589,7 +602,7 @@ function processHandResult(result, now){
 
       if (recording && now >= recording.started) recording.frames.push(stamped);
 
-      liveBuffer.push(stamped);
+      if (handCountMatches) liveBuffer.push(stamped);
       const cutoff = performance.now() - LIVE_BUFFER_MAX_MS;
       while (liveBuffer.length && liveBuffer[0].t < cutoff) liveBuffer.shift();
 
@@ -619,7 +632,9 @@ function processHandResult(result, now){
         }
       }
     } else {
-      liveBuffer = [];
+      // The buffer is not cleared here: a hand that is lost for a moment
+      // must not end the capture. It is cleared when the new hand count has
+      // held long enough to be believed.
       document.getElementById('gestureReadoutLabel').textContent = 'tracking';
       document.getElementById('currentGesture').textContent = 'No hand currently tracked';
       document.getElementById('gestureSignalNote').textContent = 'Bring one or both hands into the camera view. The hand-pose preview needs no training.';
@@ -644,7 +659,7 @@ window.ashaSharedFrame = (result, stream, t) => {
   processHandResult(result, t + window.parent.performance.timeOrigin - performance.timeOrigin);
 };
 window.ashaSharedPause = () => {
-  running = false; video.srcObject = null; liveBuffer = []; lastTrackedCount = 0;
+  running = false; video.srcObject = null; liveBuffer = []; confirmedHandCount = null; pendingHandCount = 0;
   recording = null; wizardActive = false;
   intentState = 'REST'; candidateIdx = null; candidateStart = 0; restStreak = 0; updateConfidenceRing(0); setIntentBadge('REST');
   document.getElementById('wizardOverlay').style.display = 'none';
@@ -981,12 +996,26 @@ function trainDTW(trainSeqsByClass){
   trainSeqsByClass.forEach((seqs, classIdx) => {
     seqs.forEach(seq => { baselineModels.dtw.trainSeqs.push(seq); baselineModels.dtw.trainLabels.push(classIdx); });
   });
+  // Each class's own scale: how far apart its own recorded sequences are.
+  // The scale is what makes a warping distance mean the same thing for
+  // every class, and the same thing as the other models' scores.
+  baselineModels.dtw.spreads = trainSeqsByClass.map(seqs => {
+    if (!seqs || seqs.length < 2) return null;
+    let total = 0, count = 0;
+    for (let i = 0; i < seqs.length; i++)
+      for (let j = 0; j < seqs.length; j++)
+        if (i !== j) { total += dtwDistance(seqs[i], seqs[j]); count++; }
+    return count ? total / count : null;
+  });
 }
 function classifyDTW(querySeq){
   const dists = baselineModels.dtw.trainSeqs.map(s => dtwDistance(querySeq, s));
   const order = dists.map((d,i)=>[d,i]).sort((a,b)=>a[0]-b[0]).slice(0, DTW_K);
+  // The scale is the model's own spread, so the score is a probability and
+  // the same cut-off means the same thing as it does for the other models.
+  const scale = window.NF_fingerspeakSignal.middle(baselineModels.dtw.spreads || []);
   const votes = {};
-  for (const [d,i] of order){ const c = baselineModels.dtw.trainLabels[i]; votes[c] = (votes[c]||0) + 1/(1+d); }
+  for (const [d,i] of order){ const c = baselineModels.dtw.trainLabels[i]; votes[c] = (votes[c]||0) + window.NF_fingerspeakSignal.distanceSimilarity(d, scale); }
   const entries = Object.entries(votes).sort((a,b)=>b[1]-a[1]);
   const total = entries.reduce((s,[,v])=>s+v, 0) || 1;
   const probs = new Array(gestures.length).fill(0);
@@ -1010,7 +1039,10 @@ function trainPrototype(trainSeqsByClass){
 function classifyPrototype(querySeq){
   const q = summaryVector(querySeq);
   const dists = baselineModels.prototype.prototypes.map(p => euclid(q, p));
-  const sims = dists.map(d => 1/(1+d));
+  // The scale is the model's own spread, so the score is a probability and
+  // the same cut-off means the same thing as it does for the other models.
+  const scale = window.NF_fingerspeakSignal.middle(baselineModels.prototype.spreads || []);
+  const sims = dists.map(d => window.NF_fingerspeakSignal.distanceSimilarity(d, scale));
   const total = sims.reduce((a,b)=>a+b,0) || 1;
   return sims.map(s => s/total);
 }

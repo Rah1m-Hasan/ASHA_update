@@ -111,30 +111,89 @@
       return Math.round(100 * clamp01((Math.min(pip, dip) - 0.48) / 0.42));
     });
   }
-  function classifyPose(lm) {
+  /**
+   * The person's own open and closed levels.
+   *
+   * The fixed levels (75 for extended, 30 for closed) assume a hand that
+   * straightens fully. A patient whose fingers do not straighten as far
+   * never reaches them, so their open hand is never recognised as open. The
+   * levels are taken from what this person's hand actually does - but only
+   * when the observed range is wide enough to mean something, so a hand that
+   * has only ever been seen closed keeps the fixed levels.
+   */
+  function opennessScale(history) {
+    var values = [];
+    for (var i = 0; i < history.length; i++)
+      for (var j = 0; j < history[i].length; j++) values.push(history[i][j]);
+    if (!values.length) return { high: 75, low: 30 };
+    var max = Math.max.apply(null, values), min = Math.min.apply(null, values);
+    // Only a hand that has been seen both open and closed gives a scale.
+    if (max - min < 40) return { high: 75, low: 30 };
+    // A hand that reaches the fixed level keeps the fixed levels, so nothing
+    // changes for the person whose fingers straighten fully.
+    if (max >= 75) return { high: 75, low: 30 };
+    return { high: 0.75 * max, low: Math.max(0, 0.3 * max) };
+  }
+  function classifyPose(lm, scale) {
     if (!Array.isArray(lm) || lm.length !== 21) return { name: 'Unclear', openness: [0, 0, 0, 0, 0] };
-    var openness = fingerOpenness(lm), states = openness.slice(1).map(function (v) {
-      return v >= 75 ? 1 : v <= 30 ? 0 : -1;
+    var openness = fingerOpenness(lm);
+    var high = scale && Number.isFinite(scale.high) ? scale.high : 75;
+    var low = scale && Number.isFinite(scale.low) ? scale.low : 30;
+    var states = openness.slice(1).map(function (v) {
+      return v >= high ? 1 : v <= low ? 0 : -1;
     });
     var key = states.join('');
     var labels = { '1111': 'Open palm', '0000': 'Closed fingers', '1000': 'Index extended',
       '1100': 'Two fingers extended', '1110': 'Three fingers extended' };
     return { name: labels[key] || 'Other hand pose', openness: openness };
   }
-  function PoseTracker(holdMs) { this.holdMs = holdMs || 180; this.states = new Map(); }
+  // A hand that is missed for a moment keeps its pose for this long. The
+  // detection flickers, and a flicker used to delete the pose state, so the
+  // patient had to hold the gesture again before it counted and the gesture
+  // was lost. The kept pose is marked stale: it may be shown, but it is
+  // never emitted as a proposal.
+  var POSE_GRACE_MS = 400;
+  function PoseTracker(holdMs) { this.holdMs = holdMs || 180; this.states = new Map(); this.graceMs = POSE_GRACE_MS; }
   PoseTracker.prototype.update = function (hands, t) {
     var seen = new Set(), self = this;
     var result = hands.map(function (hand, i) {
-      var key = hand.id || hand.label || 'slot-' + i, pose = classifyPose(hand.lm);
+      var key = hand.id || hand.label || 'slot-' + i;
+      var label = hand.label ? hand.label[0].toUpperCase() + hand.label.slice(1) : 'Hand ' + (i + 1);
       seen.add(key);
       var state = self.states.get(key);
-      if (!state || state.candidate !== pose.name) state = { candidate: pose.name, since: t, stable: 'Observing…' };
+      if (!state) state = { candidate: '', since: t, stable: 'Observing…', history: [] };
+      // The person's own open and closed levels, from what this hand has
+      // actually done.
+      var scale = opennessScale(state.history);
+      var pose = classifyPose(hand.lm, scale);
+      if (state.candidate !== pose.name) state = { candidate: pose.name, since: t, stable: 'Observing…', history: state.history || [] };
+      state.missingSince = null; state.stale = false;
+      state.label = label; state.openness = pose.openness;
+      state.history = (state.history || []).concat([pose.openness]);
+      if (state.history.length > 120) state.history.shift();
       if (t - state.since >= self.holdMs) state.stable = pose.name;
       self.states.set(key, state);
-      return { id: key, label: hand.label ? hand.label[0].toUpperCase() + hand.label.slice(1) : 'Hand ' + (i + 1),
-        pose: state.stable, openness: pose.openness };
+      return { id: key, label: label, pose: state.stable, openness: pose.openness, stale: false };
     });
-    for (var key of this.states.keys()) if (!seen.has(key)) this.states.delete(key);
+    // A hand that was missed for a moment keeps its pose. It is still shown,
+    // so the patient sees their hand is being followed, but it is marked
+    // stale so nothing treats it as a fresh reading.
+    var missing = [];
+    var keys = Array.from(this.states.keys());
+    for (var i = 0; i < keys.length; i++) {
+      var key = keys[i];
+      if (seen.has(key)) continue;
+      var state = this.states.get(key);
+      if (state.missingSince === null || state.missingSince === undefined) state.missingSince = t;
+      if (t - state.missingSince <= this.graceMs) {
+        state.stale = true;
+        missing.push({ id: key, label: state.label || key, pose: state.stable,
+          openness: state.openness || [0, 0, 0, 0, 0], stale: true });
+      } else {
+        this.states.delete(key);
+      }
+    }
+    for (var j = 0; j < missing.length; j++) result.push(missing[j]);
     return result;
   };
 
@@ -191,8 +250,35 @@
     return Math.sqrt(distanceSq) <= entry.spread * (multiplier || 2.2);
   }
 
+  /**
+   * A similarity on the model's own scale.
+   *
+   * The distance-based classifiers - dynamic time warping against recorded
+   * sequences, and the nearest prototype - produce a score on their own
+   * scale: a warping distance of 2 and a prototype distance of 0.2 can mean
+   * the same closeness, and the raw scores do not. Compared with one
+   * cut-off, each of them therefore means something different, and neither
+   * of them is a probability.
+   *
+   * Here the distance is turned into a similarity with the model's own
+   * spread as the scale, so a distance equal to that spread is halfway, and
+   * the scores can be compared with the same threshold as the softmax model.
+   */
+  function distanceSimilarity(distance, scale) {
+    if (!Number.isFinite(distance)) return 0;
+    var tau = Number.isFinite(scale) && scale > 0 ? scale : 1;
+    return Math.exp(-Math.max(0, distance) / tau);
+  }
+  /** The middle of a list of numbers, for a scale. */
+  function middle(values) {
+    var usable = values.filter(function (v) { return Number.isFinite(v) && v > 0; });
+    if (!usable.length) return 1;
+    usable.sort(function (a, b) { return a - b; });
+    return usable[Math.floor(usable.length / 2)];
+  }
   return { RAW_LEN: RAW_LEN, FEATURE_LEN: FEATURE_LEN, orderedHands: orderedHands,
     packHands: packHands, upgradeLegacyFrame: upgradeLegacyFrame, buildModelInput: buildModelInput,
-    classifyPose: classifyPose, PoseTracker: PoseTracker,
-    resampleSequence: resampleSequence, inDistribution: inDistribution };
+    classifyPose: classifyPose, opennessScale: opennessScale, PoseTracker: PoseTracker,
+    resampleSequence: resampleSequence, inDistribution: inDistribution,
+    distanceSimilarity: distanceSimilarity, middle: middle };
 });
