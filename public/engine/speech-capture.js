@@ -17,6 +17,20 @@ function joinText(...parts) {
 }
 
 /**
+ * The recogniser's other readings of the same words. `maxAlternatives` is
+ * three, so each result carries the best reading and up to two others.
+ */
+function alternativeTranscripts(result) {
+  const out = [];
+  const list = Array.from(result || []);
+  for (let i = 1; i < list.length; i++) {
+    const text = String(list[i]?.transcript || "").trim();
+    if (text) out.push(text);
+  }
+  return out;
+}
+
+/**
  * A bounded Web Speech listening session. Each browser recognition instance may
  * end after a short silence; the session survives those ends until its time
  * budget expires or the user explicitly stops it.
@@ -55,6 +69,7 @@ export class SpeechCapture {
     this._committedFinal = "";
     this._sessionFinal = "";
     this._interim = "";
+    this._alternatives = [];
     this._rapidEndCount = 0;
   }
 
@@ -90,6 +105,7 @@ export class SpeechCapture {
     this._committedFinal = "";
     this._sessionFinal = "";
     this._interim = "";
+    this._alternatives = [];
     this._rapidEndCount = 0;
     this._generation++;
     this._beginBudget();
@@ -229,15 +245,22 @@ export class SpeechCapture {
       if (!current()) return;
       const finalParts = [];
       const interimParts = [];
+      let latest = null;
       // Web Speech sends a cumulative results collection. Rebuild it instead
       // of appending every result event, which duplicates earlier final words.
       for (const result of Array.from(event.results || [])) {
         const transcript = result?.[0]?.transcript;
         if (!transcript) continue;
         (result.isFinal ? finalParts : interimParts).push(transcript);
+        latest = result;
       }
       this._sessionFinal = joinText(...finalParts);
       this._interim = joinText(...interimParts);
+      // The other readings of the words just heard. They are kept so the
+      // words can be checked against them, not so they can be shown as
+      // meanings.
+      const alternatives = latest ? alternativeTranscripts(latest) : [];
+      if (alternatives.length) this._alternatives = alternatives.slice(0, 2);
       this._emitText();
     };
     recognition.onerror = (event) => {
@@ -304,6 +327,10 @@ export class SpeechCapture {
       this._sessionFinal,
     );
     const interimText = this._interim;
-    this.onText(joinText(finalText, interimText), { finalText, interimText });
+    this.onText(joinText(finalText, interimText), {
+      finalText,
+      interimText,
+      alternatives: this._alternatives.slice(),
+    });
   }
 }

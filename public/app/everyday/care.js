@@ -66,6 +66,8 @@ export async function mount(host, ctx) {
       q("#dictationTarget").value === "symptoms"
         ? q("[name=symptoms]")
         : q("#careQuestion");
+    // The dictation continues the field's text: the patient may have typed
+    // part of it, and each session adds the words just spoken.
     capture.start({
       language: ctx.language() === "bn" ? "bn-BD" : "en-US",
       initialText: dictationTarget.value,

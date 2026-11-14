@@ -39,7 +39,7 @@ export default function SenseAssistPage() {
     speech.stop();
     setBusy(true);
     try {
-      const r = await askAsha(cred, { text: heard, cloud: settings.cloud, mode: "interpret", module: "senseassist", context, language: settings.language });
+      const r = await askAsha(cred, { text: heard, cloud: settings.cloud, mode: "interpret", module: "senseassist", context, language: settings.language, heardAlternatives: speech.alternatives });
       setResult(r);
       setChosen(r.candidate);
       speak(r.question);

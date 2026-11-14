@@ -1,5 +1,6 @@
 import { clean, requestKinds } from "./logic.js";
 import { retrieveKnowledge } from "./retrieval.js";
+import { candidateMatchesHeard } from "./speech-similarity.js";
 
 const MODULES = new Set([
   "facespeak",
@@ -32,14 +33,29 @@ export const ASHA_TOOLS = Object.freeze([
   },
 ]);
 
-const hasBangla = (value) => /[\u0980-\u09ff]/u.test(value);
-const hasLatin = (value) => /[a-z]/iu.test(value);
-
+/**
+ * Which language the words are in.
+ *
+ * One English word in a Bangla sentence does not make the sentence
+ * bilingual, so the scripts are counted rather than merely looked for. The
+ * count is by word, not by letter, so a long English word does not outweigh
+ * a short Bangla one.
+ */
 export function resolveLanguage(text, requested = "auto") {
   if (["en", "bn", "mixed"].includes(requested)) return requested;
-  const bangla = hasBangla(text);
-  const latin = hasLatin(text);
-  return bangla && latin ? "mixed" : bangla ? "bn" : "en";
+  const words = String(text || "").split(/\s+/).filter(Boolean);
+  let bangla = 0;
+  let latin = 0;
+  for (const word of words) {
+    if (/[\u0980-\u09ff]/u.test(word)) bangla += 1;
+    if (/[a-z]/iu.test(word)) latin += 1;
+  }
+  const total = bangla + latin;
+  if (!total) return "en";
+  const share = bangla / total;
+  if (share >= 0.7) return "bn";
+  if (share <= 0.3) return "en";
+  return "mixed";
 }
 
 export function selectAshaTask({ mode, language }) {
@@ -121,8 +137,10 @@ function requestIntent(message, history) {
     );
     return matches.length === 1 ? matches[0][0] : null;
   }
+  // "টয়লেট দরকার" and "সাহায্য দরকার" need no possessive, so "দরকার" is
+  // asked for on its own too.
   const asks =
-    /\b(?:i|we)\s+(?:need|want|would like)|\bi(?: am|'m|’m) (?:thirsty|hungry|uncomfortable)\b|\bplease (?:bring|get|call|help|give)\b|\bcan you (?:get|bring|ask|call)|আমার .*?(?:দরকার|লাগবে|চাই)|(?:চাই|দাও|দিন|ডাকো|ডাকুন)(?:\s|[.!।]|$)/iu.test(
+    /\b(?:i|we)\s+(?:need|want|would like)|\bi(?: am|'m|’m) (?:thirsty|hungry|uncomfortable)\b|\bplease (?:bring|get|call|help|give)\b|\bcan you (?:get|bring|ask|call)|আমার .*?(?:দরকার|লাগবে|চাই)|(?:দরকার|লাগবে|চাই|দাও|দিন|ডাকো|ডাকুন)(?:\s|[.!।]|$)/iu.test(
       text,
     );
   const bareNeed =
@@ -238,6 +256,7 @@ export function createAshaOrchestrator({ provider }) {
     context = "",
     history = [],
     confirmedMemories = [],
+    heardAlternatives = [],
     signal,
   }) {
     const safeText = clean(text, 600);
@@ -284,7 +303,13 @@ export function createAshaOrchestrator({ provider }) {
       const parsed = parsedObject(generated.text);
       const valid =
         typeof parsed?.candidate === "string" && !!parsed.candidate.trim();
-      const candidate = valid
+      // A candidate that has drifted away from the heard words is not a
+      // reading of them. The heard words are kept instead, and the patient
+      // is asked to check them.
+      const grounded = valid
+        ? candidateMatchesHeard(safeText, parsed.candidate, heardAlternatives)
+        : false;
+      const candidate = grounded
         ? clean(parsed.candidate, 250)
         : safeText.slice(0, 250);
       const alternatives = Array.isArray(parsed?.alternatives)
@@ -292,10 +317,11 @@ export function createAshaOrchestrator({ provider }) {
             .slice(0, 2)
             .map((item) => clean(item, 250))
             .filter(Boolean)
+            .filter((item) => candidateMatchesHeard(safeText, item, heardAlternatives))
         : [];
       const question =
-        (valid && clean(parsed?.question, 180)) ||
-        (valid
+        (grounded && clean(parsed?.question, 180)) ||
+        (grounded
           ? "Is this what you meant?"
           : "I could not clarify that reliably. Could you check the heard words?");
       return {
@@ -308,7 +334,7 @@ export function createAshaOrchestrator({ provider }) {
           task,
           generated.model,
           sources.length,
-          valid,
+          grounded,
         ),
       };
     }

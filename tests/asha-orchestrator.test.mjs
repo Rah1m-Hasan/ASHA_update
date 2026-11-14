@@ -140,6 +140,40 @@ test("speech clarification uses the speech model and only confirmed memory", asy
   assert.equal(result.orchestration.model, "gpt-5.6-sol");
 });
 
+test("a meaning that was not heard is not offered as the patient's words", async () => {
+  const provider = fakeProvider(
+    '{"candidate":"the weather is cold today","alternatives":["rain tomorrow"],"question":"Did you mean that?"}',
+  );
+  const result = await createAshaOrchestrator({ provider }).run({
+    patientId: "patient-a",
+    profile,
+    text: "wabbit",
+    module: "senseassist",
+    mode: "interpret",
+  });
+  // The heard words are kept, and the model is asked to check them.
+  assert.equal(result.candidate, "wabbit");
+  assert.deepEqual(result.alternatives, []);
+  assert.equal(
+    result.question,
+    "I could not clarify that reliably. Could you check the heard words?",
+  );
+});
+
+test("a meaning that matches another reading of the same words is kept", async () => {
+  const provider = fakeProvider('{"candidate":"rabbit","question":"Did you mean rabbit?"}');
+  const result = await createAshaOrchestrator({ provider }).run({
+    patientId: "patient-a",
+    profile,
+    text: "wabbit",
+    module: "senseassist",
+    mode: "interpret",
+    heardAlternatives: ["rabbit"],
+  });
+  assert.equal(result.candidate, "rabbit");
+  assert.equal(result.question, "Did you mean rabbit?");
+});
+
 test("request tools require an explicit matching patient need", async () => {
   const provider = fakeProvider(({ query }) =>
     JSON.stringify({

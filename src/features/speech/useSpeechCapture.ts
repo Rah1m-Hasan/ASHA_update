@@ -13,10 +13,19 @@ type Capture = {
   resumeAfterOutput(): void;
 };
 
+/** What the recogniser reported alongside the words. */
+type CaptureText = {
+  finalText?: string;
+  interimText?: string;
+  /** The recogniser's other readings of the same words. */
+  alternatives?: string[];
+};
+
 /** Browser speech recognition through the engine's SpeechCapture (auto-reconnect, 90 s window). */
 export function useSpeechCapture() {
   const capture = useRef<Capture | null>(null);
   const [text, setText] = useState("");
+  const [alternatives, setAlternatives] = useState<string[]>([]);
   const [listening, setListening] = useState(false);
   const [supported, setSupported] = useState(true);
   const [note, setNote] = useState("");
@@ -40,7 +49,14 @@ export function useSpeechCapture() {
         if (!alive) return;
         capture.current = new SpeechCapture({
           Recognition,
-          onText: (t: string) => setText(t),
+          onText: (t: string, info?: CaptureText) => {
+            setText(t);
+            setAlternatives(
+              Array.isArray(info?.alternatives)
+                ? info.alternatives.slice(0, 2).filter(Boolean)
+                : [],
+            );
+          },
           onState: (s: { state: string; reason?: string }) => {
             setListening(s.state === "listening" || s.state === "paused");
             setNote(
@@ -82,16 +98,19 @@ export function useSpeechCapture() {
     (language = "en-US") => {
       const c = capture.current;
       if (!c) return;
-      c.start({ language, initialText: text });
+      // The words of this session only. Starting again used to put the
+      // previous session's words in front of the new ones, so "water" and
+      // then "toilet" were heard as "water toilet".
+      c.start({ language });
       if (isSpeaking()) c.pauseForOutput();
       setListening(c.active);
     },
-    [text],
+    [],
   );
   const stop = useCallback(() => {
     capture.current?.stop("stopped");
     setListening(false);
   }, []);
 
-  return { text, setText, listening, supported, note, start, stop };
+  return { text, setText, alternatives, listening, supported, note, start, stop };
 }

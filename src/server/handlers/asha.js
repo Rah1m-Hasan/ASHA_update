@@ -84,6 +84,14 @@ export default async function handler(req, res) {
       confirmedMemories: Array.isArray(b.confirmedMemories)
         ? b.confirmedMemories.slice(-20)
         : [],
+      // The recogniser's other readings of the same words. They are evidence
+      // for what was heard, not meanings: they stay in their own field.
+      heardAlternatives: Array.isArray(b.heardAlternatives)
+        ? b.heardAlternatives
+            .slice(0, 2)
+            .map((item) => clean(item, 200))
+            .filter(Boolean)
+        : [],
     });
     res.setHeader(
       "Server-Timing",

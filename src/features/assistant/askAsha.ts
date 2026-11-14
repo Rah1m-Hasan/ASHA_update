@@ -42,6 +42,11 @@ export async function askAsha(
     context?: string;
     history?: ChatTurn[];
     language?: string;
+    /**
+     * The recogniser's other readings of the same words. These are what was
+     * heard, not meanings: they never appear in the reply's `alternatives`.
+     */
+    heardAlternatives?: string[];
   },
 ) {
   // The existing precautionary response runs locally, including before linking or cloud consent.
@@ -75,6 +80,12 @@ export async function askAsha(
       text: body.text,
       confirmedMemories:
         body.mode === "interpret" ? confirmedSpeechPairs(cred.patientId) : [],
+      heardAlternatives:
+        body.mode === "interpret"
+          ? (body.heardAlternatives ?? [])
+              .slice(0, 2)
+              .map((item) => String(item ?? "").slice(0, 200))
+          : [],
     },
   });
 }

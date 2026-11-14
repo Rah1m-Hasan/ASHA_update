@@ -14,9 +14,38 @@ export const speechPairs = [
   { heard: "help me", confirmed: "help", expected: "help" },
   { heard: "paine", confirmed: "pain", expected: "pain" },
   { heard: "bathroom", confirmed: "bathroom", expected: "bathroom" },
-  { heard: "ওয়াটার", confirmed: "পানি", expected: "পানি" },
+  // A transliteration is not a reading of the same words: the model is asked
+  // to keep the words, not to translate them, so this pair is a meaning
+  // change rather than a sound-alike edit.
+  { heard: "ওয়াটার", confirmed: "পানি", expected: "পানি", reading: false },
   { heard: "খাবার", confirmed: "খাবার", expected: "খাবার" },
   { heard: "টয়লেট দরকার", confirmed: "টয়লেট", expected: "টয়লেট" },
+];
+
+/**
+ * A suggested meaning that is not a reading of the words that were heard.
+ * The clarification check must refuse every one of these.
+ */
+export const mismatchedSpeechPairs = [
+  { heard: "I want water", candidate: "toilet" },
+  { heard: "I need food", candidate: "pain" },
+  { heard: "help me", candidate: "the weather" },
+  { heard: "my leg hurts", candidate: "I want a pillow" },
+  { heard: "আমার পানি দরকার", candidate: "খাবার" },
+  { heard: "I am hungry", candidate: "bathroom" },
+];
+
+/**
+ * The language the words are in. One English word in a Bangla sentence does
+ * not make the sentence bilingual.
+ */
+export const languageCases = [
+  { text: "I want water", expected: "en" },
+  { text: "", expected: "en" },
+  { text: "123", expected: "en" },
+  { text: "আমার পানি দরকার", expected: "bn" },
+  { text: "আমার পানি দরকার, water", expected: "bn" },
+  { text: "আমি খাবার চাই but I really want rice", expected: "mixed" },
 ];
 
 /**

@@ -59,6 +59,19 @@ class FakeRecognition {
     });
   }
 
+  /** A result with more than one reading of the same words. */
+  resultWithAlternatives(transcripts, isFinal) {
+    this.onresult?.({
+      resultIndex: 0,
+      results: [
+        Object.assign(
+          transcripts.map((transcript) => ({ transcript })),
+          { isFinal },
+        ),
+      ],
+    });
+  }
+
   end() {
     this.onend?.();
   }
@@ -118,6 +131,7 @@ test("cumulative result events do not duplicate finals, including after a restar
     display: "Patient said red rabbit gre",
     finalText: "Patient said red rabbit",
     interimText: "gre",
+    alternatives: [],
   });
   first.end();
   clock.advance(250);
@@ -126,7 +140,34 @@ test("cumulative result events do not duplicate finals, including after a restar
     display: "Patient said red rabbit green",
     finalText: "Patient said red rabbit green",
     interimText: "",
+    alternatives: [],
   });
+});
+
+test("a second session does not carry the first session's words with it", () => {
+  const { capture, clock, texts } = fixture();
+  capture.start();
+  FakeRecognition.instances[0].result(["water", true]);
+  capture.stop("stopped");
+  assert.equal(texts.at(-1).finalText, "water");
+  capture.start();
+  FakeRecognition.instances[1].result(["toilet", true]);
+  assert.equal(
+    texts.at(-1).finalText,
+    "toilet",
+    "the second session repeated the first session's words",
+  );
+});
+
+test("the other readings of the same words are kept apart from the words", () => {
+  const { capture, texts } = fixture();
+  capture.start();
+  FakeRecognition.instances[0].resultWithAlternatives(
+    ["water", "later", "want her"],
+    true,
+  );
+  assert.equal(texts.at(-1).display, "water");
+  assert.deepEqual(texts.at(-1).alternatives, ["later", "want her"]);
 });
 
 test("stop prevents re-arming and ignores stale events", () => {

@@ -2374,9 +2374,11 @@ function wireSpeech() {
       },
     });
     speechCapture = capture;
+    // This session's words only. The words already in the box were put in
+    // front of every new session, so two things said in a row were heard as
+    // one long phrase.
     capture.start({
       language: $("speechLanguage").value,
-      initialText: $("heardSpeech").value,
     });
   };
   $("stopSpeech").onclick = () => speechCapture?.stop("manual");

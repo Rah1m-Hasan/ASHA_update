@@ -22,7 +22,7 @@ import { calibrationCapture, distort, gazeTrace } from "../tests/fixtures/gaze.m
 import { vitalTrace, noiseOnlyTrace, faceMotionStream } from "../tests/fixtures/vitals.mjs";
 import { poseTrace } from "../tests/fixtures/posture.mjs";
 import { handLandmarks, handSequence, partialHandLandmarks } from "../tests/fixtures/hands.mjs";
-import { intentCases, retrievalGapQueries, retrievalQueries, speechPairs } from "../tests/fixtures/language.mjs";
+import { intentCases, languageCases, mismatchedSpeechPairs, retrievalGapQueries, retrievalQueries, speechPairs } from "../tests/fixtures/language.mjs";
 import { MotionMeter } from "../public/engine/motion-meter.js";
 
 const require = createRequire(import.meta.url);
@@ -40,7 +40,8 @@ function umd(relative) {
 const { VitalSense } = await import("../public/engine/vitalsense.js");
 const { poseFeatures, RestTracker } = await import("../public/engine/signals.js");
 const { retrieveKnowledge } = await import("../src/server/lib/retrieval.js");
-const { createAshaOrchestrator } = await import("../src/server/lib/asha-orchestrator.js");
+const { createAshaOrchestrator, resolveLanguage } = await import("../src/server/lib/asha-orchestrator.js");
+const { candidateMatchesHeard } = await import("../src/server/lib/speech-similarity.js");
 const {
   calibrationTargets,
   calibrationFrameIsOutlier,
@@ -1057,12 +1058,50 @@ export async function languageMetrics() {
     intentDetails.push({ text: item.text, expected: item.expected, found, ok });
   }
 
+  // The clarification check: a suggested meaning that is a reading of the
+  // heard words is kept, and one that is not is refused.
+  const readings = speechPairs.filter((pair) => pair.reading !== false);
+  const acceptedReadings = readings.filter((pair) =>
+    candidateMatchesHeard(pair.heard, pair.confirmed),
+  );
+  const refusedReadings = readings.filter(
+    (pair) => !candidateMatchesHeard(pair.heard, pair.confirmed),
+  );
+  const wronglyAccepted = mismatchedSpeechPairs.filter((pair) =>
+    candidateMatchesHeard(pair.heard, pair.candidate),
+  );
+
+  // Which language the words are in.
+  const languageDetails = languageCases.map((item) => ({
+    text: item.text,
+    expected: item.expected,
+    found: resolveLanguage(item.text),
+  }));
+  const languageCorrect = languageDetails.filter(
+    (item) => item.found === item.expected,
+  ).length;
+
   return {
     retrieval: {
       queries: retrieval.length,
       top1Hits: hits,
       top1Accuracy: rate(hits, retrieval.length),
       details: retrieval,
+    },
+    clarification: {
+      readings: readings.length,
+      accepted: acceptedReadings.length,
+      acceptRate: rate(acceptedReadings.length, readings.length),
+      refused: refusedReadings.map((pair) => pair.heard),
+      mismatched: mismatchedSpeechPairs.length,
+      wronglyAccepted: wronglyAccepted.map((pair) => pair.heard),
+      wrongAcceptRate: rate(wronglyAccepted.length, mismatchedSpeechPairs.length),
+    },
+    languageResolution: {
+      cases: languageCases.length,
+      correct: languageCorrect,
+      accuracy: rate(languageCorrect, languageCases.length),
+      details: languageDetails,
     },
     retrievalGaps: {
       queries: gaps.length,

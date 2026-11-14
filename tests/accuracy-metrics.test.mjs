@@ -310,6 +310,34 @@ test("FingerSpeak recognises a hand that does not straighten fully", () => {
   assert.equal(partial.ownLevels, "Open palm");
 });
 
+// ---------------------------------------------------------------- SenseAssist
+
+test("the clarification check keeps a reading of the words that were heard", () => {
+  const clarification = metrics.language.clarification;
+  assert.equal(clarification.refused.length, 0, `refused: ${clarification.refused.join(", ")}`);
+  assert.ok(
+    clarification.acceptRate >= 0.9,
+    `only ${clarification.acceptRate * 100}% of the readings were kept`,
+  );
+});
+
+test("the clarification check refuses a meaning that was not heard", () => {
+  const clarification = metrics.language.clarification;
+  assert.equal(
+    clarification.wronglyAccepted.length,
+    0,
+    `accepted: ${clarification.wronglyAccepted.join(", ")}`,
+  );
+});
+
+test("the language of the words is decided by proportion, not by presence", () => {
+  const language = metrics.language.languageResolution;
+  assert.ok(
+    language.accuracy >= 0.9,
+    `language resolved correctly for ${language.accuracy * 100}% of the cases`,
+  );
+});
+
 // ---------------------------------------------------------------- Posture
 
 test("Posture keeps a stable label under landmark noise", () => {
@@ -361,9 +389,7 @@ test("a pose without visibility scores is still a pose", () => {
 
 // ---------------------------------------------------------------- Language
 
-// Wave 6 — the Bangla need patterns require a possessive ("আমার") before
-// "দরকার", so a bare "টয়লেট দরকার" is not recognised.
-test.todo("SenseAssist finds the need in a request and invents none", async () => {
+test("SenseAssist finds the need in a request and invents none", async () => {
   const intent = metrics.language.intent;
   assert.equal(intent.cases, intentCases.length);
   assert.ok(intent.accuracy >= 0.95, `intent accuracy ${intent.accuracy}`);
