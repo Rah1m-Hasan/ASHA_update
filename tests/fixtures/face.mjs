@@ -88,9 +88,11 @@ export function faceTrace({
         deliberate: event.deliberate !== false,
       });
     } else if (event.kind === "turn") {
-      groundTruth.turns.push({ at: event.at, side: event.side });
+      // The degrees belong to the ground truth too: the trace reads them
+      // back when it builds the pose, and without them the head never moves.
+      groundTruth.turns.push({ at: event.at, side: event.side, degrees: event.degrees });
     } else if (event.kind === "nod") {
-      groundTruth.nods.push({ at: event.at });
+      groundTruth.nods.push({ at: event.at, degrees: event.degrees });
     } else if (event.kind === "smile") {
       groundTruth.smiles.push({ at: event.at, durationMs: event.durationMs });
     } else if (event.kind === "spike") {

@@ -23,11 +23,12 @@ const COMPARISON_ROWS = [
   ["faceSpeak.deliberateBlink.f1", "up"],
   ["faceSpeak.ordinaryBlink.f1", "up"],
   ["faceSpeak.lowEarBlink.f1", "up"],
+  ["faceSpeak.headTurn.f1", "up"],
   ["faceSpeak.falseActivationsPerHour", "down"],
   ["faceSpeak.frameRejection.missedGlitches", "down"],
   ["faceSpeak.frameRejection.falseRejections", "down"],
   ["faceSpeak.frameRejection.blinkLostToSpike", "down"],
-  ["eyeSpeak.contaminated.p90Error", "down"],
+  ["eyeSpeak.contaminatedCalibration.p90Error", "down"],
   ["eyeSpeak.targetSelection.accuracy", "up"],
   ["vitalSense.meanAbsoluteError", "down"],
   ["vitalSense.noiseOnlyFalseReadingRate", "down"],
@@ -36,6 +37,7 @@ const COMPARISON_ROWS = [
   ["motionGate.noisyStillFalseTrips", "down"],
   ["fingerSpeak.observingFrameRate", "down"],
   ["fingerSpeak.steadyPoseFlips", "down"],
+  ["fingerSpeak.recoveryAfterDropoutMs.0", "down"],
   ["posture.flipRatePerMinute", "down"],
   ["posture.restSurvivesSingleMotionSpike", "up"],
   ["language.intent.accuracy", "up"],
@@ -58,11 +60,19 @@ async function main() {
 
   const dir = path.join(root, "artifacts");
   fs.mkdirSync(dir, { recursive: true });
-  const file = path.join(dir, after ? "accuracy-after.json" : "accuracy-baseline.json");
-  fs.writeFileSync(file, JSON.stringify(metrics, null, 2));
+  // `--compare` must never write the baseline: it reads it. Only a plain run
+  // records the baseline and `--after` records the result of the current code.
+  if (!compare) {
+    const file = path.join(dir, after ? "accuracy-after.json" : "accuracy-baseline.json");
+    fs.writeFileSync(file, JSON.stringify(metrics, null, 2));
+  }
 
   if (!quiet) {
-    console.log(`Accuracy metrics written to ${path.relative(root, file)}`);
+    console.log(
+      compare
+        ? "Accuracy metrics compared against the recorded baseline"
+        : `Accuracy metrics written to ${path.relative(root, after ? "accuracy-after.json" : "accuracy-baseline.json")}`,
+    );
     console.log("");
     console.log("faceSpeak.deliberateBlink      ", JSON.stringify(metrics.faceSpeak.deliberateBlink));
     console.log("faceSpeak.ordinaryBlink        ", JSON.stringify(metrics.faceSpeak.ordinaryBlink));
@@ -102,7 +112,10 @@ async function main() {
     const before = readAt(baseline, dotted);
     const now = readAt(metrics, dotted);
     let mark = "";
-    if (before !== now) {
+    if (before === undefined) {
+      // The metric did not exist when the baseline was recorded.
+      mark = "  (not measured at baseline)";
+    } else if (before !== now) {
       const improved =
         direction === "up" ? now > before : now < before;
       mark = improved ? "  <-- improved" : "  <-- REGRESSED";
