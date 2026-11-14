@@ -37,7 +37,8 @@ function umd(relative) {
   )({ exports: {} }, (request) => umd(path.join(path.dirname(relative), request.replace("./", "").replace(".js", ""))));
 }
 
-const { VitalSense } = await import("../public/engine/vitalsense.js");
+const { VitalSense, MIN_SNR_NULL, GOOD_SNR_NULL } = await import("../public/engine/vitalsense.js");
+const { medianHeadY } = await import("../public/engine/perception.js");
 const { poseFeatures, RestTracker } = await import("../public/engine/signals.js");
 const { retrieveKnowledge } = await import("../src/server/lib/retrieval.js");
 const { createAshaOrchestrator, resolveLanguage, selectAshaTask } = await import("../src/server/lib/asha-orchestrator.js");
@@ -575,7 +576,7 @@ export function vitalSenseMetrics() {
     const engine = new VitalSense();
     let value;
     for (const row of vitalTrace({ bpm, seconds: 20, seed: 30 + bpm })) value = engine.add(row);
-    recovered.push({ bpm, reported: value.bpm, status: value.status, error: value.bpm ? Math.abs(value.bpm - bpm) : null });
+    recovered.push({ bpm, reported: value.bpm, status: value.status, snr: value.snr, snrNull: value.snrNull, error: value.bpm ? Math.abs(value.bpm - bpm) : null });
   }
   const errors = recovered.filter((r) => r.error !== null).map((r) => r.error);
 
@@ -585,9 +586,40 @@ export function vitalSenseMetrics() {
     const engine = new VitalSense();
     let value;
     for (const row of noiseOnlyTrace({ seconds: 20, seed })) value = engine.add(row);
-    noiseRuns.push({ seed, bpm: value.bpm, status: value.status, reason: value.reason });
+    noiseRuns.push({ seed, bpm: value.bpm, status: value.status, snr: value.snr, snrNull: value.snrNull, reason: value.reason });
   }
   const falseReadings = noiseRuns.filter((run) => run.bpm !== null);
+
+  // How long a real pulse takes to produce its first reading. The window
+  // needs 12 seconds of observations before any rate can exist at all.
+  const firstReadings = [];
+  for (const bpm of [54, 78, 120, 200]) {
+    const engine = new VitalSense();
+    let first = null;
+    for (const row of vitalTrace({ bpm, seconds: 30, seed: 30 + bpm })) {
+      const value = engine.add(row);
+      if (first === null && value.bpm !== null) first = row.t;
+    }
+    firstReadings.push({ bpm, firstReadingMs: first === null ? null : Math.round(first) });
+  }
+
+  // A light level that changes inside the window cannot be reported: the
+  // change smears broadband energy across the band.
+  const lightEngine = new VitalSense();
+  let lightValue, lightRejected = false, lightRecoveredAt = null;
+  const stepAt = 20000;
+  for (const row of vitalTrace({ bpm: 78, seconds: 45, seed: 71, lightStep: { at: stepAt, scale: 0.75 } })) {
+    lightValue = lightEngine.add(row);
+    if (row.t >= stepAt && lightValue.bpm === null) lightRejected = true;
+    if (lightRejected && lightValue.bpm !== null && lightRecoveredAt === null) lightRecoveredAt = row.t;
+  }
+
+  // One badly tracked landmark must not move the head trace the breathing
+  // estimate reads.
+  const landmarks = Array.from({ length: 478 }, () => ({ x: 0.5, y: 0.5 }));
+  const broken = landmarks.map((point, index) => (index < 96 ? { x: 0.5, y: 0.9 } : point));
+  const meanBroken = broken.reduce((sum, point) => sum + point.y, 0) / broken.length;
+  const medianBroken = medianHeadY(broken);
 
   // Motion rejection.
   const motionEngine = new VitalSense();
@@ -607,14 +639,40 @@ export function vitalSenseMetrics() {
   let darkValue;
   for (const row of vitalTrace({ bpm: 78, seconds: 20, seed: 61, rgb: [0.05, 0.04, 0.03] })) darkValue = darkEngine.add(row);
 
+  const noiseSnr = noiseRuns.map((run) => run.snr).filter((value) => value != null);
+  const noiseSnrNull = noiseRuns.map((run) => run.snrNull).filter((value) => value != null);
+  const signalSnr = recovered.map((row) => row.snr).filter((value) => value != null);
+  const signalSnrNull = recovered.map((row) => row.snrNull).filter((value) => value != null);
+
   return {
-    recovery: recovered.map((r) => ({ ...r, error: round(r.error, 2) })),
+    recovery: recovered.map((r) => ({ ...r, error: round(r.error, 2), snr: round(r.snr, 2), snrNull: round(r.snrNull, 3) })),
     meanAbsoluteError: round(errors.reduce((a, b) => a + b, 0) / (errors.length || 1), 3),
     maxAbsoluteError: round(Math.max(0, ...errors), 2),
     noiseOnlyRuns: noiseRuns.length,
     noiseOnlyFalseReadings: falseReadings.length,
     noiseOnlyFalseReadingRate: rate(falseReadings.length, noiseRuns.length),
     noiseOnlyExamples: falseReadings.slice(0, 5),
+    // The calibration the gate rests on: the plain SNR cannot separate the
+    // two, the null-calibrated statistic can.
+    snrSeparation: {
+      gate: MIN_SNR_NULL,
+      goodGrade: GOOD_SNR_NULL,
+      noiseSnrMax: round(Math.max(0, ...noiseSnr), 2),
+      noiseSnrNullMax: round(Math.max(0, ...noiseSnrNull), 3),
+      signalSnrMin: round(Math.min(...signalSnr), 2),
+      signalSnrNullMin: round(Math.min(...signalSnrNull), 3),
+    },
+    firstReadings,
+    lightingStep: {
+      rejected: lightRejected,
+      recoveredAtMs: lightRecoveredAt === null ? null : Math.round(lightRecoveredAt),
+      recoveryAfterStepMs: lightRecoveredAt === null ? null : Math.round(lightRecoveredAt - stepAt),
+    },
+    headTrace: {
+      brokenLandmarks: 96,
+      meanShift: round(Math.abs(meanBroken - 0.5), 4),
+      medianShift: round(Math.abs(medianBroken - 0.5), 4),
+    },
     motionRejection: {
       beforeMotionBpm: beforeMotion,
       afterMotionBpm: afterMotion.bpm,

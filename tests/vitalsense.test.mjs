@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { VitalSense, resampleVitals, vitalROIs } from "../public/engine/vitalsense.js";
+import { VitalSense, resampleVitals, vitalROIs, MIN_SNR_NULL } from "../public/engine/vitalsense.js";
+import { medianHeadY } from "../public/engine/perception.js";
+import { noiseOnlyTrace, vitalTrace } from "./fixtures/vitals.mjs";
 
 function sample(t, bpm = 78, overrides = {}) {
   const wave = Math.sin(2 * Math.PI * bpm / 60 * t / 1000);
@@ -113,4 +115,60 @@ test("forehead and cheek boxes are bounded to the video frame", () => {
     assert.ok(r.x + r.w <= 640 && r.y + r.h <= 480);
   }
   assert.deepEqual(vitalROIs(landmarks.slice(0, 40), 640, 480), []);
+});
+
+// Wave 8 — the acceptance gate is calibrated against what noise alone
+// reaches, so a spectrum with no pulse in it cannot become a reading.
+test("a spectrum with no pulse in it never becomes a reading", () => {
+  for (let seed = 40; seed < 50; seed++) {
+    const engine = new VitalSense();
+    let value;
+    for (const row of noiseOnlyTrace({ seconds: 20, seed })) value = engine.add(row);
+    assert.equal(value.bpm, null, `seed ${seed} reported ${value.bpm} bpm from noise`);
+    assert.equal(value.status, "poor");
+    assert.equal(value.readings.length, 0);
+    // The calibrated statistic is reported even when the reading is refused.
+    assert.ok(value.snrNull !== null, "the calibrated statistic was not reported");
+    assert.ok(value.snrNull < MIN_SNR_NULL, `noise scored ${value.snrNull}`);
+  }
+});
+
+test("a real pulse is reported with its calibrated statistic", () => {
+  const engine = new VitalSense();
+  let value;
+  for (const row of vitalTrace({ bpm: 78, seconds: 20, seed: 108 })) value = engine.add(row);
+  assert.equal(value.bpm, 78);
+  assert.equal(value.status, "good");
+  assert.ok(value.snrNull >= MIN_SNR_NULL, `the calibrated statistic was ${value.snrNull}`);
+  assert.ok(value.snr > value.snrNull, "the plain SNR is reported next to the calibrated one");
+});
+
+test("a light level that changes inside the window drops the window", () => {
+  const engine = new VitalSense();
+  const stepAt = 20000;
+  let duringStep = null, afterStep = null;
+  const rows = vitalTrace({ bpm: 78, seconds: 40, seed: 109, lightStep: { at: stepAt, scale: 0.75 } });
+  for (const row of rows) {
+    const value = engine.add(row);
+    // The window that holds the step is never reported.
+    if (row.t >= stepAt && duringStep === null) duringStep = value;
+    if (row.t >= stepAt && row.t < stepAt + 12000 && value.bpm !== null) {
+      throw new Error(`a reading was published from the window that holds the light step: ${value.bpm}`);
+    }
+    if (row.t >= stepAt + 12000) afterStep = value;
+  }
+  assert.ok(duringStep, "the trace never reached the step");
+  assert.equal(duringStep.bpm, null);
+  assert.match(duringStep.reason, /glare|steady light/i);
+  // Once the light is steady again a full window produces a reading.
+  assert.equal(afterStep.bpm, 78);
+});
+
+test("the head trace reads the median of the face landmarks", () => {
+  const landmarks = Array.from({ length: 478 }, () => ({ x: 0.5, y: 0.5 }));
+  assert.equal(medianHeadY(landmarks), 0.5);
+  const broken = landmarks.map((point, index) => (index < 96 ? { x: 0.5, y: 0.9 } : point));
+  assert.equal(medianHeadY(broken), 0.5);
+  const mean = broken.reduce((sum, point) => sum + point.y, 0) / broken.length;
+  assert.ok(mean > 0.57, `the mean would have moved to ${mean}`);
 });

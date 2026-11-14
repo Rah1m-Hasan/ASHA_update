@@ -11,6 +11,24 @@ import { MotionMeter } from "./motion-meter.js";
 
 /** A worker frame that takes longer than this is a stall, not a slow device. */
 const WORKER_STALL_MS = 2000;
+
+/**
+ * The head's vertical position, taken as the median of the face landmarks.
+ *
+ * The breathing estimate reads this as a displacement over time. The mean of
+ * the landmarks moves when a single landmark is tracked badly - one stray
+ * point is enough to shift the whole head trace - while the median does not
+ * move until more than half of the landmarks agree on it.
+ */
+export function medianHeadY(landmarks) {
+  const ys = [];
+  for (const point of landmarks) if (Number.isFinite(point.y)) ys.push(point.y);
+  if (!ys.length) return 0;
+  ys.sort((a, b) => a - b);
+  const mid = ys.length >> 1;
+  return ys.length % 2 ? ys[mid] : (ys[mid - 1] + ys[mid]) / 2;
+}
+
 export class Perception extends EventTarget {
   constructor(video, canvas) {
     super();
@@ -598,7 +616,7 @@ export class Perception extends EventTarget {
     // Landmarks change much less often than camera color frames. Recompute
     // geometry only for a new observed face result or video dimensions.
     if (this.pulseGeometry?.landmarks !== lm || this.pulseGeometry.width !== W || this.pulseGeometry.height !== H) {
-      this.pulseGeometry = { landmarks: lm, width: W, height: H, rois: vitalROIs(lm, W, H), headY: lm.reduce((sum, p) => sum + p.y, 0) / lm.length };
+      this.pulseGeometry = { landmarks: lm, width: W, height: H, rois: vitalROIs(lm, W, H), headY: medianHeadY(lm) };
     }
     const rois = this.pulseGeometry.rois, rgbSum = [0, 0, 0], boxes = [];
     let roiCount = 0;

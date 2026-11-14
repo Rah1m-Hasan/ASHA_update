@@ -243,12 +243,61 @@ test("VitalSense rejects a motion-corrupted signal and a low-light signal", () =
 
 // Wave 8 — the in-band SNR is not normalised by the bin count, so a
 // noise-only spectrum passes the acceptance gate and the "good" grade.
-test.todo("VitalSense does not report a pulse when there is no pulse", () => {
+test("VitalSense does not report a pulse when there is no pulse", () => {
   const rate = metrics.vitalSense.noiseOnlyFalseReadingRate;
   assert.ok(
     rate <= 0.1,
     `noise-only traces produced a reading in ${rate * 100}% of runs (${metrics.vitalSense.noiseOnlyFalseReadings}/${metrics.vitalSense.noiseOnlyRuns})`,
   );
+  assert.equal(metrics.vitalSense.noiseOnlyFalseReadings, 0);
+});
+
+// Wave 8 — the gate rests on the null-calibrated statistic, and the plain
+// SNR cannot make the same separation.
+test("the calibrated SNR separates a pulse from a noise spectrum", () => {
+  const separation = metrics.vitalSense.snrSeparation;
+  assert.ok(
+    separation.noiseSnrNullMax < separation.gate,
+    `noise reached ${separation.noiseSnrNullMax}, over the ${separation.gate} gate`,
+  );
+  assert.ok(
+    separation.signalSnrNullMin > separation.gate,
+    `the weakest real pulse scored ${separation.signalSnrNullMin}, under the ${separation.gate} gate`,
+  );
+  assert.ok(
+    separation.noiseSnrMax > separation.gate * 4,
+    `the plain SNR no longer reaches noise (${separation.noiseSnrMax})`,
+  );
+});
+
+// Wave 8 — a reading must still arrive as early as it used to.
+test("a real pulse still produces its first reading inside the 12 second window", () => {
+  for (const row of metrics.vitalSense.firstReadings) {
+    assert.ok(row.firstReadingMs !== null, `${row.bpm} bpm produced no reading at all`);
+    assert.ok(
+      row.firstReadingMs <= 15000,
+      `${row.bpm} bpm first reported at ${row.firstReadingMs}ms`,
+    );
+  }
+});
+
+// Wave 8 — a light level that changes inside the window is dropped, not read.
+test("a light step inside the window is rejected and the window refills", () => {
+  const step = metrics.vitalSense.lightingStep;
+  assert.equal(step.rejected, true);
+  assert.ok(step.recoveredAtMs !== null, "the reading never came back after the light settled");
+  assert.ok(
+    step.recoveryAfterStepMs >= 12000,
+    `the reading came back after ${step.recoveryAfterStepMs}ms, before a full window was observed`,
+  );
+});
+
+// Wave 8 — the breathing trace reads the median of the face landmarks, so one
+// badly tracked group of landmarks cannot move it.
+test("one badly tracked landmark does not move the head trace", () => {
+  const head = metrics.vitalSense.headTrace;
+  assert.ok(head.meanShift > 0.05, `the mean barely moved (${head.meanShift})`);
+  assert.equal(head.medianShift, 0);
 });
 
 // ---------------------------------------------------------------- FingerSpeak
