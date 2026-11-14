@@ -49,13 +49,19 @@ export function poseTrace({
         visibility: noisy(next, visibility, noise),
       };
     };
-    // Shoulders 11/12 shift laterally with the lean; hips 23/24 stay put.
-    const dx = Math.sin(radians) * half;
-    const dy = Math.cos(radians) * half;
-    put(11, cx - half + dx * 0.5, cy - dy);
-    put(12, cx + half + dx * 0.5, cy - dy);
-    put(23, cx - half * 0.7, cy + 0.2);
-    put(24, cx + half * 0.7, cy + 0.2);
+    // The posture detector measures the lean as the angle of the shoulder
+    // centre away from the hip centre, so the fixture has to place the
+    // shoulders at that angle: the lateral offset is the shoulder-to-hip
+    // distance times the tangent of the requested angle. Rotating the whole
+    // body instead would produce a much smaller angle, because the distance
+    // from the shoulders to the hips is far larger than the body is wide.
+    const shoulderY = cy - 0.06;
+    const hipY = cy + 0.12;
+    const dx = Math.abs(shoulderY - hipY) * Math.tan(radians);
+    put(11, cx - half + dx, shoulderY);
+    put(12, cx + half + dx, shoulderY);
+    put(23, cx - half * 0.7, hipY);
+    put(24, cx + half * 0.7, hipY);
     frames.push({ t, landmarks });
   }
   return frames;

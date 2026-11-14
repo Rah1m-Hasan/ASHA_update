@@ -252,12 +252,38 @@ test("Posture does not report sideways under a small lean", () => {
 
 // Wave 3 — one landmark spike is replayed on every face frame and clears the
 // whole 60 s closed-eye accumulator.
-test.todo("Posture does not lose the whole rest window to one motion spike", () => {
+test("Posture does not lose the whole rest window to one motion spike", () => {
   assert.equal(
     metrics.posture.restSurvivesSingleMotionSpike,
     true,
     "one landmark spike currently clears the 60s closed-eye accumulator",
   );
+  assert.equal(
+    metrics.posture.legacyRestSurvivesSingleMotionSpike,
+    false,
+    "the recorded legacy behaviour must stay reproducible for the comparison",
+  );
+});
+
+test("Posture holds its label when the lean sits on the sideways threshold", () => {
+  const posture = metrics.posture;
+  assert.ok(
+    posture.marginalRawLabelFlips > 100,
+    "the marginal fixture must actually flip the raw label",
+  );
+  assert.ok(
+    posture.marginalLabelFlips * 10 < posture.marginalRawLabelFlips,
+    `the label still flipped ${posture.marginalLabelFlips} times against ${posture.marginalRawLabelFlips}`,
+  );
+});
+
+test("Posture reports a real lean and ignores a small one", () => {
+  assert.equal(metrics.posture.sidewaysDetectionRateUnderLean, 0);
+  assert.equal(metrics.posture.sidewaysDetectionRateUnderStrongLean, 1);
+});
+
+test("a pose without visibility scores is still a pose", () => {
+  assert.equal(metrics.posture.poseValidWithoutVisibilityScores, true);
 });
 
 // ---------------------------------------------------------------- Language

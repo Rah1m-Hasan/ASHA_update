@@ -26,6 +26,9 @@ export class Perception extends EventTarget {
     this.vitals = new VitalSense();
     this.pulse = this.vitals.value;
     this.motionMeter = new MotionMeter();
+    // The pose motion sample waiting to be consumed by the rest tracker. It
+    // is consumed once, when it arrives.
+    this.pendingMotion = null;
     // Observed interval between face results, used to bound how old a face
     // landmark ROI may be before its colour sample is rejected.
     this.faceResultIntervalMs = 0;
@@ -120,6 +123,7 @@ export class Perception extends EventTarget {
     this.poseResultAt = 0;
     this.posture = null;
     this.poseAt = 0;
+    this.pendingMotion = null;
     this.vitalsMotion = 0;
     this.motionMeter?.reset();
     this.faceResultIntervalMs = 0;
@@ -426,7 +430,13 @@ export class Perception extends EventTarget {
       this.cycles.pose++;
       this.poseResult = d.pose;
       this.poseResultAt = d.t;
-      this.posture = poseFeatures(d.pose.landmarks?.[0], this.posture);
+      this.posture = poseFeatures(d.pose.landmarks?.[0], this.posture, d.t);
+      // The motion sample belongs to this pose result. It is consumed once,
+      // when it arrives, instead of being replayed on every face frame.
+      this.pendingMotion = {
+        motion: this.posture.motion,
+        motionRate: this.posture.motionRate,
+      };
       this.poseAt = d.t;
       this.emit("pose", {
         landmarks: d.pose.landmarks?.[0] ?? null,
@@ -450,8 +460,12 @@ export class Perception extends EventTarget {
       t: d.t,
       valid: r.accepted && !!poseValid,
       closed: f.eyeBlinkLeft > 0.65 && f.eyeBlinkRight > 0.65,
-      motion: this.posture?.motion || 0,
+      // null means "no new motion sample", which is unknown rather than
+      // still: a stale value must not be read as a fresh observation.
+      motion: this.pendingMotion?.motion ?? null,
+      motionRate: this.pendingMotion?.motionRate ?? null,
     });
+    this.pendingMotion = null;
     if (rest) this.emit("cue", rest);
     if (this.postureCue.update(this.posture?.sideways, !!poseValid, d.t))
       this.emit("cue", "posture");

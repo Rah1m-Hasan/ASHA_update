@@ -123,3 +123,107 @@ test("role tokens and push endpoints are restricted", () => {
   assert.equal(pushEndpoint("http://fcm.googleapis.com/x"), false);
   assert.equal(pushEndpoint("https://fcm.googleapis.com/fcm/send/x"), true);
 });
+
+// ---------------------------------------------------------------- Wave 3
+test("one motion spike does not clear the closed-eye accumulator, two do", () => {
+  // The pipeline delivers a motion sample once per pose result, so the
+  // frames in between carry no new sample at all.
+  const feed = (tracker, samples) => {
+    samples.forEach((motion, i) => {
+      tracker.update({
+        t: i * 500,
+        valid: true,
+        closed: true,
+        motion,
+        motionRate: motion,
+      });
+    });
+  };
+  const window = new Array(130).fill(0);
+
+  const once = new RestTracker();
+  const withOneSpike = window.slice();
+  withOneSpike[10] = 0.2;
+  feed(once, withOneSpike);
+  assert.equal(once.resting, true, "one spike must not discard a minute of observation");
+
+  const twice = new RestTracker();
+  const withTwoSpikes = window.slice();
+  withTwoSpikes[10] = 0.2;
+  withTwoSpikes[11] = 0.2;
+  feed(twice, withTwoSpikes);
+  assert.equal(twice.resting, false, "two consecutive spikes clear the accumulator");
+});
+
+test("the same movement means the same thing at any pose cadence", () => {
+  // The same physical movement, sampled at 500 ms and at 50 ms. The
+  // displacement per sample differs by ten, the rate does not.
+  const slow = new RestTracker();
+  slow.update({ t: 0, valid: true, closed: true, motion: 0.02, motionRate: 0.04 });
+  const fast = new RestTracker();
+  fast.update({ t: 0, valid: true, closed: true, motion: 0.002, motionRate: 0.04 });
+  // 0.04 units/s is above the awake threshold (0.024) for both, so both see
+  // the movement.
+  assert.equal(slow.motionSeen, false);
+  assert.equal(fast.motionSeen, false);
+  const slowAwake = new RestTracker();
+  slowAwake.resting = true;
+  slowAwake.update({ t: 0, valid: true, closed: false, motion: 0.02, motionRate: 0.04 });
+  const fastAwake = new RestTracker();
+  fastAwake.resting = true;
+  fastAwake.update({ t: 0, valid: true, closed: false, motion: 0.002, motionRate: 0.04 });
+  assert.equal(slowAwake.motionSeen, true);
+  assert.equal(fastAwake.motionSeen, true);
+});
+
+test("the posture label holds until a lean is sustained", () => {
+  const lean = (x) => {
+    const lm = Array.from({ length: 33 }, () => ({ x: 0.5, y: 0.5, visibility: 0.9 }));
+    lm[11] = { x: 0.3 + x * 0.1, y: 0.54, visibility: 0.9 };
+    lm[12] = { x: 0.7 + x * 0.1, y: 0.54, visibility: 0.9 };
+    lm[23] = { x: 0.4, y: 0.72, visibility: 0.9 };
+    lm[24] = { x: 0.6, y: 0.72, visibility: 0.9 };
+    return lm;
+  };
+  let previous = null;
+  // A single sample that leans must not change the label.
+  let features = poseFeatures(lean(0), previous, 0);
+  previous = features;
+  assert.equal(features.label, "Upright");
+  features = poseFeatures(lean(1), previous, 500);
+  previous = features;
+  assert.equal(features.label, "Upright", "one leaning sample must not flip the label");
+  assert.equal(features.rawLabel, "Leaning", "but the raw reading must still see it");
+  // Held for longer than the entry time, the label follows.
+  features = poseFeatures(lean(1), previous, 1500);
+  assert.equal(features.label, "Leaning");
+});
+
+test("a pose without visibility scores is not an invisible pose", () => {
+  const lm = Array.from({ length: 33 }, () => ({ x: 0.5, y: 0.5 }));
+  lm[11] = { x: 0.3, y: 0.54 };
+  lm[12] = { x: 0.7, y: 0.54 };
+  lm[23] = { x: 0.4, y: 0.72 };
+  lm[24] = { x: 0.6, y: 0.72 };
+  const features = poseFeatures(lm, null, 0);
+  assert.equal(features.valid, true);
+  assert.equal(features.label, "Upright");
+});
+
+test("the motion rate is the same movement per second at any cadence", () => {
+  const lm = (x) => {
+    const out = Array.from({ length: 33 }, () => ({ x: 0.5, y: 0.5, visibility: 0.9 }));
+    out[11] = { x: 0.3, y: 0.54, visibility: 0.9 };
+    out[12] = { x: 0.7 + x, y: 0.54, visibility: 0.9 };
+    out[23] = { x: 0.4, y: 0.72, visibility: 0.9 };
+    out[24] = { x: 0.6, y: 0.72, visibility: 0.9 };
+    return out;
+  };
+  let slow = poseFeatures(lm(0), null, 0);
+  const slowNext = poseFeatures(lm(0.01), slow, 500);
+  let fast = poseFeatures(lm(0), null, 0);
+  const fastNext = poseFeatures(lm(0.001), fast, 50);
+  assert.ok(Math.abs(slowNext.motionRate - fastNext.motionRate) < 0.002);
+  // The displacement itself is unchanged and still per interval.
+  assert.ok(slowNext.motion > fastNext.motion);
+});

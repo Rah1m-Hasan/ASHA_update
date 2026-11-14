@@ -714,42 +714,129 @@ export function postureMetrics() {
   const noisy = poseTrace({ fps: 2, durationMs: 120000, seed: 80, noise: 0.006 });
   let previous = null;
   const labels = [];
+  const rawLabels = [];
   for (const frame of noisy) {
-    const features = poseFeatures(frame.landmarks, previous);
+    const features = poseFeatures(frame.landmarks, previous, frame.t);
     previous = features.valid ? features : previous;
     labels.push(features.label);
+    rawLabels.push(features.rawLabel ?? features.label);
   }
   let flips = 0;
   for (let i = 1; i < labels.length; i++) if (labels[i] !== labels[i - 1]) flips += 1;
+  // The label before the hysteresis was added: the raw reading on every
+  // sample, with no hold.
+  let rawFlips = 0;
+  for (let i = 1; i < rawLabels.length; i++)
+    if (rawLabels[i] !== rawLabels[i - 1]) rawFlips += 1;
 
-  // A sustained lean must be detected, and must not be detected while upright.
-  const leaning = poseTrace({ fps: 2, durationMs: 120000, seed: 81, lean: 40 });
+  // A lean that hovers on the sideways threshold: the raw reading flips on
+  // every noisy sample, and the label has to hold.
+  const marginal = poseTrace({ fps: 10, durationMs: 120000, seed: 83, lean: 25, noise: 0.008 });
+  let marginalLabels = [];
+  let marginalRaw = [];
+  previous = null;
+  for (const frame of marginal) {
+    const features = poseFeatures(frame.landmarks, previous, frame.t);
+    previous = features.valid ? features : previous;
+    marginalLabels.push(features.label);
+    marginalRaw.push(features.rawLabel ?? features.label);
+  }
+  const countFlips = (list) => {
+    let n = 0;
+    for (let i = 1; i < list.length; i++) if (list[i] !== list[i - 1]) n += 1;
+    return n;
+  };
+
+  // A small lean must not be reported as sideways, and a real lean must be.
+  const leaning = poseTrace({ fps: 2, durationMs: 120000, seed: 81, lean: 12 });
   let sidewaysFrames = 0;
   let totalFrames = 0;
   previous = null;
   for (const frame of leaning) {
-    const features = poseFeatures(frame.landmarks, previous);
+    const features = poseFeatures(frame.landmarks, previous, frame.t);
     previous = features.valid ? features : previous;
     totalFrames += 1;
     if (features.sideways) sidewaysFrames += 1;
   }
+  const strongLean = poseTrace({ fps: 2, durationMs: 120000, seed: 84, lean: 40 });
+  let strongSideways = 0;
+  previous = null;
+  for (const frame of strongLean) {
+    const features = poseFeatures(frame.landmarks, previous, frame.t);
+    previous = features.valid ? features : previous;
+    if (features.sideways) strongSideways += 1;
+  }
 
-  // The rest detector: one motion spike must not clear the 60 s accumulator.
+  // The rest detector as the pipeline drives it: the pose arrives every
+  // 500 ms and each pose sample is consumed once, so the face frames in
+  // between carry no new motion sample at all.
   const rest = new RestTracker();
   let cue = null;
-  for (let t = 0; t <= 70000; t += 100) {
-    const spike = t === 30000 ? 0.2 : 0;
-    cue = rest.update({ t, valid: true, closed: true, motion: spike });
+  let spikeDelivered = false;
+  for (let t = 0; t <= 70000; t += 33) {
+    const isPose = t % 500 === 0;
+    const spike = isPose && !spikeDelivered && t >= 30000;
+    if (spike) spikeDelivered = true;
+    cue = rest.update({
+      t,
+      valid: true,
+      closed: true,
+      motion: isPose ? (spike ? 0.2 : 0) : null,
+      motionRate: isPose ? (spike ? 0.4 : 0) : null,
+    });
   }
   const restingAfterSpike = rest.resting;
 
+  // The same window through the previous rule: the stale motion value was
+  // replayed on every face frame, and one sample above the threshold cleared
+  // the whole closed-eye accumulator. Kept so the before/after is permanent.
+  let legacyClosedSince = null;
+  let legacyResting = false;
+  let legacyMotion = 0;
+  let legacySpike = false;
+  for (let t = 0; t <= 70000; t += 33) {
+    const isPose = t % 500 === 0;
+    if (isPose) {
+      legacySpike = !legacySpike && t >= 30000;
+      legacyMotion = legacySpike ? 0.2 : 0;
+    }
+    if (legacyMotion > 0.04) {
+      legacyClosedSince = null;
+    } else {
+      legacyClosedSince ??= t;
+      if (t - legacyClosedSince >= 60000) legacyResting = true;
+    }
+  }
+
+  // A landmark set that publishes no visibility scores at all must not make
+  // the whole pose invisible.
+  const noVisibility = poseTrace({ fps: 2, durationMs: 2000, seed: 82 })[0].landmarks.map(
+    (p) => ({ x: p.x, y: p.y, z: p.z }),
+  );
+  const withoutScores = poseFeatures(noVisibility, null, 0);
+
   return {
     labelFlipsUnderNoise: flips,
+    rawLabelFlipsUnderNoise: rawFlips,
     totalFrames: labels.length,
     flipRatePerMinute: round((flips / (labels.length / 120)) * 60, 3),
+    rawFlipRatePerMinute: round((rawFlips / (labels.length / 120)) * 60, 3),
+    marginalLabelFlips: countFlips(marginalLabels),
+    marginalRawLabelFlips: countFlips(marginalRaw),
+    marginalFlipRatePerMinute: round(
+      (countFlips(marginalLabels) / (marginalLabels.length / 120)) * 60,
+      3,
+    ),
+    marginalRawFlipRatePerMinute: round(
+      (countFlips(marginalRaw) / (marginalRaw.length / 120)) * 60,
+      3,
+    ),
     sidewaysDetectionRateUnderLean: rate(sidewaysFrames, totalFrames),
+    sidewaysDetectionRateUnderStrongLean: rate(strongSideways, strongLean.length),
     restSurvivesSingleMotionSpike: restingAfterSpike,
+    legacyRestSurvivesSingleMotionSpike: legacyResting,
     restCue: cue,
+    poseValidWithoutVisibilityScores: withoutScores.valid,
   };
 }
 
