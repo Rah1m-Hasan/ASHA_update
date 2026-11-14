@@ -20,8 +20,18 @@ Three additional targets, separate from the fitting targets, check calibration b
 dwell selection can be enabled. The current engineering thresholds are mean normalized
 screen-coordinate error at most 0.06 and 90th-percentile error at most 0.09. These are
 prototype gates and require user/device evaluation. They do not represent degrees of
-visual angle or a validated clinical accuracy bound. Selection requires the estimated
-error ellipse to fit inside the tile, so small targets may require touch or switch input.
+visual angle or a validated clinical accuracy bound.
+
+The error-ellipse rule above belongs to the retained Everyday path. The React app in
+`src/features/eyespeak/` uses a different rule: a point selects a tile when it lands
+inside the tile with a flat 12% margin (`tileAt`), a tile keeps the selection while the
+point stays anywhere on it or crosses a 450 ms gap (`TileTracker`), and a new tile takes
+over only after the point has been inside it for 220 ms. The board is chosen from the
+measured accuracy: nine tiles at p90 ≤ 0.09 and mean ≤ 0.06, six large tiles at
+p90 ≤ 0.16 and mean ≤ 0.11, two halves of the screen at p90 ≤ 0.26 and mean ≤ 0.18, and
+no board at all when the calibration is worse than that. A gaze point whose confidence
+falls below the confidence floor is treated as a lost look, not as a look at something.
+Small targets may still require touch or switch input.
 
 Dwell is adjustable from 800 to 1500 ms. The same target cannot repeat until a valid
 observed look-away period. Tracking loss cancels dwell progress and does not count as
@@ -38,6 +48,14 @@ records contain derived numeric parameters, screen size and provenance, without 
 - Missing iris points, closed eyes, invalid values and out-of-domain head changes fail closed.
 - All three calibration grids have the requested size and coverage.
 - Dwell emits exactly once per hold, needs release and resets across gaps/reordered frames.
+- A prediction reports how well it fits the calibration, and that confidence never
+  changes whether the prediction is valid.
+- A frame captured far from the rest of its target is not used as a frame of that target.
+
+`node --test tests/accuracy-metrics.test.mjs` adds the measured eye numbers: the
+target-selection accuracy on synthetic gaze traces, the calibration error with and
+without the capture-time outlier rule, the live p90 error of the fitted model, and the
+confidence guard.
 
 Synthetic tests establish software behavior. Live gaze accuracy, selection speed,
 calibration duration and fatigue have not been measured on intended users.

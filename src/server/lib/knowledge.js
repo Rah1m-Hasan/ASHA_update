@@ -1,4 +1,10 @@
 // Small, version-controlled retrieval set: only capabilities actually implemented here.
+//
+// This is the source of the OKF bundle. `okf/compile.mjs` checks each concept
+// in `okf/*.md` against the guide below and generates `okf/generated.js`,
+// which is what the retriever sends to the provider. The provider is never
+// given the whole guide: it receives the short excerpts that
+// `src/server/lib/retrieval.js` selects for the patient's question.
 export const guides = {
   companion:
     "The caregiver starts support once on the patient phone to grant camera/audio permission. Asha introduces each page, checks in gently about every two minutes while support is active, and asks after sustained changes. Pause Asha check-ins is available. Details contains every module. The caregiver completes assessment and calibration; no capability locks access. A calibrated patient response proposes a request, then a separate confirmation sends it to the assigned caregiver. Ordinary blinks never initiate or confirm requests. The app does not place telephone calls. Do not announce delivery without a verified receipt.",
@@ -18,27 +24,4 @@ export const guides = {
     "Lightweight pose estimation shares the camera with face and both hands in every patient interface. Optional YOLO provides a second posture estimate. Shoulders must be visible; hips improve lean estimates. A minute of sustained change prompts a comfort check-in. Closed-eye/still-body then open-eye/movement is a possible wake pattern, not a sleep-stage classifier.",
   caregiver:
     "Use the private caregiver link from setup on the second phone. View Requests & updates and acknowledge to let the patient know. Sent means server-stored; received means the dashboard fetched it; acknowledged requires a caregiver action. Push is optional, and on iPhone requires installation to the Home Screen. Keep the dashboard open for foreground live updates. Patient camera sensing stops when the browser is backgrounded or locked.",
-};
-
-// The provider receives a compact, module-specific fact set on each turn.
-// The full guides above remain available for future retrieval or help views.
-export const briefGuides = {
-  companion:
-    "Asha guides pages and offers check-ins. Details opens every module. A confirmed request reaches the assigned caregiver; this app does not place phone calls.",
-  assessment:
-    "Available hand movement suggests FingerSpeak, face movement suggests FaceSpeak, and speech suggests SenseAssist. All modules stay open. Use voice for someone who cannot see and text for someone who cannot hear.",
-  facespeak:
-    "A caregiver calibrates movements in Details. Ordinary blinks never request help. Three practiced quick blinks may propose a need; a separate practiced slower blink after Asha's question confirms it. Head and smile responses can also be calibrated.",
-  fingerspeak:
-    "Track either or both hands. Record, test, and confirm personal gestures before speaking or sending a request. The capability assessment never locks this module.",
-  senseassist:
-    "Practice short phrases or clarify an editable speech transcript. Asha suggests possible words; the speaker confirms before they are spoken or sent.",
-  vitalsense:
-    "VitalSense samples forehead and cheek color on the shared camera: 12 seconds for experimental pulse, 30 seconds for breathing. Keep still in steady light. Details includes baseline calibration, waveform, trend and export. It does not measure blood pressure, oxygen or temperature or trigger emergencies.",
-  posture:
-    "Pose tracking observes position and movement. A sustained change may prompt a comfort question. A wake-like pattern is not a sleep-stage reading or diagnosis.",
-  eyespeak:
-    "EyeSpeak selects with the eyes. Calibrate first: look at each target until it is collected. The board size follows the measured accuracy. A dwell selects a word, and a separate confirmation sends it to the caregiver. The gaze estimate is a camera measurement, not a clinical reading.",
-  caregiver:
-    "The caregiver opens a private link on another device, sees requests, and acknowledges them. Sent, received, and acknowledged are distinct states. Push is optional; keep the dashboard open for live foreground updates.",
 };

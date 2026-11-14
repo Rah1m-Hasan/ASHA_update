@@ -2,6 +2,12 @@
 
 Date: 2026-11-10. Branch: `codex/asha-everyday-companion`. Baseline: `a145b2c`.
 
+Note: this document was written against the pre-migration layout and is kept as the
+record of that work. The paths it names have moved in the Next.js codebase: `app/` is
+now `public/app/` and `public/neuroface/`, `api/` is now `src/app/api/*/route.ts` with
+its logic in `src/server/handlers/`, and `server/` is now `src/server/`. The current
+layout is described in `CLAUDE.md` and `docs/ARCHITECTURE.md`.
+
 ## Current-state audit
 
 The working application is buildless JavaScript ES modules, HTML and CSS. Vercel runs Node.js handlers in `api/`. `server/common.js` selects the existing private Supabase key/value table when configured, otherwise Vercel Blob. Hashed patient/caregiver capability tokens authorize existing care circles. This is distinct from account-based clinic identity.

@@ -1,6 +1,6 @@
 # Feature flags
 
-`app/everyday/contracts.js` exports the explicit code flags. They describe implemented capability, not clinical clearance or remote entitlement. The existing assistive modules are unchanged and independently reachable at `/app`.
+`public/app/everyday/contracts.js` exports the explicit code flags. They describe implemented capability, not clinical clearance or remote entitlement. The existing assistive modules are unchanged and independently reachable at `/app`.
 
 | Flag                                        | State | Meaning                                                                                                                      |
 | ------------------------------------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------- |

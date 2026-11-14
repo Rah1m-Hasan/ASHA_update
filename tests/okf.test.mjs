@@ -30,7 +30,7 @@ test("retrieval returns the OKF source and the scope of its verification", () =>
     query: "Can the camera measure blood pressure?",
   });
   assert.ok(match.id.startsWith("guide:vitalsense:"));
-  assert.match(match.provenance, /\/server\/knowledge\.js$/);
+  assert.match(match.provenance, /\/src\/server\/lib\/knowledge\.js$/);
   assert.equal(match.verification, "source-text-parity");
   assert.match(match.text, /cannot measure blood pressure/i);
 });

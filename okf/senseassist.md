@@ -9,7 +9,7 @@ verified: { by: process:okf-source-parity-test, at: 2026-09-30T12:00:31Z }
 verification_scope: Exact guide-text match only; not clinical validation.
 sources:
   - id: app-guide
-    resource: https://github.com/mysunatislam/neurobridge-asha-unified-app/blob/main/server/knowledge.js
+    resource: https://github.com/mysunatislam/neurobridge-asha-unified-app/blob/main/src/server/lib/knowledge.js
     title: Versioned Asha application guide
 ---
 

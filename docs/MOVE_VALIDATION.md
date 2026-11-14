@@ -2,7 +2,7 @@
 
 ## Implemented behavior
 
-`app/everyday/move.js` mounts the movement workspace through the shared Everyday camera service. It requests the existing MediaPipe Pose Landmarker Lite task and closes the camera when paused, when the page is hidden, or when the module unmounts. The module owns no second camera stream or inference loop.
+`public/app/everyday/move.js` mounts the movement workspace through the shared Everyday camera service. It requests the existing MediaPipe Pose Landmarker Lite task and closes the camera when paused, when the page is hidden, or when the module unmounts. The module owns no second camera stream or inference loop.
 
 Four movement counters are implemented.
 
