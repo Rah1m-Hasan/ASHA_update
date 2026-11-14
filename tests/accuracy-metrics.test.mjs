@@ -186,6 +186,44 @@ test("EyeSpeak selects the tile the patient was looking at", () => {
   );
 });
 
+// Wave 4 — a calibration frame captured mid-saccade is labelled with the
+// target it was meant to be, and that label is wrong.
+test("a calibration frame from the wrong place does not reach the model", () => {
+  const cleaned = metrics.eyeSpeak.cleanedCalibration;
+  const dirty = metrics.eyeSpeak.contaminatedCalibration;
+  assert.ok(
+    cleaned.meanError < dirty.meanError,
+    `the cleaned calibration is not better: ${cleaned.meanError} against ${dirty.meanError}`,
+  );
+  assert.ok(
+    cleaned.p90Error < dirty.p90Error,
+    `the cleaned calibration is not better at the tail: ${cleaned.p90Error} against ${dirty.p90Error}`,
+  );
+  assert.ok(
+    cleaned.framesKept > cleaned.framesCaptured * 0.8,
+    `the rule threw away too many good frames: ${cleaned.framesKept} of ${cleaned.framesCaptured}`,
+  );
+});
+
+// Wave 4 — a frame the tracker got wrong does not fit the calibration, and
+// must not drive a selection.
+test("EyeSpeak refuses a mis-tracked frame instead of selecting from it", () => {
+  const confidence = metrics.eyeSpeak.confidence;
+  assert.ok(
+    confidence.cleanMin > confidence.threshold,
+    `a clean look scored ${confidence.cleanMin}, under the ${confidence.threshold} threshold`,
+  );
+  assert.ok(
+    confidence.distortedMax < confidence.threshold,
+    `a mis-tracked frame scored ${confidence.distortedMax}, over the ${confidence.threshold} threshold`,
+  );
+  const selection = metrics.eyeSpeak.guardedSelection;
+  assert.ok(
+    selection.guarded > selection.unguarded,
+    `the confidence guard did not help: ${selection.guarded} against ${selection.unguarded}`,
+  );
+});
+
 // ---------------------------------------------------------------- VitalSense
 
 test("VitalSense recovers the pulse rate it was given", () => {

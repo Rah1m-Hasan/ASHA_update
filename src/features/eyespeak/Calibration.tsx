@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CAPTURE, CHECK_CAPTURE, CHECK_TARGETS, calibrationTargets, fitGazeModel, validateGazeModel } from "./gaze";
+import { CAPTURE, CHECK_CAPTURE, CHECK_TARGETS, calibrationFrameIsOutlier, calibrationTargets, fitGazeModel, validateGazeModel } from "./gaze";
 import type { Features, GazeModel, Sample, Validation } from "./gaze";
 
 /** Gaze features for each face result, with how open the eyes are (for slow-blink clicks). */
@@ -50,6 +50,11 @@ export function Calibration({ mode, model: existing, feed, onDone, onCancel }: {
         reason = f.reason;
         return;
       }
+      // A frame captured mid-saccade is labelled with this target, and that
+      // label is wrong. The frames already captured for this target say what
+      // this person's eyes look like when they are on it, so a frame that is
+      // far from all of them is not a frame of this target.
+      if (calibrationFrameIsOutlier(f.values, frames.map((s) => s.features))) return;
       frames.push({ features: f.values, x: step.x, y: step.y });
       first ??= t;
       last = t;

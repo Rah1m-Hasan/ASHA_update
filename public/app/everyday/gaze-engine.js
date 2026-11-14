@@ -270,6 +270,143 @@ function modelShapeIsValid(model) {
   return ok;
 }
 
+/**
+ * Below this, an observation does not fit the calibration well enough to be
+ * treated as a look at anything.
+ *
+ * The confidence is how far the observation sits from the surface the
+ * calibration describes: a blink, a half-closed eye or a face turning away
+ * does not fit it, and must not drive a selection. It is a quality signal
+ * for the caller, not a probability and not an accuracy claim.
+ */
+export const MIN_GAZE_CONFIDENCE = 0.5;
+
+/**
+ * How well an observation fits the calibration.
+ *
+ * The ridge model maps a seven-feature vector to a screen point, so the
+ * observations the calibration was built from lie on a surface the model
+ * describes: the two weight vectors span it. Whatever part of an
+ * observation the model cannot explain is its distance from that surface,
+ * and that is what a frame with a distorted iris looks like - a blink, a
+ * half-closed eye, a face turning away from the screen.
+ *
+ * This is a quality signal for the caller, not a probability, not an
+ * accuracy claim, and it does not change whether a prediction is valid.
+ */
+export function gazeConfidence(model, features) {
+  if (
+    typeof model !== "object" ||
+    model === null ||
+    !Array.isArray(features) ||
+    features.length !== FEATURE_COUNT ||
+    features.some((value) => !Number.isFinite(value)) ||
+    !Array.isArray(model.mean) ||
+    !Array.isArray(model.scale) ||
+    !Array.isArray(model.domain) ||
+    !Array.isArray(model.weights?.x) ||
+    !Array.isArray(model.weights?.y)
+  )
+    return 0;
+  // The standardised observation.
+  const v = features.map((value, index) => {
+    const scale = Math.max(1e-6, model.scale[index] ?? 1);
+    return (value - (model.mean[index] ?? 0)) / scale;
+  });
+  const a = model.weights.x.slice(1);
+  const b = model.weights.y.slice(1);
+  // Only the features the model actually uses describe the calibration
+  // surface. A feature the fit gave no weight to carries no information
+  // about where the person is looking, and its own noise would otherwise
+  // decide the confidence on its own.
+  const strongest = Math.max(
+    ...a.map((value, index) => Math.max(Math.abs(value), Math.abs(b[index] ?? 0))),
+    1e-9,
+  );
+  const used = a
+    .map((_, index) => index)
+    .filter(
+      (index) =>
+        Math.max(Math.abs(a[index]), Math.abs(b[index] ?? 0)) >= 0.05 * strongest,
+    );
+  if (!used.length) return 1;
+  const pick = (row) => used.map((index) => row[index]);
+  const ua = pick(a);
+  const ub = pick(b);
+  const uv = pick(v);
+  const dot = (u, w) => u.reduce((sum, value, index) => sum + value * w[index], 0);
+  const aa = dot(ua, ua),
+    ab = dot(ua, ub),
+    bb = dot(ub, ub),
+    av = dot(ua, uv),
+    bv = dot(ub, uv);
+  const det = aa * bb - ab * ab;
+  // A model whose two weight vectors do not span a plane cannot say anything
+  // about distance, so it does not lower the confidence.
+  if (!Number.isFinite(det) || Math.abs(det) < 1e-12) return 1;
+  const alpha = (av * bb - bv * ab) / det;
+  const beta = (bv * aa - av * ab) / det;
+  let residual = 0;
+  for (let index = 0; index < uv.length; index++) {
+    const off = uv[index] - (alpha * ua[index] + beta * ub[index]);
+    residual += off * off;
+  }
+  residual = Math.sqrt(residual);
+  // How wide the calibration is, in the same standardised units: an
+  // observation as far from the calibrated surface as the calibration is
+  // wide has no confidence left.
+  const halfRange = Math.max(
+    ...used.map((index) => {
+      const domain = model.domain[index] ?? { min: 0, max: 0 };
+      const scale = Math.max(1e-6, model.scale[index] ?? 1);
+      return Math.abs((domain.max - domain.min) / 2 / scale);
+    }),
+    1e-6,
+  );
+  return Math.max(0, Math.min(1, 1 - residual / halfRange));
+}
+
+/**
+ * Is this captured frame far from the other frames of the same target?
+ *
+ * A frame captured mid-saccade is labelled with the target the person was
+ * meant to be looking at, and that label is wrong, so it poisons the fit.
+ * The frames already captured for that target say what this person's eyes
+ * look like when they are on it, so a frame that is far from all of them is
+ * not a frame of that target.
+ *
+ * Only the iris features are compared. The head offset and roll features
+ * change when the person moves their head, and every frame of a capture
+ * would then look different; only the iris says where the eyes are.
+ *
+ * The rule is deliberately generous. It needs a few frames before it will
+ * reject anything, and it rejects only what no reasonable reading of the
+ * target could produce.
+ */
+export function calibrationFrameIsOutlier(features, captured) {
+  if (!Array.isArray(features) || features.length !== FEATURE_COUNT) return false;
+  if (!Array.isArray(captured) || captured.length < 4) return false;
+  const IRIS = 4;
+  // The smallest difference that counts as different, in feature units. The
+  // capture jitter is far below this, so a steady look is never rejected.
+  const floor = 0.01;
+  for (let index = 0; index < IRIS; index++) {
+    const values = captured.map((frame) => frame[index]).filter(Number.isFinite);
+    if (values.length < 4) return false;
+    const sorted = [...values].sort((x, y) => x - y);
+    const middle = Math.floor(sorted.length / 2);
+    const median =
+      sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+    const deviations = values.map((value) => Math.abs(value - median));
+    const madMedian = deviations
+      .slice()
+      .sort((x, y) => x - y)[Math.floor(deviations.length / 2)];
+    const scale = Math.max(1.4826 * madMedian, floor);
+    if (Math.abs(features[index] - median) > 4 * scale) return true;
+  }
+  return false;
+}
+
 export function predictGaze(
   model,
   features,
@@ -333,7 +470,14 @@ export function predictGaze(
     point.y > 1
   )
     return { valid: false, reason: "Look toward the center of a large tile." };
-  return { valid: true, ...point, error: model.validation?.p90Error ?? null };
+  return {
+    valid: true,
+    ...point,
+    error: model.validation?.p90Error ?? null,
+    // How well this observation fits the calibration. Additive: `valid` and
+    // `error` mean exactly what they meant before.
+    confidence: gazeConfidence(model, features),
+  };
 }
 
 export function validateGazeModel(model, observations) {

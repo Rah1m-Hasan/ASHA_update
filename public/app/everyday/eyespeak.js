@@ -2,6 +2,8 @@ import {
   CHECK_TARGETS,
   DwellSelector,
   GAZE_MODEL_VERSION,
+  MIN_GAZE_CONFIDENCE,
+  calibrationFrameIsOutlier,
   calibrationTargets,
   extractGazeFeatures,
   fitGazeModel,
@@ -104,7 +106,10 @@ export function mount(host, ctx) {
   const status = find("[data-status]");
   const selection = find("[data-selection]");
   const aac = find("[data-aac]");
-  const dwell = new DwellSelector();
+  // A slow camera delivers a face result every few hundred milliseconds. The
+  // dwell has to survive that gap, or the selection restarts on every frame
+  // and never completes.
+  const dwell = new DwellSelector({ maxGapMs: 900 });
   let language = ctx.language?.() === "bn" ? "bn" : "en";
   let mode = "phrases",
     group = null,
@@ -124,6 +129,7 @@ export function mount(host, ctx) {
     captureTimer = null,
     settleTimer = null;
   let lastGaze = null,
+    lastGazeAt = null,
     scanTimer = null,
     scanIndex = -1,
     lastAnnouncement = 0;
@@ -537,13 +543,22 @@ export function mount(host, ctx) {
       selection.textContent = point.reason;
       return;
     }
-    const weight = 0.35;
+    // A frame that does not fit the calibration is not a look at anything:
+    // it is skipped, so the selection pauses instead of following it.
+    if ((point.confidence ?? 1) < MIN_GAZE_CONFIDENCE) return;
+    // Smooth over time, not over frames: a fixed weight per frame smooths
+    // four times as much on a camera delivering ten frames a second as on one
+    // delivering forty. This is the same time constant the app uses.
+    const tau = 150;
+    const step = lastGazeAt === null ? null : data.timestamp - lastGazeAt;
+    const alpha = step === null ? 1 : 1 - Math.exp(-Math.max(0, step) / tau);
     lastGaze = lastGaze
       ? {
-          x: lastGaze.x * (1 - weight) + point.x * weight,
-          y: lastGaze.y * (1 - weight) + point.y * weight,
+          x: lastGaze.x + (point.x - lastGaze.x) * alpha,
+          y: lastGaze.y + (point.y - lastGaze.y) * alpha,
         }
       : { x: point.x, y: point.y };
+    lastGazeAt = data.timestamp;
     const x = lastGaze.x * window.innerWidth,
       y = lastGaze.y * window.innerHeight;
     const marginX = (point.error || 0.02) * window.innerWidth;
@@ -646,6 +661,12 @@ export function mount(host, ctx) {
     if (current.lastTime !== null && timestamp - current.lastTime > 350)
       current.samples = [];
     current.lastTime = timestamp;
+    // A frame captured mid-saccade is labelled with this target, and that
+    // label is wrong. The frames already captured for this target say what
+    // this person's eyes look like when they are on it, so a frame that is
+    // far from all of them is not a frame of this target.
+    if (calibrationFrameIsOutlier(features.values, current.samples.map((s) => s.features)))
+      return;
     current.samples.push({
       features: [...features.values],
       x: current.x,
@@ -732,6 +753,7 @@ export function mount(host, ctx) {
     gazeEnabled = false;
     cameraRunning = false;
     lastGaze = null;
+    lastGazeAt = null;
     dwell.reset();
     stopCalibration();
     ctx.camera.stop();
@@ -810,6 +832,7 @@ export function mount(host, ctx) {
       if (aac.dataset.focused !== "true") focusMode();
     }
     lastGaze = null;
+    lastGazeAt = null;
     dwell.reset();
     sayStatus(
       gazeEnabled

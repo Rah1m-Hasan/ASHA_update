@@ -103,7 +103,7 @@ export default function EyeSpeakPage() {
   const predictions = useMemo(() => {
     if (!result) return [];
     return result.check
-      .map((s: Sample) => ({ s, p: predictGaze(result.model, s.features, { requireValidation: false }) as { valid: boolean; x?: number; y?: number } }))
+      .map((s: Sample) => ({ s, p: predictGaze(result.model, s.features, { requireValidation: false }) as { valid: boolean; x?: number; y?: number; confidence?: number } }))
       .filter((x) => x.p.valid);
   }, [result]);
 

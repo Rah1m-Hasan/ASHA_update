@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   CHECK_TARGETS,
   DwellSelector,
+  calibrationFrameIsOutlier,
   calibrationTargets,
   extractGazeFeatures,
   fitGazeModel,
@@ -144,4 +145,58 @@ test("EyeSpeak ignores the tile under a still gaze when the layout changes", () 
   dwell.hold(null);
   for (let t = 4100; t <= 5000 && chosen === "confirm-no"; t += 100) chosen = dwell.update("confirm-yes", t) ?? chosen;
   assert.equal(chosen, "confirm-yes");
+});
+
+// ---------------------------------------------------------------- Wave 4
+test("a prediction says how well it fits the calibration", () => {
+  const model = fitGazeModel(samples(calibrationTargets(9)));
+  model.validation = validateGazeModel(model, samples(CHECK_TARGETS));
+  const good = predictGaze(model, features(0.5, 0.5));
+  assert.equal(good.valid, true);
+  assert.ok(good.confidence > 0.5, `a clean look scored ${good.confidence}`);
+  // One eye's iris estimate is wrong: the observation no longer fits the
+  // calibration, and the prediction moves away from where the person looks.
+  const wrong = features(0.5, 0.5).map((value, index) =>
+    index === 0 ? value + 0.2 : value,
+  );
+  const bad = predictGaze(model, wrong);
+  assert.ok(
+    bad.confidence < 0.5,
+    `a mis-tracked frame scored ${bad.confidence}`,
+  );
+  assert.ok(Math.abs(bad.x - good.x) > 0.05, "the wrong frame moves the prediction");
+});
+
+test("the confidence never changes whether a prediction is valid", () => {
+  const model = fitGazeModel(samples(calibrationTargets(9)));
+  assert.equal(predictGaze(model, features(0.4, 0.6)).valid, false);
+  model.validation = validateGazeModel(model, samples(CHECK_TARGETS));
+  const prediction = predictGaze(model, features(0.4, 0.6));
+  assert.equal(prediction.valid, true);
+  assert.equal(typeof prediction.confidence, "number");
+  assert.equal(typeof prediction.error, "number");
+});
+
+test("a captured frame far from the rest of its target is not a frame of that target", () => {
+  // The frames of one target, seen properly.
+  const captured = samples([calibrationTargets(9)[0]]);
+  for (const frame of captured) {
+    assert.equal(
+      calibrationFrameIsOutlier(frame.features, captured.map((f) => f.features)),
+      false,
+      "a steady look must never be rejected",
+    );
+  }
+  // A frame captured mid-saccade: the eyes were somewhere else entirely.
+  const lookingElsewhere = features(0.9, 0.9);
+  assert.equal(
+    calibrationFrameIsOutlier(lookingElsewhere, captured.map((f) => f.features)),
+    true,
+  );
+  // Not enough frames yet: nothing is rejected.
+  assert.equal(calibrationFrameIsOutlier(lookingElsewhere, []), false);
+  assert.equal(
+    calibrationFrameIsOutlier(lookingElsewhere, captured.slice(0, 3).map((f) => f.features)),
+    false,
+  );
 });

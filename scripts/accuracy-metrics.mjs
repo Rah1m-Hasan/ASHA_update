@@ -18,7 +18,7 @@ import vm from "node:vm";
 
 import { rng } from "../tests/fixtures/random.mjs";
 import { faceTrace } from "../tests/fixtures/face.mjs";
-import { calibrationCapture, gazeTrace } from "../tests/fixtures/gaze.mjs";
+import { calibrationCapture, distort, gazeTrace } from "../tests/fixtures/gaze.mjs";
 import { vitalTrace, noiseOnlyTrace, faceMotionStream } from "../tests/fixtures/vitals.mjs";
 import { poseTrace } from "../tests/fixtures/posture.mjs";
 import { handSequence } from "../tests/fixtures/hands.mjs";
@@ -43,11 +43,14 @@ const { retrieveKnowledge } = await import("../src/server/lib/retrieval.js");
 const { createAshaOrchestrator } = await import("../src/server/lib/asha-orchestrator.js");
 const {
   calibrationTargets,
+  calibrationFrameIsOutlier,
   fitGazeModel,
+  gazeConfidence,
   predictGaze,
   validateGazeModel,
   DwellSelector,
   CHECK_TARGETS,
+  MIN_GAZE_CONFIDENCE,
 } = await import("../public/app/everyday/gaze-engine.js");
 const E = umd("public/neuroface/src/engine.js");
 const FS = umd("public/neuroface/src/fingerspeak-signal.js");
@@ -395,6 +398,28 @@ export function eyeSpeakMetrics() {
     cleanCheck.samples.map((s) => ({ features: s.features, x: s.x, y: s.y })),
   );
 
+  // The capture-time rule: a frame that is far from the other frames of its
+  // own target is not a frame of that target. The same contaminated capture,
+  // with those frames left out.
+  const keptSamples = [];
+  for (const [x, y] of targets) {
+    const group = dirty.samples.filter((s) => s.x === x && s.y === y);
+    const kept = [];
+    for (const sample of group) {
+      if (calibrationFrameIsOutlier(sample.features, kept.map((k) => k.features)))
+        continue;
+      kept.push(sample);
+    }
+    keptSamples.push(...kept);
+  }
+  const cleanedModel = fitGazeModel(
+    keptSamples.map((s) => ({ features: s.features, x: s.x, y: s.y })),
+  );
+  const cleanedValidation = validateGazeModel(
+    cleanedModel,
+    cleanCheck.samples.map((s) => ({ features: s.features, x: s.x, y: s.y })),
+  );
+
   // Target selection accuracy: hold each tile on the board and let the real
   // DwellSelector choose, then check the tile it picked is the one the
   // patient was looking at. The 3x3 grid mirrors the 9-tile board.
@@ -445,6 +470,62 @@ export function eyeSpeakMetrics() {
     if (chosen === expectedTile?.id) selection.correct += 1;
   }
 
+  // The confidence: how well a clean observation fits the calibration, and
+  // how well a frame the tracker got wrong fits it. The two eyes disagree in
+  // the wrong frame, which no screen position can explain.
+  const cleanConfidence = Math.min(
+    ...clean.samples.map((s) => gazeConfidence(cleanModel, s.features)),
+  );
+  const distortedConfidence = Math.max(
+    ...clean.samples.map((s) => gazeConfidence(cleanModel, distort(s.features))),
+  );
+
+  // A trace with frames the tracker got wrong. The confidence says so, and a
+  // low-confidence point must not drive a dwell.
+  const guarded = { correct: 0, total: 0 };
+  const unguarded = { correct: 0, total: 0 };
+  for (const [x, y] of targets) {
+    const trace = gazeTrace({
+      target: [x, y],
+      fps: 30,
+      durationMs: 5000,
+      seed: 23,
+      tremor: 0.006,
+    });
+    const frames = trace.frames.map((frame, index) => ({
+      ...frame,
+      features: index % 5 === 2 ? distort(frame.features) : frame.features,
+    }));
+    for (const mode of ["guarded", "unguarded"]) {
+      const dwell = new DwellSelector({ dwellMs: 800, maxGapMs: 900 });
+      let chosen = null;
+      for (const frame of frames) {
+        const prediction = predictGaze(cleanModel, frame.features, {
+          requireValidation: false,
+        });
+        const usable =
+          prediction.valid &&
+          (mode === "unguarded" ||
+            (prediction.confidence ?? 1) >= MIN_GAZE_CONFIDENCE);
+        // A frame that cannot be used carries no information, so it is
+        // skipped: the selection pauses and carries on, exactly as the board
+        // does for a blink. It is not a failure of the tracking.
+        if (!usable) continue;
+        const picked = dwell.update(tileAt(prediction.x, prediction.y)?.id ?? null, frame.t, true);
+        if (picked) chosen = picked;
+      }
+      const expectedTile = tileAt(x, y);
+      const ok = chosen === expectedTile?.id;
+      if (mode === "guarded") {
+        guarded.total += 1;
+        if (ok) guarded.correct += 1;
+      } else {
+        unguarded.total += 1;
+        if (ok) unguarded.correct += 1;
+      }
+    }
+  }
+
   return {
     cleanCalibration: {
       meanError: round(cleanValidation.meanError),
@@ -456,10 +537,27 @@ export function eyeSpeakMetrics() {
       p90Error: round(dirtyValidation.p90Error),
       passed: dirtyValidation.passed,
     },
+    cleanedCalibration: {
+      meanError: round(cleanedValidation.meanError),
+      p90Error: round(cleanedValidation.p90Error),
+      passed: cleanedValidation.passed,
+      framesKept: keptSamples.length,
+      framesCaptured: dirty.samples.length,
+      framesContaminated: dirty.truth.contaminated,
+    },
     targetSelection: {
       correct: selection.correct,
       total: selection.total,
       accuracy: rate(selection.correct, selection.total),
+    },
+    confidence: {
+      cleanMin: round(cleanConfidence, 3),
+      distortedMax: round(distortedConfidence, 3),
+      threshold: MIN_GAZE_CONFIDENCE,
+    },
+    guardedSelection: {
+      guarded: rate(guarded.correct, guarded.total),
+      unguarded: rate(unguarded.correct, unguarded.total),
     },
     liveError: {
       mean: round(errors.reduce((a, b) => a + b, 0) / (errors.length || 1)),

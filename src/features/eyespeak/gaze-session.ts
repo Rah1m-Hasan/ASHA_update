@@ -6,7 +6,7 @@
 // constants; this is the one copy.
 
 import { LongBlink } from "./cursor-logic.js";
-import { predictGaze, smoothPoint } from "./gaze";
+import { MIN_CONFIDENCE, predictGaze, smoothPoint } from "./gaze";
 import type { Features, GazeModel } from "./gaze";
 
 /** Eyes lost for longer than this (not a blink) clear the fill. */
@@ -20,6 +20,8 @@ export type GazeFrame = { features: Features; t: number; open: number | null };
 export type GazeStep = {
   /** Where the eyes are looking, smoothed. Null while the eyes are lost. */
   point: { x: number; y: number } | null;
+  /** How well the observation fits the calibration, from 0 to 1. */
+  confidence: number;
   /** What just ended, if a blink just ended. */
   blink: Blink | null;
   /** True only on the frame where the eyes are given up on, so the caller can clear once. */
@@ -57,15 +59,20 @@ export class GazeSession {
     const { features, t } = frame;
     const blink = this.blink.update(frame.open, t) as Blink | null;
     if (!features.valid) return this.lost(t, features.reason, blink);
-    if (!model) return { point: null, blink, lost: false, reason: "" };
-    const p = predictGaze(model, features.values, { requireValidation: false }) as { valid: boolean; x?: number; y?: number; reason?: string };
+    if (!model) return { point: null, confidence: 0, blink, lost: false, reason: "" };
+    const p = predictGaze(model, features.values, { requireValidation: false }) as { valid: boolean; x?: number; y?: number; reason?: string; confidence?: number };
     if (!p.valid || p.x === undefined || p.y === undefined) return this.lost(t, p.reason ?? "", blink);
+    // An observation that does not fit the calibration is not a look at
+    // anything. It must not move the pointer or drive a selection, and it
+    // pauses the pointer the same way a blink does.
+    const confidence = p.confidence ?? 1;
+    if (confidence < MIN_CONFIDENCE) return this.lost(t, "", blink);
     this.lostSince = null;
     this.lostReported = false;
     const point = (this.smooth = smoothPoint(this.smooth, { x: p.x, y: p.y }, t));
     this.trail.push(point);
     while (this.trail.length && this.trail[0].t < t - TRAIL_MS) this.trail.shift();
-    return { point, blink, lost: false, reason: "" };
+    return { point, confidence, blink, lost: false, reason: "" };
   }
 
   /**
@@ -74,11 +81,11 @@ export class GazeSession {
    */
   private lost(t: number, reason: string, blink: Blink | null): GazeStep {
     this.lostSince ??= t;
-    if (t - this.lostSince < LOSS_MS || this.blink.closing) return { point: null, blink, lost: false, reason };
+    if (t - this.lostSince < LOSS_MS || this.blink.closing) return { point: null, confidence: 0, blink, lost: false, reason };
     const first = !this.lostReported;
     this.lostReported = true;
     this.smooth = null;
     this.trail = [];
-    return { point: null, blink, lost: first, reason };
+    return { point: null, confidence: 0, blink, lost: first, reason };
   }
 }

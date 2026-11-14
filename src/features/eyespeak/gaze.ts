@@ -7,14 +7,17 @@ import type { NeedKind } from "@/features/requests/needs";
 import {
   CHECK_TARGETS,
   DwellSelector,
+  MIN_GAZE_CONFIDENCE,
+  calibrationFrameIsOutlier,
   calibrationTargets,
   extractGazeFeatures,
   fitGazeModel,
+  gazeConfidence,
   predictGaze,
   validateGazeModel,
 } from "../../../public/app/everyday/gaze-engine.js";
 
-export { CHECK_TARGETS, DwellSelector, calibrationTargets, extractGazeFeatures, fitGazeModel, predictGaze, validateGazeModel };
+export { CHECK_TARGETS, DwellSelector, MIN_GAZE_CONFIDENCE, calibrationFrameIsOutlier, calibrationTargets, extractGazeFeatures, fitGazeModel, gazeConfidence, predictGaze, validateGazeModel };
 
 export type Features = { valid: true; values: number[]; openness: number } | { valid: false; reason: string };
 export type Sample = { features: number[]; x: number; y: number };
@@ -40,6 +43,14 @@ export const cursorOk = (size: BoardSize): boolean => size === 9 || size === 6;
 
 /** How far from the gaze point a button can be and still count as under the eyes. */
 export const reachRadius = (p90: number) => Math.max(0.035, p90);
+
+/**
+ * Below this, an observation does not fit the calibration well enough to be
+ * treated as a look at anything. The confidence is how far the observation
+ * sits from the surface the calibration describes: a blink, a half-closed eye
+ * or a face turning away does not fit it, and must not drive a selection.
+ */
+export const MIN_CONFIDENCE = MIN_GAZE_CONFIDENCE;
 
 /** How still the eyes must be for a blink to count as a deliberate choice. */
 export const steadyRadius = (p90: number) => Math.min(0.14, Math.max(0.06, p90 * 0.8));
@@ -155,7 +166,7 @@ export class TileTracker {
   private candidate: string | null = null;
   private candidateSince = 0;
   private lastOn = 0;
-  constructor(private readonly opts = { switchMs: 220, graceMs: 450 }) {}
+  constructor(private readonly opts = { switchMs: 220, graceMs: 450, minStableMs: 300 }) {}
   reset() {
     this.current = this.candidate = null;
   }
@@ -172,7 +183,11 @@ export class TileTracker {
         this.candidate = core;
         this.candidateSince = t;
       }
-      if (!this.current || t - this.candidateSince >= this.opts.switchMs) {
+      // A glance that passes over a tile must not start a selection: the
+      // point has to settle on the tile first. Switching to another tile
+      // keeps the shorter switch time.
+      const needed = this.current ? this.opts.switchMs : this.opts.minStableMs;
+      if (t - this.candidateSince >= needed) {
         this.current = core;
         this.lastOn = t;
         this.candidate = null;

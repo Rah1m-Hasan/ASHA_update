@@ -96,3 +96,13 @@ export function gazeTrace({
   }
   return { frames };
 }
+
+/**
+ * A frame the tracker got wrong: one eye's iris estimate is wrong, which is
+ * what a blink, a half-closed eye or a face turning away looks like to the
+ * feature extractor. The observation no longer fits the calibration surface
+ * the model was fitted on.
+ */
+export function distort(features, amount = 0.2) {
+  return features.map((value, index) => (index === 0 ? value + amount : value));
+}
