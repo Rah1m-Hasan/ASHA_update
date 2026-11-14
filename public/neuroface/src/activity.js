@@ -8,10 +8,21 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
   var KEYS = ['brow', 'cheek', 'corner', 'width', 'opening'];
+  // The dead zone of each indicator: a difference below this is not movement.
+  var DEADZONE = { brow: .004, cheek: .004, corner: .003, width: .005, opening: .015 };
+  // How much a captured hold may wander before it is not a neutral hold at
+  // all. The brow dead zone is .004, so a hold that wanders more than this is
+  // a moving face and must not become the reference.
+  var BASELINE_SPREAD = .006;
   function median(values) {
     var sorted = values.slice().sort(function (a, b) { return a - b; });
     var mid = Math.floor(sorted.length / 2);
     return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  }
+  // Median absolute deviation: how much the samples of a key wander around
+  // their own median.
+  function mad(values, center) {
+    return median(values.map(function (v) { return Math.abs(v - center); }));
   }
   function clamp(value) { return Math.max(0, Math.min(1, value)); }
   function features(lm, aspect) {
@@ -51,11 +62,23 @@
     options = options || {};
     var f = features(lm, options.aspect);
     if (!f) return { ready: false, invalid: true, progress: this.samples.length, values: this.values };
+    // The samples are kept as a rolling window, so a reference can be
+    // re-anchored later without waiting for another capture.
+    this.samples.push(f);
+    if (this.samples.length > this.count) this.samples.shift();
     if (!this.baseline) {
-      this.samples.push(f);
       if (this.samples.length < this.count) return { ready: false, progress: this.samples.length, values: this.values };
       var baseline = {};
       KEYS.forEach(function (key) { baseline[key] = median(this.samples.map(function (s) { return s[key]; })); }, this);
+      // A hold that was not actually still must not become the reference. If
+      // the samples wander, they are discarded and the capture starts again
+      // rather than locking in a moving face.
+      var browSpread = mad(this.samples.map(function (s) { return s.brow; }), baseline.brow);
+      var cheekSpread = mad(this.samples.map(function (s) { return s.cheek; }), baseline.cheek);
+      if (browSpread > BASELINE_SPREAD || cheekSpread > BASELINE_SPREAD) {
+        this.samples = [];
+        return { ready: false, progress: 0, values: this.values };
+      }
       this.baseline = baseline;
     }
     var b = this.baseline;
@@ -76,7 +99,39 @@
       this.values[key] += .45 * (target[key] * 100 - this.values[key]);
       values[key] = Math.round(this.values[key]);
     }, this);
+    // A reference that no longer describes the person's resting face turns
+    // every reading into an offset. It is re-anchored only when all three of
+    // these hold:
+    //   * the caller says the face is at rest by its own test,
+    //   * the recent hold is stable, so a movement cannot be absorbed, and
+    //   * several indicators are offset from the reference at once, which is
+    //     what a shifted reference looks like. A single raised brow offsets
+    //     one indicator and must never re-anchor the reference.
+    if (this.baseline && options.neutral && this.samples.length >= this.count && this.windowIsStable()) {
+      var offset = 0;
+      KEYS.forEach(function (key) {
+        var center = median(this.samples.map(function (s) { return s[key]; }));
+        if (Math.abs(center - this.baseline[key]) > DEADZONE[key] * 2) offset++;
+      }, this);
+      if (offset >= 3) this.rebaseline();
+    }
     return { ready: true, progress: this.count, values: values, features: f, baseline: b };
+  };
+  // Is the captured window a still hold, or is the face moving through it?
+  Tracker.prototype.windowIsStable = function () {
+    if (this.samples.length < this.count) return false;
+    var brow = median(this.samples.map(function (s) { return s.brow; }));
+    var cheek = median(this.samples.map(function (s) { return s.cheek; }));
+    return mad(this.samples.map(function (s) { return s.brow; }), brow) <= BASELINE_SPREAD &&
+      mad(this.samples.map(function (s) { return s.cheek; }), cheek) <= BASELINE_SPREAD;
+  };
+  // Move the reference onto the current window.
+  Tracker.prototype.rebaseline = function () {
+    if (this.samples.length < this.count) return false;
+    var baseline = {};
+    KEYS.forEach(function (key) { baseline[key] = median(this.samples.map(function (s) { return s[key]; })); }, this);
+    this.baseline = baseline;
+    return true;
   };
   return { Tracker: Tracker, features: features };
 });

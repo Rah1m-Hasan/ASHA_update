@@ -108,6 +108,8 @@ function runFace(frames) {
       t: frame.timestamp,
       accepted: result.accepted,
       reason: result.reason ?? null,
+      outliers: result.features?.outliers ?? [],
+      features: result.features ?? null,
     });
   }
   return { events, commands, timeline };
@@ -261,14 +263,29 @@ export function faceSpeakMetrics() {
   for (const row of doubleRun.timeline) {
     if (!row.accepted) rejectedAt.set(row.t, row.reason);
   }
-  // A glitch is "caught" when the frame carrying it is rejected.
+  // A glitch is "caught" when the frame carrying it names the offending
+  // channel as an outlier. The frame itself survives: the channel carries its
+  // last filtered value forward instead of the raw spike.
   const caughtSpikes = [...spikeTimes].filter((at) =>
-    [...rejectedAt.keys()].some((t) => Math.abs(t - at) <= 17),
+    doubleRun.timeline.some(
+      (row) => Math.abs(row.t - at) <= 17 && row.outliers.length > 0,
+    ),
   );
   // A frame with no glitch in it must never be rejected.
   const falseRejections = [...rejectedAt.entries()].filter(
     ([t]) => ![...spikeTimes].some((at) => Math.abs(t - at) <= 17),
   );
+  // And the glitch itself must not reach the feature vector: a channel named
+  // as an outlier has to carry its previous filtered value forward.
+  let leakedGlitches = 0;
+  doubleRun.timeline.forEach((row, index) => {
+    if (!row.outliers.length || !row.features) return;
+    const previous = doubleRun.timeline[index - 1]?.features;
+    if (!previous) return;
+    for (const channel of row.outliers) {
+      if (row.features[channel] !== previous[channel]) leakedGlitches++;
+    }
+  });
 
   // A spike in the middle of a deliberate blink: does the blink survive?
   const blinkWithSpike = faceTrace({
@@ -289,9 +306,30 @@ export function faceSpeakMetrics() {
     }).frames,
   ).events.some((e) => e.type === "BLINK_COMPLETED");
 
+  // A patient whose open eye is narrower than the population default
+  // (0.27). With the reference pinned to the default, the ratio never reaches
+  // the open threshold, the blink state machine never arms, and none of this
+  // patient's blinks are detected at all.
+  const lowEar = faceTrace({
+    seed: 16,
+    durationMs: 30000,
+    ear: 0.18,
+    script: [
+      { at: 2000, kind: "blink", durationMs: 420 },
+      { at: 5000, kind: "blink", durationMs: 420 },
+      { at: 9000, kind: "blink", durationMs: 420 },
+    ],
+  });
+  const lowEarRun = runFace(lowEar.frames);
+  const lowEarBlink = matchEvents(
+    lowEarRun.events.filter((e) => e.type === "BLINK_COMPLETED"),
+    lowEar.groundTruth.blinks,
+  );
+
   return {
     deliberateBlink: prf(deliberateBlink.tp, deliberateBlink.fp, deliberateBlink.fn),
     ordinaryBlink: prf(ordinaryBlink.tp, ordinaryBlink.fp, ordinaryBlink.fn),
+    lowEarBlink: prf(lowEarBlink.tp, lowEarBlink.fp, lowEarBlink.fn),
     commandsFromOrdinaryBlinks: commandsFromOrdinary,
     falseActivationsPerHour: round(falseActivationsPerHour, 2),
     headTurn: prf(turnTp, turnFp, turnFn),
@@ -306,6 +344,8 @@ export function faceSpeakMetrics() {
       glitchesInjected: spikeTimes.size,
       glitchesCaught: caughtSpikes.length,
       missedGlitches: spikeTimes.size - caughtSpikes.length,
+      // A rejected channel that let its raw value through anyway.
+      leakedGlitchValues: leakedGlitches,
       // Clean frames wrongly rejected because the reference was poisoned.
       falseRejections: falseRejections.length,
       falseRejectionReasons: falseRejections.map(([, reason]) => reason),

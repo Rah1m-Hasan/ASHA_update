@@ -6,6 +6,15 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
   const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+  const median = values => {
+    const s = values.filter(Number.isFinite).sort((a,b)=>a-b);
+    if (!s.length) return 0;
+    const i = Math.floor(s.length/2);
+    return s.length % 2 ? s[i] : (s[i-1]+s[i])/2;
+  };
+  // How many open-eye readings the blink reference is learned from, and how
+  // far around the population default it may travel.
+  const OPEN_SAMPLES = 15, REF_LOW_RATIO = .55, REF_HIGH_RATIO = 2;
   const copy = x => JSON.parse(JSON.stringify(x));
   const DEFAULTS = {
     blink: { minMs: 65, maxMs: 1400, confirmMs: 30, reopenMs: 25, refractoryMs: 150, deliberateMinMs: 260, confidence: .58 },
@@ -68,20 +77,30 @@
     update(f) {
       if (!this.last) { this.last={...f}; return {...f,earMean:(f.earLeft+f.earRight)/2,outliers:[]}; }
       const dt=f.timestamp-this.last.timestamp, out={...f}, rejected=[];
+      // The reference advances per accepted channel. A rejected channel keeps
+      // its own previous reference, so one glitch can no longer freeze the
+      // baseline of every other channel.
+      const next={...this.last,timestamp:f.timestamp};
       for (const k of ['earLeft','earRight','eyeBlinkLeft','eyeBlinkRight','mouthSmileLeft','mouthSmileRight','cheekSquintLeft','cheekSquintRight','mouthClose','jawOpen','mouthPucker','mouthCornerLeftX','mouthCornerLeftY','mouthCornerRightX','mouthCornerRightY','yaw','pitch','roll']) {
         const a=this.last[k], b=f[k];
         if (!Number.isFinite(a)||!Number.isFinite(b)) continue;
         const pose=/^(yaw|pitch|roll)$/.test(k), eye=/ear|eyeBlink/.test(k), corner=/Corner/.test(k);
         const speed=pose?750:corner?7:/^ear/.test(k)?20:80;
-        if (Math.abs(b-a)>speed*dt/1000+(pose?6:corner?.025:.04)) { rejected.push(k); continue; }
+        if (Math.abs(b-a)>speed*dt/1000+(pose?6:corner?.025:.04)) {
+          // A rejected channel carries its last filtered value forward. The
+          // raw outlier must never reach the feature vector: the channel is
+          // the one thing that was just shown to be unreliable.
+          rejected.push(k); out[k]=a; continue;
+        }
         const tau=pose?this.c.pose:eye?this.c.blink:corner?this.c.geometry:this.c.smile;
         const adaptive=1+Math.min(3,Math.abs(b-a)/(pose?10:.2));
         const alpha=1-Math.exp(-dt/Math.max(1,tau/adaptive));
         out[k]=a+(b-a)*alpha;
+        next[k]=out[k];
       }
       out.earMean=(out.earLeft+out.earRight)/2;
       out.outliers=rejected;
-      if (!rejected.length) this.last={...out};
+      this.last=next;
       return out;
     }
   }
@@ -93,14 +112,39 @@
     }
   }
   class BlinkFSM extends FSM {
-    constructor(c,b,log) { super('BLINK','UNARMED',log); this.c=c;this.b=b;this.cooldown=-Infinity;this.previous=null;this.refLeft=b.neutralEARLeft;this.refRight=b.neutralEARRight; }
+    constructor(c,b,log) { super('BLINK','UNARMED',log); this.c=c;this.b=b;this.cooldown=-Infinity;this.previous=null;this.refLeft=b.neutralEARLeft;this.refRight=b.neutralEARRight;this.openSamples=[]; }
     reset(t,reason) { this.previous=null;this.shallow=false;this.move('UNARMED',t,reason); }
-    update(f) {
+    update(f,raw) {
       const t=f.timestamp, b=this.b, c=this.c;
-      // The uncalibrated population default must not override a visibly
-      // higher personal open-eye EAR (e.g. .45 versus .27).
-      if(!b.calibrated&&['UNARMED','OPEN'].includes(this.state)&&f.eyeBlinkLeft<.2&&f.eyeBlinkRight<.2){
-        this.refLeft=Math.max(this.refLeft,f.earLeft);this.refRight=Math.max(this.refRight,f.earRight);
+      // The open-eye reference has to be learned in BOTH directions, or a
+      // person whose open eye is narrower than the population default can
+      // never satisfy the "open" test: with the reference stuck at .27 and a
+      // true open EAR of .18 the ratio never reaches .80, the state machine
+      // stays UNARMED, and that patient's blinks are never detected at all.
+      //
+      // It is learned only from frames where the eyes are clearly open, and
+      // only while the state machine is UNARMED or OPEN. During CLOSING,
+      // CLOSED or OPENING a lower reading is a closure, and learning it
+      // would manufacture a false "open".
+      //
+      // "Clearly open" is judged on the RAW blendshape, not the filtered
+      // one. The filter smooths, so a frame where the eye has just started
+      // closing still reads as open for a few frames, and learning those
+      // frames would lower the reference exactly when a closure begins.
+      //
+      // The median of the recent open-eye readings is used rather than the
+      // maximum, so one bad frame cannot move the reference, and the
+      // reference is bounded around the population default so it can never
+      // run away. A calibrated baseline is authoritative and is never
+      // learned over.
+      const openLeft=raw&&Number.isFinite(raw.eyeBlinkLeft)?raw.eyeBlinkLeft:f.eyeBlinkLeft;
+      const openRight=raw&&Number.isFinite(raw.eyeBlinkRight)?raw.eyeBlinkRight:f.eyeBlinkRight;
+      if(!b.calibrated&&['UNARMED','OPEN'].includes(this.state)&&openLeft<.2&&openRight<.2){
+        this.openSamples.push([f.earLeft,f.earRight]);
+        if(this.openSamples.length>OPEN_SAMPLES)this.openSamples.shift();
+        const left=median(this.openSamples.map(s=>s[0])),right=median(this.openSamples.map(s=>s[1]));
+        this.refLeft=clamp(left,b.neutralEARLeft*REF_LOW_RATIO,b.neutralEARLeft*REF_HIGH_RATIO);
+        this.refRight=clamp(right,b.neutralEARRight*REF_LOW_RATIO,b.neutralEARRight*REF_HIGH_RATIO);
       }
       const leftRatio=f.earLeft/this.refLeft,rightRatio=f.earRight/this.refRight;
       const ratio=(leftRatio+rightRatio)/2;
@@ -283,7 +327,12 @@
       const required=['earLeft','earRight','eyeBlinkLeft','eyeBlinkRight','mouthSmileLeft','mouthSmileRight','cheekSquintLeft','cheekSquintRight','jawOpen','mouthClose','mouthPucker','mouthCornerLeftX','mouthCornerLeftY','mouthCornerRightX','mouthCornerRightY','yaw','pitch','roll'];
       let reason=!raw.facePresent?'face absent':required.some(k=>!Number.isFinite(raw[k]))||!Number.isFinite(raw.faceQuality)?'invalid features':!raw.poseValid?'pose unavailable':Math.abs(raw.yaw)>80||Math.abs(raw.pitch)>70||Math.abs(raw.roll)>75?'pose outside reliable range':raw.faceQuality<this.config.tracking.minQuality?'poor tracking/quality':null;
       const f=reason?null:this.filter.update(raw);
-      if(f&&f.outliers.length)reason='outlier: '+f.outliers.join(', ');
+      // A channel-level outlier no longer discards the frame. The offending
+      // channel carries its last filtered value forward (see SignalFilter) and
+      // the frame survives, so a noisy mouthCornerLeftX sample can no longer
+      // destroy an unrelated blink or reset every state machine. Frame-level
+      // failures above - no face, invalid features, no pose, pose outside the
+      // reliable range, poor tracking quality - still reject the frame.
       if(reason){
         if(this.lostAt===null)this.lostAt=t;
         // Invalidate incomplete cycles immediately: reopening after an unseen closure cannot be a blink.
@@ -294,7 +343,7 @@
       const b=this.baseline;f.relativeYaw=f.yaw-b.neutralYaw;f.relativePitch=f.pitch-b.neutralPitch;f.relativeRoll=f.roll-b.neutralRoll;
       f.facing=Math.abs(f.relativeYaw)<this.config.commands.facingYaw&&Math.abs(f.relativePitch)<this.config.commands.facingPitch;
       const smile=smileFeatures(f,b);
-      const ev=[...this.blink.update(f),...this.head.update(f.relativeYaw,t,f.faceQuality),...this.nod.update(f.relativePitch,t,f.faceQuality),...this.smile.update(smile,t)];
+      const ev=[...this.blink.update(f,raw),...this.head.update(f.relativeYaw,t,f.faceQuality),...this.nod.update(f.relativePitch,t,f.faceQuality),...this.smile.update(smile,t)];
       smile.smileDetected=['SMILING','SMILE_HELD','RETURNING'].includes(this.smile.state);
       const pucker=clamp((f.mouthPucker-b.puckerBaseline)/Math.max(.05,b.puckerRange));
       if(pucker>this.config.pucker.enter&&!this.pucker)this.pucker={start:t,confirmed:false};

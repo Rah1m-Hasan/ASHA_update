@@ -248,3 +248,62 @@ test("blink, smile and head temporal defaults are preserved", () => {
   assert.equal(NF_engine.DEFAULTS.blink.deliberateMinMs, 260);
   assert.equal(NF_engine.baseline().leftTurnEnterThreshold, 13);
 });
+
+test("the neutral reference is refreshed when the resting face geometry changes", () => {
+  const a = calibrated();
+  const before = { ...a.neutral };
+  // The same face, resting a centimetre further to one side: the reference
+  // captured at the start no longer describes where the mouth actually is.
+  const moved = mesh();
+  moved[61].x += 0.01;
+  moved[291].x += 0.01;
+  let refreshed = false;
+  for (let t = 2000; t <= 8000; t += 40) {
+    a.update(moved, raw(), result(), baseline, t);
+    if (a.log.some((entry) => /refreshed/.test(entry.label))) refreshed = true;
+  }
+  assert.ok(refreshed, "a changed resting face must refresh the neutral reference");
+  assert.ok(
+    Math.abs(a.neutral.cornerLX - before.cornerLX) > 0.005,
+    "the refreshed reference must follow the new mouth position",
+  );
+  assert.equal(
+    a.neutral.yaw,
+    before.yaw,
+    "the head orientation is deliberately not refreshed",
+  );
+});
+
+test("the AU reference is re-anchored when it stops describing the resting face", () => {
+  const tracker = new NF_activity.Tracker(5);
+  for (let i = 0; i < 5; i++)
+    tracker.update(mesh(), { aspect: 1, browReliable: true, neutral: true });
+  const before = { ...tracker.baseline };
+  // Brows, cheeks and mouth corners all shifted at once: that is what a
+  // reference that no longer matches the face looks like.
+  const shifted = mesh();
+  shifted[107].y += 0.03;
+  shifted[336].y += 0.03;
+  shifted[61].y -= 0.02;
+  shifted[291].y -= 0.02;
+  shifted[116].y -= 0.015;
+  shifted[345].y -= 0.015;
+  for (let i = 0; i < 15; i++)
+    tracker.update(shifted, { aspect: 1, browReliable: true, neutral: true });
+  assert.notDeepEqual(tracker.baseline, before, "a stale reference must be re-anchored");
+  assert.ok(tracker.values.AU4 < 20, "the readings must settle again after re-anchoring");
+});
+
+test("a single raised brow never re-anchors the AU reference", () => {
+  const tracker = new NF_activity.Tracker(5);
+  for (let i = 0; i < 5; i++)
+    tracker.update(mesh(), { aspect: 1, browReliable: true, neutral: true });
+  const before = { ...tracker.baseline };
+  const raised = mesh();
+  raised[107].y -= 0.03;
+  raised[336].y -= 0.03;
+  for (let i = 0; i < 15; i++)
+    tracker.update(raised, { aspect: 1, browReliable: true, neutral: true });
+  assert.deepEqual(tracker.baseline, before, "one raised brow must not move the reference");
+  assert.ok(tracker.values.AU1 > 90, "and the raised brow must still be reported");
+});

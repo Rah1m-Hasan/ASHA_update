@@ -122,23 +122,46 @@ test("FaceSpeak keeps a clean frame rather than rejecting it", () => {
   assert.equal(rejection.cleanRejectionRate, 0);
 });
 
-// Wave 2 — the FaceSpeak filter rejects a whole frame when any one channel
-// spikes, and a rejected frame resets the filter, so the next frame bypasses
-// the outlier check and poisons the reference.
-test.todo("FaceSpeak does not let one noisy channel destroy an unrelated gesture", () => {
+// Wave 2 — the FaceSpeak filter used to reject a whole frame when any one
+// channel spiked, and a rejected frame reset the filter, so the next frame
+// bypassed the outlier check and poisoned the reference.
+test("FaceSpeak does not let one noisy channel destroy an unrelated gesture", () => {
   const rejection = metrics.faceSpeak.frameRejection;
   // A glitch in a mouth channel must not erase a blink in progress.
   assert.equal(
     rejection.blinkLostToSpike,
     false,
-    "a mouth glitch currently destroys a blink detected at the same time",
+    "a mouth glitch destroys a blink detected at the same time",
+  );
+  assert.equal(rejection.blinkDetectedWithSpike, true);
+  assert.equal(
+    rejection.leakedGlitchValues,
+    0,
+    "a rejected channel leaked its raw outlier into the feature vector",
   );
 });
 
-test.todo("FaceSpeak catches every injected glitch and rejects no clean frame", () => {
-  const rejection = metrics.faceSpeak.frameRejection;
+test("FaceSpeak detects the blinks of a patient whose open eye is narrower than the default", () => {
+  // With the open-eye reference pinned to the population default (0.27), a
+  // patient whose open eye is 0.18 never satisfies the "open" test, the blink
+  // state machine never arms, and none of their blinks are detected.
+  const lowEar = metrics.faceSpeak.lowEarBlink;
+  assert.ok(
+    lowEar.recall >= 0.9,
+    `a low-EAR patient's blinks were not detected: ${JSON.stringify(lowEar)}`,
+  );
+  assert.equal(lowEar.fp, 0, "the wider reference must not invent blinks");
+});
+
+test("FaceSpeak catches every injected glitch and rejects no clean frame", () => {  const rejection = metrics.faceSpeak.frameRejection;
   assert.equal(rejection.missedGlitches, 0, "a glitch was accepted as a clean frame");
   assert.equal(rejection.falseRejections, 0, "a clean frame was rejected");
+  assert.equal(rejection.cleanRejectedFrames, 0, "a clean frame was rejected");
+  assert.equal(
+    rejection.longestRejectionCascadeFrames,
+    0,
+    "one glitch still cascades into later frames",
+  );
 });
 
 // ---------------------------------------------------------------- EyeSpeak

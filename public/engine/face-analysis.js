@@ -3,6 +3,12 @@
 import { BlinkCounter } from "./blink-counter.js";
 const median = (a) => [...a].sort((x, y) => x - y)[Math.floor(a.length / 2)];
 const clamp = (n) => Math.max(0, Math.min(1, n));
+// How far the resting face may drift before the neutral reference no longer
+// describes it, and how far the head may be from the reference orientation
+// for the facial comparison to be meaningful at all.
+const NEUTRAL_FACE_TOLERANCE = 0.006;
+const NEUTRAL_MOUTH_TOLERANCE = 0.02;
+const NEUTRAL_POSE_TOLERANCE = 6;
 export class FaceAnalysis {
   constructor() {
     this.reset();
@@ -22,6 +28,30 @@ export class FaceAnalysis {
   addLog(t, label, kind = "movement") {
     this.log.unshift({ t, label, kind });
     this.log = this.log.slice(0, 100);
+  }
+  /**
+   * Has the neutral reference stopped describing the person's resting face?
+   *
+   * The facial geometry is compared with the reference, but only while the
+   * head is in the same place: the corner positions move with the head, so a
+   * turned head would otherwise look like a changed face. The head pose
+   * itself is never a reason to refresh, for the reason given at the call
+   * site.
+   */
+  neutralIsStale(candidate) {
+    const n = this.neutral;
+    if (!n) return false;
+    if (
+      Math.abs(candidate.yaw - n.yaw) > NEUTRAL_POSE_TOLERANCE ||
+      Math.abs(candidate.pitch - n.pitch) > NEUTRAL_POSE_TOLERANCE ||
+      Math.abs(candidate.roll - n.roll) > NEUTRAL_POSE_TOLERANCE
+    )
+      return false;
+    if (Math.abs(candidate.dev0 - n.dev0) > NEUTRAL_FACE_TOLERANCE) return true;
+    if (Math.abs(candidate.mouthW - n.mouthW) > NEUTRAL_MOUTH_TOLERANCE) return true;
+    for (const key of ["cornerLX", "cornerLY", "cornerRX", "cornerRY"])
+      if (Math.abs(candidate[key] - n[key]) > NEUTRAL_FACE_TOLERANCE) return true;
+    return false;
   }
   update(lm, f, r, baseline, t) {
     const M = globalThis.NF_metrics;
@@ -73,8 +103,11 @@ export class FaceAnalysis {
       Math.abs(M.lipAsymmetry(lm, null)) < 0.04;
     let au;
     const browReliable = eye.state === "OPEN" && Math.max(f.eyeBlinkLeft, f.eyeBlinkRight) < 0.25;
-    if (this.activity.baseline || (still && relaxed && browReliable))
-      au = this.activity.update(lm, { aspect: f.imageAspect || 1, browReliable });
+    // "At rest by the caller's own test" is what lets the tracker re-anchor a
+    // reference that no longer describes the person's resting face.
+    const atRest = still && relaxed && browReliable;
+    if (this.activity.baseline || atRest)
+      au = this.activity.update(lm, { aspect: f.imageAspect || 1, browReliable, neutral: atRest });
     else
       au = {
         ready: false,
@@ -82,7 +115,7 @@ export class FaceAnalysis {
         values: {},
         paused: true,
       };
-    if (!this.neutral && still && relaxed) {
+    if (still && relaxed) {
       this.neutralFrames.push({
         mouthW: M.mouthWidth(lm),
         dev0: M.lipDeviation(lm, 0),
@@ -104,15 +137,42 @@ export class FaceAnalysis {
             median(this.neutralFrames.map((x) => x[k])),
           ]),
         );
-        this.neutral = {
-          ...b,
-          head: { yaw: b.geomYaw, pitch: b.geomPitch, roll: b.geomRoll },
-        };
-        this.addLog(
-          t,
-          "Neutral facial reference captured from 45 live frames",
-          "calibration",
-        );
+        if (!this.neutral) {
+          this.neutral = {
+            ...b,
+            head: { yaw: b.geomYaw, pitch: b.geomPitch, roll: b.geomRoll },
+          };
+          this.addLog(
+            t,
+            "Neutral facial reference captured from 45 live frames",
+            "calibration",
+          );
+        } else if (this.neutralIsStale(b)) {
+          // The captured reference no longer describes the person's resting
+          // face: the geometry has moved. The facial part of the reference is
+          // refreshed, so the sustained-lip-shift watch is measured against
+          // the face the person actually has now.
+          //
+          // The head orientation is deliberately NOT refreshed. Turning the
+          // head is exactly what the head labels exist to show, so a
+          // reference that followed the head would report "Centered" for a
+          // head that is turned 30 degrees.
+          this.neutral = {
+            ...this.neutral,
+            mouthW: b.mouthW,
+            dev0: b.dev0,
+            cornerLX: b.cornerLX,
+            cornerLY: b.cornerLY,
+            cornerRX: b.cornerRX,
+            cornerRY: b.cornerRY,
+          };
+          this.addLog(
+            t,
+            "Neutral facial reference refreshed: the resting face geometry changed",
+            "calibration",
+          );
+        }
+        this.neutralFrames = [];
       }
     }
     const n = this.neutral;

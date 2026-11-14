@@ -22,6 +22,7 @@ const root = path.resolve(here, "..");
 const COMPARISON_ROWS = [
   ["faceSpeak.deliberateBlink.f1", "up"],
   ["faceSpeak.ordinaryBlink.f1", "up"],
+  ["faceSpeak.lowEarBlink.f1", "up"],
   ["faceSpeak.falseActivationsPerHour", "down"],
   ["faceSpeak.frameRejection.missedGlitches", "down"],
   ["faceSpeak.frameRejection.falseRejections", "down"],
@@ -65,6 +66,7 @@ async function main() {
     console.log("");
     console.log("faceSpeak.deliberateBlink      ", JSON.stringify(metrics.faceSpeak.deliberateBlink));
     console.log("faceSpeak.ordinaryBlink        ", JSON.stringify(metrics.faceSpeak.ordinaryBlink));
+    console.log("faceSpeak.lowEarBlink          ", JSON.stringify(metrics.faceSpeak.lowEarBlink));
     console.log("faceSpeak.falseActivations/hour", metrics.faceSpeak.falseActivationsPerHour);
     console.log("faceSpeak.frameRejection       ", JSON.stringify(metrics.faceSpeak.frameRejection));
     console.log("eyeSpeak.cleanCalibration      ", JSON.stringify(metrics.eyeSpeak.cleanCalibration));
