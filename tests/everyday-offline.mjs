@@ -21,7 +21,7 @@ try {
   await page.evaluate(() => navigator.serviceWorker.ready);
   await page.waitForFunction(
     async () =>
-      !!(await caches.open("asha-everyday-v1")).match(
+      !!(await caches.open("asha-everyday-v2")).match(
         "/app/everyday/safety.js",
       ),
   );

@@ -2,8 +2,14 @@ import { blobStore } from "./store.js";
 import { supabaseStore } from "./supabase-store.js";
 import { memoryStore } from "./memory-store.js";
 import { hash, equal } from "./logic.js";
-export const store =
-  process.env.ASHA_MEMORY_STORE === "1" && process.env.NODE_ENV !== "production"
+// In-memory storage is development-only by default. ASHA_MEMORY_STORE_PRODUCTION=1
+// is an explicit opt-in for LAN/demo runs of the production build, where no
+// Supabase or Blob credentials exist. Data is lost on restart.
+const memoryAllowed =
+  process.env.ASHA_MEMORY_STORE === "1" &&
+  (process.env.NODE_ENV !== "production" ||
+    process.env.ASHA_MEMORY_STORE_PRODUCTION === "1");
+export const store = memoryAllowed
     ? memoryStore
     : process.env.SUPABASE_URL &&
   (process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY)
@@ -11,6 +17,21 @@ export const store =
     : blobStore;
 export const base = (id) => `asha-live/v1/${id}`;
 export const path = (id, file) => `${base(id)}/${file}.json`;
+/**
+ * True when an Origin header points at the same host that served the request
+ * (ignoring scheme). Used to accept same-origin traffic on any address the
+ * app is reached by, including a LAN IP.
+ */
+export function sameHost(origin, host) {
+  if (!origin || !host) return false;
+  try {
+    const o = new URL(origin);
+    const h = new URL(`http://${host}`);
+    return o.hostname === h.hostname && o.port === h.port;
+  } catch {
+    return false;
+  }
+}
 export function begin(req, res) {
   res.setHeader("Cache-Control", "no-store");
   res.setHeader(
@@ -24,7 +45,12 @@ export function begin(req, res) {
     res.status(204).end();
     return false;
   }
-  const origin = req.headers.origin;
+  const host = String(req.headers.host || "");
+  // A same-origin request (the browser talking to the host that served the
+  // page) is always allowed, whatever address that host is reached by.
+  const origin = sameHost(req.headers.origin, host)
+    ? null
+    : req.headers.origin;
   if (
     origin &&
     ![

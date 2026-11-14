@@ -47,6 +47,25 @@ export type FrameSnapshot = {
   t?: number;
 };
 
+/**
+ * The runtime-loaded camera support probe (public/engine/camera-support.js).
+ * The dashboard cannot import from `public/` statically — `tsconfig.json` excludes
+ * it — so the module is fetched at runtime through `engineModule()`.
+ */
+export interface CameraSupportModule {
+  cameraSupport: () => {
+    ok: boolean;
+    code: string;
+    secure: boolean | null;
+    message: string;
+  };
+  cameraCode: (err: unknown) => string;
+  cameraMessage: (err: unknown) => string;
+  cameraFailure: (code: string, suffix?: string) => Error;
+  cameraUnavailable: (suffix?: string) => Error | null;
+  microphoneMessage: (err: unknown) => string;
+}
+
 export interface PerceptionInstance extends EventTarget {
   running: boolean;
   stream?: MediaStream;

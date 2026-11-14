@@ -6,7 +6,8 @@ const EVERYDAY_ASSETS = ['/everyday.html', '/app/everyday/main.js', '/app/everyd
   '/app/everyday/contracts.js', '/app/everyday/evidence.js', '/app/everyday/platform.js', '/app/everyday/model-registry.js',
   '/app/everyday/safety.js', '/app/everyday/companion-safety.js', '/app/everyday/care.js', '/app/everyday/clinic.js', '/app/everyday/nutrition.js', '/app/everyday/foods.js',
   '/app/everyday/move.js', '/app/everyday/move-engine.js', '/app/everyday/eyespeak.js', '/app/everyday/gaze-engine.js',
-  '/app/speech-capture.js', '/engine/speech-capture.js', '/assets/assets/images/asha-avatar.png', '/assets/brand/asha-favicon-48.png'];
+  '/app/speech-capture.js', '/engine/speech-capture.js', '/engine/uuid.js', '/engine/camera-support.js',
+  '/assets/assets/images/asha-avatar.png', '/assets/brand/asha-favicon-48.png'];
 self.addEventListener("install", (event) => {
   self.skipWaiting();
   event.waitUntil(

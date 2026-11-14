@@ -49,6 +49,8 @@ branded placeholder is shown.
 - `src/components/dashboard` — shell, sidebar, panels, stats, pills, dialog, switch, sparkline
 
 Local dev without cloud storage: `ASHA_MEMORY_STORE=1 LOCAL_DEV=1 npm run dev` (in-memory, dev only).
+LAN demo without cloud storage: `ASHA_MEMORY_STORE=1 ASHA_MEMORY_STORE_PRODUCTION=1 LOCAL_DEV=1 npm run serve:lan` — see `docs/LAN_SETUP.md`.
+**Phones must open the https address** (`https://<lan-ip>:8443`), not the http one. A browser only exposes the camera in a secure context, so `http://<lan-ip>:3000` cannot open a camera at all.
 
 Routes: `/` landing · `/app` app · `/app?module=facespeak|fingerspeak|senseassist|vitalsense|posture`
 · `/app?role=caregiver` (also `/care`).

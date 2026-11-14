@@ -1,9 +1,10 @@
 import { MODEL_REGISTRY, verifyModel } from "./model-registry.js";
+import { cameraSupport, cameraFailure } from "../../engine/camera-support.js";
 
 export function deviceCapabilities() {
   return {
     secure: !!globalThis.isSecureContext,
-    camera: !!globalThis.navigator?.mediaDevices?.getUserMedia,
+    camera: cameraSupport().ok,
     webgpu: !!globalThis.navigator?.gpu,
     wasm: typeof WebAssembly !== "undefined",
     crypto: !!globalThis.crypto?.subtle,
@@ -137,9 +138,11 @@ export class CameraManager extends EventTarget {
   async start(task, callback) {
     this.stop();
     const generation = ++this.generation;
-    if (!navigator.mediaDevices?.getUserMedia)
-      throw Error(
-        "Camera needs HTTPS and a supported browser. Touch controls remain available.",
+    const support = cameraSupport();
+    if (!support.ok)
+      throw cameraFailure(
+        support.code,
+        "Touch controls remain available.",
       );
     const stream = await navigator.mediaDevices.getUserMedia({
       video: {

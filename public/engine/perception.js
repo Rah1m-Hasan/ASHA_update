@@ -8,6 +8,11 @@ import { FaceAnalysis } from "./face-analysis.js";
 import { VitalSense, vitalROIs } from "./vitalsense.js";
 import { MODEL_THRESHOLDS } from "./model-thresholds.js";
 import { MotionMeter } from "./motion-meter.js";
+import {
+  cameraCode,
+  cameraFailure,
+  cameraSupport,
+} from "./camera-support.js";
 
 /** A worker frame that takes longer than this is a stall, not a slow device. */
 const WORKER_STALL_MS = 2000;
@@ -35,6 +40,11 @@ export class Perception extends EventTarget {
     this.video = video;
     this.canvas = canvas;
     this.running = false;
+    // A start in flight, so two taps on "Start camera" open one camera.
+    this.starting = null;
+    // Bumped by stop(), so a start that is still waiting for permission cannot
+    // bring the camera back after the user asked for it to stop.
+    this.generation = 0;
     this.extractor = new NF_vision.Extractor();
     this.engine = new NF_engine.Engine();
     this.handTracker = new NF_fingerspeakSignal.PoseTracker(800);
@@ -118,17 +128,29 @@ export class Perception extends EventTarget {
   }
   /** Front ("user") or back ("environment") camera. Swaps the stream; the models keep running. */
   async setFacingMode(facing) {
-    this.facingMode = facing === "environment" ? "environment" : "user";
-    if (!this.running) return this.facingMode;
-    const next = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: this.facingMode }, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30, max: 30 } },
+    const wanted = facing === "environment" ? "environment" : "user";
+    if (!this.running) {
+      this.facingMode = wanted;
+      return this.facingMode;
+    }
+    const generation = this.generation;
+    const next = await this.openStream({
+      video: { facingMode: { ideal: wanted }, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 30, max: 30 } },
       audio: false,
     });
+    // A camera that stopped while the prompt was open must not be left running.
+    if (generation !== this.generation) {
+      next.getTracks().forEach((t) => t.stop());
+      throw cameraFailure("cancelled");
+    }
     const old = this.stream;
     this.stream = next;
     this.video.srcObject = next;
     await this.video.play().catch(() => {});
     old?.getTracks().forEach((t) => t.stop());
+    // The engine now agrees with the UI about which camera is in use. It did
+    // not before: a failed switch left the two disagreeing.
+    this.facingMode = wanted;
     this.lastTime = this.lastHandTime = null;
     // The new camera's colours must not be sampled through the old camera's
     // landmarks: those ROIs sit somewhere else on the new image, so the vital
@@ -148,11 +170,41 @@ export class Perception extends EventTarget {
     this.invalidateVitals("Camera changed; waiting for a fresh signal");
     return next.getVideoTracks()[0]?.getSettings?.().facingMode || this.facingMode;
   }
+  /**
+   * Opens the camera and turns every failure into a patient-facing error.
+   *
+   * `navigator.mediaDevices` does not exist outside a secure context, so the
+   * browser cannot be asked for a camera it has not got. The reason is checked
+   * first and reported in words; a permission prompt is never the first thing
+   * a patient sees when the page cannot work anyway.
+   */
+  async openStream(constraints) {
+    const support = cameraSupport();
+    if (!support.ok) throw cameraFailure(support.code);
+    try {
+      return await navigator.mediaDevices.getUserMedia(constraints);
+    } catch (e) {
+      // The browser's own words for the failure, translated into ours.
+      throw cameraFailure(cameraCode(e));
+    }
+  }
   async start() {
     if (this.running) return;
+    // Two taps on "Start camera" must open one camera, not two.
+    if (this.starting) return this.starting;
+    const generation = ++this.generation;
+    const task = this.startCamera(generation);
+    this.starting = task;
+    try {
+      await task;
+    } finally {
+      if (this.starting === task) this.starting = null;
+    }
+  }
+  async startCamera(generation) {
     this.cycles = { face: 0, hand: 0, pose: 0, pulse: 0 };
     this.emit("status", "Loading face, two-hand and pose models…");
-    this.stream = await navigator.mediaDevices.getUserMedia({
+    const stream = await this.openStream({
       video: {
         facingMode: this.facingMode === "environment" ? { ideal: "environment" } : "user",
         width: { ideal: 640 },
@@ -161,24 +213,50 @@ export class Perception extends EventTarget {
       },
       audio: false,
     });
-    this.video.srcObject = this.stream;
-    await this.video.play();
-    this.running = true;
-    this.setActiveModule(this.activeModule);
+    // A stop() while the permission prompt was open must not leave a camera
+    // running behind the user's back.
+    if (generation !== this.generation) {
+      stream.getTracks().forEach((t) => t.stop());
+      throw cameraFailure("cancelled");
+    }
+    this.stream = stream;
+    this.video.srcObject = stream;
     try {
-      await this.initWorker();
+      await this.video.play();
+      if (generation !== this.generation) throw cameraFailure("cancelled");
+      this.running = true;
+      this.setActiveModule(this.activeModule);
+      try {
+        await this.initWorker();
+      } catch (e) {
+        this.worker?.terminate();
+        this.worker = null;
+        this.handWorker?.terminate();
+        this.handWorker = null;
+        this.emit("status", "Using compatible camera mode…");
+        await this.initMain();
+      }
     } catch (e) {
-      this.worker?.terminate();
-      this.worker = null;
-      this.handWorker?.terminate();
-      this.handWorker = null;
-      this.emit("status", "Using compatible camera mode…");
-      await this.initMain();
+      // A start that does not finish must not leave the camera running.
+      stream.getTracks().forEach((t) => t.stop());
+      if (this.stream === stream) {
+        this.stream = null;
+        this.video.srcObject = null;
+      }
+      this.running = false;
+      throw e;
     }
     this.running = true;
     this.emit("status", "Camera active · all sensing shares one stream");
     this.setActiveModule(this.activeModule);
-    this.loop();
+    // The frame loop runs on its own; a rejected frame must not become an
+    // unhandled rejection that the browser reports as an application error.
+    this.loop().catch(() => this.reportFrameFailure());
+  }
+  /** Tell the patient that tracking stopped, without letting it become an error. */
+  reportFrameFailure() {
+    this.busy = false;
+    this.emit("status", "Camera frame unavailable. Try restarting monitoring.");
   }
   async initWorker() {
     // Separate one-frame queues keep real hand samples flowing during pose work.
@@ -419,7 +497,9 @@ export class Perception extends EventTarget {
           .catch(() => (this.yoloBusy = false));
       }
     }
-    this.raf = requestAnimationFrame(() => this.loop());
+    this.raf = requestAnimationFrame(() => {
+      this.loop().catch(() => this.reportFrameFailure());
+    });
   }
   result(d) {
     if (!this.running) return;
@@ -799,9 +879,14 @@ export class Perception extends EventTarget {
     return true;
   }
   stop() {
+    // Cancel a start that is still waiting for permission, so the camera
+    // cannot come back after the user asked for it to stop.
+    this.generation++;
+    this.starting = null;
     this.running = false;
     cancelAnimationFrame(this.raf);
     this.stream?.getTracks().forEach((t) => t.stop());
+    this.stream = null;
     this.video.srcObject = null;
     this.worker?.terminate();
     this.worker = null;

@@ -396,6 +396,7 @@
 
 <script type="module">
 import { HandLandmarker, FilesetResolver } from "./vendor/vision_bundle.mjs";
+import { cameraSupport, cameraCode, cameraFailure, cameraMessage } from "../engine/camera-support.js";
 const EMBEDDED = window.parent !== window && new URLSearchParams(location.search).get('embedded') === '1';
 const tellParent = (data) => { if (EMBEDDED) window.parent.postMessage(data, location.origin); };
 document.getElementById('backToFace').onclick = () => {
@@ -534,7 +535,15 @@ async function initHandLandmarker(){
 
 async function startCamera(){
   try{
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+    // A browser that cannot open a camera says so in words, not in a stack trace.
+    const support = cameraSupport();
+    if (!support.ok) throw cameraFailure(support.code);
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } });
+    } catch (err) {
+      throw cameraFailure(cameraCode(err));
+    }
     video.srcObject = stream;
     await new Promise(res => video.onloadedmetadata = res);
     await video.play().catch(()=>{});
@@ -548,9 +557,8 @@ async function startCamera(){
     warmupVoices();
     requestAnimationFrame(renderLoop);
   } catch(err){
-    setStatus(false, 'camera permission denied');
-    document.getElementById('startOverlay').querySelector('div').textContent =
-      `Camera access failed: ${err.message}. Check camera permissions and retry.`;
+    setStatus(false, 'camera unavailable');
+    document.getElementById('startOverlay').querySelector('div').textContent = cameraMessage(err);
     document.getElementById('startBtn').textContent = 'Retry camera';
     document.getElementById('startBtn').disabled = false;
   }
@@ -1634,7 +1642,10 @@ document.getElementById('startBtn').addEventListener('click', async () => {
   try { await initHandLandmarker(); await startCamera(); }
   catch (error) {
     setStatus(false, 'hand tracker unavailable');
-    document.getElementById('startOverlay').querySelector('div').textContent = 'Hand tracker could not load: ' + error.message;
+    // A camera failure already carries its own sentence; anything else is
+    // described without repeating the raw exception.
+    const reason = error && error.name === 'CameraError' ? error.message : 'The hand tracker could not load. Please try again.';
+    document.getElementById('startOverlay').querySelector('div').textContent = reason;
     button.textContent = 'Retry camera'; button.disabled = false;
   }
 });

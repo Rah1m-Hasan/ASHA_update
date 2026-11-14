@@ -15,6 +15,10 @@ Browsers only expose `navigator.mediaDevices.getUserMedia` and
 (FaceSpeak, VitalSense, Nutrition) and caregiver push notifications silently
 fail. HTTPS with a locally trusted certificate fixes this.
 
+`crypto.randomUUID()` is also secure-context-only, so request IDs use a
+`crypto.getRandomValues()` fallback (`src/lib/uuid.ts`, `public/engine/uuid.js`)
+and requests still send over plain HTTP.
+
 ## Run it
 
 ```sh
@@ -25,6 +29,23 @@ npm run serve:lan
 The server prints every reachable address. Ports `3000` and `8443` must be open
 in the host firewall (`firewall-cmd --add-port=8443/tcp --permanent &&
 firewall-cmd --reload`).
+
+### Storage for a LAN run
+
+A production build needs Supabase or Blob credentials. Without them every
+`/api/session` write fails with "Connection unavailable" and no care circle
+can be created. For a demo on the LAN with no cloud account, run the build
+against in-memory storage:
+
+```sh
+ASHA_MEMORY_STORE=1 ASHA_MEMORY_STORE_PRODUCTION=1 LOCAL_DEV=1 npm run serve:lan
+```
+
+`ASHA_MEMORY_STORE_PRODUCTION=1` is the explicit opt-in that lets the
+production build use the in-memory store; without it the flag is ignored
+outside development. Data lives in server memory and is lost on restart, so
+every device on the LAN must use the same server process — which `serve:lan`
+already does. `LOCAL_DEV=1` relaxes the same-origin check for local origins.
 
 ## Certificate setup
 

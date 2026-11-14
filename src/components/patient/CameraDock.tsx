@@ -12,7 +12,7 @@ const BIG_CAMERA = ["facespeak", "vitalsense", "posture", "calibration", "finger
 /** Persistent camera + live signal summary at the bottom of the patient sidebar. */
 export function CameraDock() {
   const pathname = usePathname();
-  const { state, snapshot, stop } = usePerception();
+  const { state, snapshot, cameraError, stop } = usePerception();
   const showPreview = !BIG_CAMERA.some((m) => pathname.endsWith("/" + m));
   const on = state === "on";
   const signals = [
@@ -27,7 +27,7 @@ export function CameraDock() {
       {showPreview && <CameraView compact className="mb-3" />}
       <div className="flex items-center justify-between">
         <StatusPill tone={on ? "good" : state === "error" ? "alert" : "neutral"} pulse={on}>
-          {on ? "Sensing live" : state === "starting" ? "Starting" : "Camera off"}
+          {on ? "Sensing live" : state === "starting" ? "Starting" : state === "error" ? "Camera problem" : "Camera off"}
         </StatusPill>
         {on && (
           <button onClick={stop} className="text-sm font-medium text-muted hover:text-ink">
@@ -35,6 +35,13 @@ export function CameraDock() {
           </button>
         )}
       </div>
+      {/* A reason the patient can act on. It stays here even while the camera
+          is running, which is the case when only the camera switch failed. */}
+      {cameraError && (
+        <p role="status" className="mt-2 text-xs leading-snug text-danger">
+          {cameraError}
+        </p>
+      )}
       {on && (
         <ul className="mt-3 grid grid-cols-2 gap-1.5" aria-label="Signals being tracked">
           {signals.map((s) => (

@@ -5,6 +5,8 @@ import { vitalsStudio, paintVitals, exportVitals } from "./vitals-studio.js";
 import { icon, iconButton } from "./icons.js";
 import { RequestGate, recommendations, clamp } from "./signals.js";
 import { CompanionGuide, responsePlan, confirmationMatches } from "./companion-guide.js";
+import { requestId } from "./uuid.js";
+import { cameraMessage, microphoneMessage } from "./camera-support.js";
 import { BlinkIntent, RAPID_BLINK, CONFIRM_BLINK } from "./blink-intent.js";
 import { SpeechCapture } from "./speech-capture.js";
 import { instantGreeting } from "./fast-reply.js";
@@ -983,7 +985,10 @@ let screenLock;
 function monitorUI(on) {
   $("startMonitoring").hidden = on;
   $("pauseMonitoring").hidden = !on;
-  $("studioStart").textContent = on ? "Pause camera" : "Start camera";
+  // Write to the button's label, not the button, so its camera icon stays.
+  const studioLabel = $("studioStart").querySelector("span");
+  if (studioLabel) studioLabel.textContent = on ? "Pause camera" : "Start camera";
+  else $("studioStart").textContent = on ? "Pause camera" : "Start camera";
   $("cameraPlaceholder").hidden = on;
   $("activeModules").textContent = on
     ? "Monitoring together: NeuroFace Sense · FingerSpeak · VitalSense · Posture. See Details for signal status."
@@ -1026,13 +1031,15 @@ async function startMonitor() {
       toast("Open Details → Calibrate patient to train your own movements.");
     heartbeat();
   } catch (e) {
+    console.warn("Camera start failed", e);
     perception.stop();
     monitorUI(false);
-    toast(
-      e.name === "NotAllowedError"
-        ? "Camera permission was declined. Allow the camera in your browser settings."
-        : e.message,
-    );
+    // The reason belongs to the patient, in words they can act on, and it
+    // stays on the camera panel after the toast has gone.
+    const message = cameraMessage(e);
+    $("cameraPlaceholder").textContent = message;
+    $("cameraStatus").textContent = message;
+    toast(message);
   } finally {
     $("startMonitoring").disabled = $("studioStart").disabled = false;
   }
@@ -1108,7 +1115,7 @@ async function sendEvent(kind, source, text, confirmed) {
     return;
   }
   const event = {
-    id: crypto.randomUUID(),
+    id: requestId(),
     action: "event",
     kind,
     source,
@@ -1959,7 +1966,8 @@ $("recordVoice").onclick = async () => {
       if (voiceRecorder.state === "recording") voiceRecorder.stop();
     }, 12000);
   } catch (e) {
-    toast("Microphone unavailable: " + e.message);
+    console.warn("Microphone start failed", e);
+    toast("Microphone unavailable: " + microphoneMessage(e));
   }
 };
 $("stopVoice").onclick = () =>

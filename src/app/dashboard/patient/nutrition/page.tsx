@@ -18,7 +18,10 @@ import { NutritionFlow } from "@/features/nutrition/state.js";
 import { nutritionStore, useNutrition, type MealLog } from "@/features/nutrition/store";
 import type { Answer, Capture, Item, Meal, Question, Suggestion, Text, VisionResult } from "@/features/nutrition/types";
 import { useFoodVision } from "@/features/nutrition/useFoodVision";
+import { engineModule } from "@/lib/engine/load";
+import type { CameraSupportModule } from "@/lib/engine/types";
 import { cn } from "@/lib/cn";
+import { requestId } from "@/lib/uuid";
 
 type Screen = string;
 type Method = Capture["method"];
@@ -27,6 +30,19 @@ const tx = (lang: string, en: string, bn: string) => (lang === "bn" ? bn : en);
 const fmt = formatValue as (v: unknown, key: string, lang: string) => string;
 const DISH = DISHES as Record<string, { id: string; category: string; en: string; bn: string }>;
 const ADDABLE = ["rice", "dal", "fish_curry", "banana", "apple", "strawberries", "packaged", "other"];
+
+// The shared camera-support probe, loaded once from /engine at runtime. It is
+// loaded defensively: the camera still works if the probe cannot be fetched.
+let cameraSupportModule: Promise<CameraSupportModule | null> | null = null;
+function loadCameraSupport(): Promise<CameraSupportModule | null> {
+  cameraSupportModule ??= engineModule<CameraSupportModule>("camera-support").catch(
+    (err) => {
+      console.warn("Camera support probe unavailable", err);
+      return null;
+    },
+  );
+  return cameraSupportModule;
+}
 const SCANNING = ["SCANNING", "QUALITY_WAIT", "CANDIDATE_STABLE"];
 
 const QUALITY_TEXT: Record<string, Text> = {
@@ -60,6 +76,8 @@ export default function NutritionPage() {
   const [photo, setPhoto] = useState<string | null>(null);
   const [still, setStill] = useState<{ suggestions: Suggestion[]; vision: VisionResult | null } | null>(null);
   const [error, setError] = useState<string>("");
+  // Why the camera could not start, when the reason is worth saying in full.
+  const [cameraReason, setCameraReason] = useState<string>("");
   const [notice, setNotice] = useState<string>("");
   const [scanInfo, setScanInfo] = useState<{ tentative: string | null; warnings: string[]; face: boolean; steady: boolean }>({ tentative: null, warnings: [], face: false, steady: false });
   const [slow, setSlow] = useState(false);
@@ -109,12 +127,23 @@ export default function NutritionPage() {
   }, []);
 
   const openCamera = useCallback(async () => {
+    // A browser with no camera API (an http:// address on the LAN) cannot open
+    // one at all. Check first, so the shared camera is not paused for nothing.
+    const support = await loadCameraSupport();
+    const probe = support?.cameraSupport();
+    if (probe && !probe.ok) throw support!.cameraFailure(probe.code);
     // One camera at a time: the shared camera (front, for requests) pauses while scanning food.
     if (perceptionRef.current.state === "on") {
       perceptionRef.current.stop();
       pausedShared.current = true;
     }
-    const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+    let s: MediaStream;
+    try {
+      s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false });
+    } catch (err) {
+      if (support) throw support.cameraFailure(support.cameraCode(err));
+      throw new Error("The camera could not start. Please try again.");
+    }
     stream.current = s;
     const v = video.current;
     if (v) {
@@ -147,6 +176,7 @@ export default function NutritionPage() {
     setFocus(null);
     setError("");
     setNotice("");
+    setCameraReason("");
     setLoggedId(null);
     baseCanvas.current = workCanvas.current = null;
     go("IDLE");
@@ -206,10 +236,18 @@ export default function NutritionPage() {
     try {
       await openCamera();
     } catch (err) {
-      const name = (err as DOMException)?.name;
-      if (name === "NotAllowedError" || name === "SecurityError") go("PERMISSION_DENIED");
-      else {
-        setError(name === "NotFoundError" ? tx(lang, "No camera was found on this device.", "এই ডিভাইসে ক্যামেরা পাওয়া যায়নি।") : tx(lang, "The camera couldn't start. Another app may be using it.", "ক্যামেরা চালু হয়নি। অন্য কোনো অ্যাপ হয়তো ব্যবহার করছে।"));
+      const code = (err as { code?: string })?.code ?? (err as DOMException)?.name;
+      if (code === "not-allowed" || code === "NotAllowedError" || code === "SecurityError") {
+        setCameraReason("");
+        go("PERMISSION_DENIED");
+      } else if (code === "insecure-context") {
+        // The camera cannot work on an insecure address. The photo and manual
+        // paths still can, so the patient keeps those.
+        setCameraReason(tx(lang, "The camera needs a secure (https) address. Ask your caregiver for the https link to this app.", "ক্যামেরার জন্য নিরাপদ (https) ঠিকানা দরকার। আপনার পরিচর্যাকারীর কাছে এই অ্যাপের https লিঙ্ক চান।"));
+        go("PERMISSION_DENIED");
+      } else {
+        setCameraReason("");
+        setError(code === "not-found" || code === "NotFoundError" ? tx(lang, "No camera was found on this device.", "এই ডিভাইসে ক্যামেরা পাওয়া যায়নি।") : tx(lang, "The camera couldn't start. Another app may be using it.", "ক্যামেরা চালু হয়নি। অন্য কোনো অ্যাপ হয়তো ব্যবহার করছে।"));
         go("ERROR");
       }
       return;
@@ -361,7 +399,7 @@ export default function NutritionPage() {
     const c = workCanvas.current;
     if (!c || !go("ANALYZING")) return;
     const r = await analyzeStill(c);
-    mealId.current = crypto.randomUUID();
+    mealId.current = requestId();
     setItems(toItems(r.suggestions, r.vision, "upload"));
     go("FOOD_REVIEW");
   };
@@ -370,7 +408,7 @@ export default function NutritionPage() {
   const confirmStill = () => {
     if (!go("FOOD_REVIEW")) return;
     stopCamera();
-    mealId.current = crypto.randomUUID();
+    mealId.current = requestId();
     setItems(toItems(still?.suggestions ?? [], still?.vision ?? null, "live_scan"));
   };
 
@@ -379,7 +417,7 @@ export default function NutritionPage() {
     if (flow.current!.state === "IDLE") go("MODE_SELECTED");
     if (!go("MANUAL")) return;
     if (!photo) setMethod("manual");
-    mealId.current = crypto.randomUUID();
+    mealId.current = requestId();
     go("FOOD_REVIEW");
   };
 
@@ -447,7 +485,7 @@ export default function NutritionPage() {
     const r = flow.current!.logOnce(() => {
       const byUid = Object.fromEntries(items.map((i) => [i.uid, i]));
       const entry: MealLog = {
-        id: mealId.current || crypto.randomUUID(),
+        id: mealId.current || requestId(),
         loggedAt: new Date().toISOString(),
         captureMethod: method,
         status: meal.status,
@@ -695,8 +733,8 @@ export default function NutritionPage() {
 
       {(screen === "ERROR" || screen === "PERMISSION_DENIED") && (
         <div className="mx-auto max-w-xl space-y-4 rounded-2xl bg-surface p-5 ring-1 ring-line" role="alert" data-testid="nutrition-error">
-          <h2 className="text-lg font-semibold text-ink">{screen === "PERMISSION_DENIED" ? tx(lang, "Camera permission is off", "ক্যামেরার অনুমতি বন্ধ") : tx(lang, "Something didn't work", "কিছু একটা কাজ করেনি")}</h2>
-          <p className="text-muted">{screen === "PERMISSION_DENIED" ? tx(lang, "ASHA can't use the camera. You can allow it in your browser's site settings, upload a photo instead, or enter the food without a photo.", "আশা ক্যামেরা ব্যবহার করতে পারছে না। ব্রাউজারের সাইট সেটিংসে অনুমতি দিন, ছবি আপলোড করুন, বা ছবি ছাড়া খাবার লিখুন।") : error}</p>
+          <h2 className="text-lg font-semibold text-ink">{screen === "PERMISSION_DENIED" ? (cameraReason ? tx(lang, "The camera isn't available here", "এখানে ক্যামেরা পাওয়া যাচ্ছে না") : tx(lang, "Camera permission is off", "ক্যামেরার অনুমতি বন্ধ")) : tx(lang, "Something didn't work", "কিছু একটা কাজ করেনি")}</h2>
+          <p className="text-muted">{screen === "PERMISSION_DENIED" ? cameraReason || tx(lang, "ASHA can't use the camera. You can allow it in your browser's site settings, upload a photo instead, or enter the food without a photo.", "আশা ক্যামেরা ব্যবহার করতে পারছে না। ব্রাউজারের সাইট সেটিংসে অনুমতি দিন, ছবি আপলোড করুন, বা ছবি ছাড়া খাবার লিখুন।") : error}</p>
           <div className="flex flex-wrap gap-2">
             <Button onClick={() => {
               go("RETRY");

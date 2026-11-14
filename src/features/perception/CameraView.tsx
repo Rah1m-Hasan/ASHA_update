@@ -9,7 +9,7 @@ import { usePerception } from "./PerceptionProvider";
 /** Shows the shared camera. If several are mounted, the most recent one gets the live video. */
 export function CameraView({ className, compact = false, children, offMessage }: { className?: string; compact?: boolean; children?: React.ReactNode; offMessage?: string }) {
   const host = useRef<HTMLDivElement>(null);
-  const { attach, state, status, start } = usePerception();
+  const { attach, state, status, cameraError, start } = usePerception();
 
   useEffect(() => (host.current ? attach(host.current) : undefined), [attach]);
 
@@ -21,10 +21,18 @@ export function CameraView({ className, compact = false, children, offMessage }:
         <div className="absolute inset-0 grid place-items-center bg-veil p-4 text-center text-on-veil">
           <div className="max-w-xs">
             <CameraIcon size={compact ? 20 : 28} className="mx-auto text-white/70" />
-            {!compact && (
-              <p className="mt-3 text-sm text-white/80">
-                {state === "error" ? status : offMessage ?? "The camera stays off until you start it. Video never leaves this device."}
+            {state === "error" ? (
+              // A camera that cannot start says why, even in the small preview:
+              // the reason is the only thing the patient can act on.
+              <p className={cn("mt-3 text-white/80", compact ? "text-xs leading-snug" : "text-sm")}>
+                {cameraError ?? status}
               </p>
+            ) : (
+              !compact && (
+                <p className="mt-3 text-sm text-white/80">
+                  {offMessage ?? "The camera stays off until you start it. Video never leaves this device."}
+                </p>
+              )
             )}
             <Button size="sm" className="mt-3" onClick={start} disabled={state === "starting"}>
               {state === "starting" ? "Starting…" : "Start camera"}

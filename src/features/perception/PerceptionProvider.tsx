@@ -11,6 +11,7 @@ import {
 } from "react";
 import { engineModule, loadClassicScripts } from "@/lib/engine/load";
 import type {
+  CameraSupportModule,
   FrameSnapshot,
   PerceptionInstance,
   PulseValue,
@@ -21,6 +22,12 @@ type CameraState = "off" | "starting" | "on" | "error";
 type PerceptionContextValue = {
   state: CameraState;
   status: string;
+  /**
+   * Why the camera could not be used, in plain words. Kept apart from `status`,
+   * which is the engine's live channel and is overwritten by every model
+   * message. Null when the camera is fine.
+   */
+  cameraError: string | null;
   snapshot: FrameSnapshot;
   pulse: PulseValue | null;
   calibrating: boolean;
@@ -44,6 +51,26 @@ type PerceptionContextValue = {
 };
 
 const PerceptionContext = createContext<PerceptionContextValue | null>(null);
+
+/**
+ * The shared camera-support probe, loaded once from /engine at runtime.
+ *
+ * It is loaded defensively: if the module cannot be fetched the camera still
+ * works, because the engine carries the same guard. Only the explanation of a
+ * failure falls back to a generic sentence.
+ */
+let supportModule: Promise<CameraSupportModule | null> | null = null;
+function loadCameraSupport(): Promise<CameraSupportModule | null> {
+  supportModule ??= engineModule<CameraSupportModule>("camera-support").catch(
+    (err) => {
+      console.warn("Camera support probe unavailable", err);
+      return null;
+    },
+  );
+  return supportModule;
+}
+
+const GENERIC_CAMERA_ERROR = "The camera could not start. Please try again.";
 
 // Off-screen holder that keeps the video element in the document (moving it out would pause it).
 function parking() {
@@ -71,6 +98,7 @@ export function PerceptionProvider({
   const hosts = useRef<HTMLElement[]>([]);
   const [state, setState] = useState<CameraState>("off");
   const [status, setStatus] = useState("Camera is off");
+  const [cameraError, setCameraError] = useState<string | null>(null);
   const [snapshot, setSnapshot] = useState<FrameSnapshot>({});
   const [pulse, setPulse] = useState<PulseValue | null>(null);
   const [calibrating, setCalibrating] = useState(false);
@@ -159,6 +187,12 @@ export function PerceptionProvider({
     setState("starting");
     const task = (async () => {
       try {
+        // Fail before the models are downloaded: a browser with no camera API
+        // (an http:// address on the LAN) can never open one, and the patient
+        // should read why rather than watch a spinner.
+        const support = await loadCameraSupport();
+        const probe = support?.cameraSupport();
+        if (probe && !probe.ok) throw support!.cameraFailure(probe.code);
         const p = await ensureEngine();
         place();
         await p.start();
@@ -166,16 +200,18 @@ export function PerceptionProvider({
           p.stop();
           return;
         }
+        setCameraError(null);
         setState("on");
       } catch (err) {
         engine.current?.stop();
         if (current !== generation.current) return;
+        const support = await loadCameraSupport();
+        const message =
+          support?.cameraMessage(err) ?? GENERIC_CAMERA_ERROR;
+        console.warn("Camera start failed", err);
         setState("error");
-        setStatus(
-          (err as Error).name === "NotAllowedError"
-            ? "Camera permission was blocked. Allow camera access in your browser settings."
-            : `Camera could not start: ${(err as Error).message}`,
-        );
+        setCameraError(message);
+        setStatus(message);
       }
     })();
     starting.current = task;
@@ -191,6 +227,7 @@ export function PerceptionProvider({
     engine.current?.stop();
     setState("off");
     setStatus("Camera is off");
+    setCameraError(null);
     setSnapshot({});
     setPulse(null);
     setCalibrating(false);
@@ -213,10 +250,18 @@ export function PerceptionProvider({
       const actual = await p.setFacingMode(next);
       const now = actual === "environment" ? "environment" : "user";
       setFacing(now);
+      setCameraError(null);
       // Selfie view for the front camera; a true (unmirrored) view for the back camera.
       setMirrored(now === "user");
     } catch (err) {
-      setStatus(`Could not switch camera: ${(err as Error).message}`);
+      // The old camera is still running, so the camera state stays "on" and the
+      // reason is reported on its own. Flipping the state would blank the
+      // preview of a camera that is still working.
+      const support = await loadCameraSupport();
+      const message = support?.cameraMessage(err) ?? GENERIC_CAMERA_ERROR;
+      console.warn("Camera switch failed", err);
+      setCameraError(message);
+      setStatus(message);
     }
   }, [facing, setMirrored]);
 
@@ -247,6 +292,7 @@ export function PerceptionProvider({
     () => ({
       state,
       status,
+      cameraError,
       snapshot,
       pulse,
       calibrating,
@@ -266,6 +312,7 @@ export function PerceptionProvider({
     [
       state,
       status,
+      cameraError,
       snapshot,
       pulse,
       calibrating,

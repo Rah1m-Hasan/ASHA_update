@@ -1,3 +1,4 @@
+import { requestId } from "../../engine/uuid.js";
 export const MODEL_REGISTRY = Object.freeze({
   face: {
     id: "mediapipe-face",
@@ -287,7 +288,7 @@ export class ModelPackStore {
         this._activate(pack.id, name, current);
         return name;
       }
-      const stagingName = `${name}-staging-${crypto.randomUUID()}`;
+      const stagingName = `${name}-staging-${requestId()}`;
       const staging = await caches.open(stagingName);
       let finalStarted = false,
         finalVerified = false;

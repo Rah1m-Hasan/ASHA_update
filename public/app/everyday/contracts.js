@@ -1,3 +1,4 @@
+import { requestId } from "../../engine/uuid.js";
 /** @typedef {'user'|'camera_estimate'|'device'|'clinician'} EvidenceSource */
 /** @typedef {{id:string,module:string,value:unknown,units:string,timestamp:string,source:EvidenceSource,model_id:string,model_version:string,correction_status:string,consent_scope:string,confidence?:number,interval?:unknown}} Evidence */
 export const MODULES = ["nutrition", "move", "eyespeak", "care"];
@@ -28,7 +29,7 @@ export function evidenceRecord(input, now = new Date()) {
   if (!Number.isFinite(timestamp.getTime()))
     throw Error("Invalid record date.");
   const record = {
-    id: crypto.randomUUID(),
+    id: requestId(),
     module: input.module,
     value: JSON.parse(serialized),
     units: String(input.units || "entry").slice(0, 40),
