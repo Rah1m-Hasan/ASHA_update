@@ -12,6 +12,8 @@
     "test:browser": "node tests/browser.mjs",
     "test:everyday": "node tests/everyday-browser.mjs && node tests/everyday-offline.mjs",
     "benchmark:everyday": "node scripts/everyday-benchmark.mjs --browser",
+    "benchmark:accuracy": "node scripts/accuracy-benchmark.mjs",
+    "benchmark:accuracy:after": "node scripts/accuracy-benchmark.mjs --after --compare",
     "okf": "node okf/compile.mjs",
     "tokens": "node scripts/tokens.mjs",
     "tokens:check": "node scripts/tokens.mjs --check"

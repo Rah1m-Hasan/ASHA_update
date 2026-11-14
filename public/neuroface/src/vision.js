@@ -27,6 +27,22 @@
     try{return await FaceLandmarker.createFromOptions(files,options);}
     catch(e){options.baseOptions.delegate='CPU';return FaceLandmarker.createFromOptions(files,options);}
   }
+  // A soft or motion-blurred face crop gives unreliable landmarks, so the
+  // frame is worth less. The sharpness proxy above is the mean absolute
+  // vertical gradient of the 48x48 face crop, in 0-255 units; the penalty is
+  // bounded so it can never reject a frame that was previously accepted, and
+  // it never lifts a frame above the quality it already had.
+  //
+  // BLUR_SHARPNESS_FLOOR is a deliberately low threshold: the proxy depends on
+  // the camera resolution (a high-resolution crop downscaled to 48x48 is
+  // smoother), so the floor only fires on frames that are plainly out of focus.
+  // It is NOT calibrated against real camera footage and should be re-tuned
+  // with recorded frames before it is allowed to reject anything.
+  const BLUR_SHARPNESS_FLOOR=6,BLUR_PENALTY_MAX=.15;
+  function blurPenalty(sharpness){
+    if(!Number.isFinite(sharpness)||sharpness>=BLUR_SHARPNESS_FLOOR)return 0;
+    return Math.min(BLUR_PENALTY_MAX,BLUR_PENALTY_MAX*(BLUR_SHARPNESS_FLOOR-sharpness)/BLUR_SHARPNESS_FLOOR);
+  }
   class Extractor {
     constructor(){this.previous=null;this.canvas=document.createElement('canvas');this.canvas.width=48;this.canvas.height=48;this.ctx=this.canvas.getContext('2d',{willReadFrequently:true});this.lastLight=-Infinity;this.light={brightness:null,sharpness:null};}
     extract(result,video,t){
@@ -59,9 +75,9 @@
       f.mar=M.mar(lm);f.mouthWidth=M.mouthWidth(lm);f.browGap=((lm[133].y-lm[105].y)+(lm[362].y-lm[334].y))/2;
       f.lipDeviation=M.lipDeviation(lm,0);f.cornerDepression=M.cornerDepression(lm);f.gaze=M.gaze(lm);
       f.faceQuality=(!f.blendshapesValid||!pose||!lm.every(p=>Number.isFinite(p.x)&&Number.isFinite(p.y)&&Number.isFinite(p.z)))?0:
-        Math.max(0,1-(f.inFrame?0:.4)-(f.faceSize<.13||f.faceSize>.85?.4:0)-(f.brightness!==null&&(f.brightness<28||f.brightness>245)?.4:0)-(f.fps&&f.fps<8?.3:0));
+        Math.max(0,1-(f.inFrame?0:.4)-(f.faceSize<.13||f.faceSize>.85?.4:0)-(f.brightness!==null&&(f.brightness<28||f.brightness>245)?.4:0)-(f.fps&&f.fps<8?.3:0)-blurPenalty(f.sharpness));
       this.previous=f;return f;
     }
   }
-  window.NF_vision={create,Extractor,headPose,VERSION,CDN,MODEL};
+  window.NF_vision={create,Extractor,headPose,blurPenalty,VERSION,CDN,MODEL};
 })();

@@ -1,3 +1,5 @@
+import { MODEL_THRESHOLDS } from "./model-thresholds.js";
+
 let face,
   hand,
   pose,
@@ -57,8 +59,7 @@ self.onmessage = async ({ data: d }) => {
             numFaces: 1,
             outputFaceBlendshapes: true,
             outputFacialTransformationMatrixes: true,
-            minFaceDetectionConfidence: 0.6,
-            minTrackingConfidence: 0.6,
+            ...MODEL_THRESHOLDS.face,
           },
         );
       if (role !== "face")
@@ -67,8 +68,7 @@ self.onmessage = async ({ data: d }) => {
           "../neuroface/models/hand_landmarker.task",
           {
             numHands: 2,
-            minHandDetectionConfidence: 0.55,
-            minTrackingConfidence: 0.55,
+            ...MODEL_THRESHOLDS.hand,
           },
         );
       if (role !== "hand")
@@ -77,8 +77,7 @@ self.onmessage = async ({ data: d }) => {
           "../models/pose_landmarker_lite.task",
           {
             numPoses: 1,
-            minPoseDetectionConfidence: 0.6,
-            minTrackingConfidence: 0.6,
+            ...MODEL_THRESHOLDS.pose,
           },
         );
       self.postMessage({ type: "ready", delegate });

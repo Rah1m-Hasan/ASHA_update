@@ -6,6 +6,11 @@ import {
 import { HandTracks } from "./hand-tracks.js";
 import { FaceAnalysis } from "./face-analysis.js";
 import { VitalSense, vitalROIs } from "./vitalsense.js";
+import { MODEL_THRESHOLDS } from "./model-thresholds.js";
+import { MotionMeter } from "./motion-meter.js";
+
+/** A worker frame that takes longer than this is a stall, not a slow device. */
+const WORKER_STALL_MS = 2000;
 export class Perception extends EventTarget {
   constructor(video, canvas) {
     super();
@@ -20,6 +25,10 @@ export class Perception extends EventTarget {
     this.analysis = new FaceAnalysis();
     this.vitals = new VitalSense();
     this.pulse = this.vitals.value;
+    this.motionMeter = new MotionMeter();
+    // Observed interval between face results, used to bound how old a face
+    // landmark ROI may be before its colour sample is rejected.
+    this.faceResultIntervalMs = 0;
     this.snapshot = {};
     this.enabled = [];
     this.handStates = {};
@@ -100,6 +109,21 @@ export class Perception extends EventTarget {
     await this.video.play().catch(() => {});
     old?.getTracks().forEach((t) => t.stop());
     this.lastTime = this.lastHandTime = null;
+    // The new camera's colours must not be sampled through the old camera's
+    // landmarks: those ROIs sit somewhere else on the new image, so the vital
+    // signal would read skin from the wrong place.
+    this.faceResult = null;
+    this.faceResultAt = 0;
+    this.vitalsFaceFeatures = null;
+    this.pulseGeometry = null;
+    this.poseResult = null;
+    this.poseResultAt = 0;
+    this.posture = null;
+    this.poseAt = 0;
+    this.vitalsMotion = 0;
+    this.motionMeter?.reset();
+    this.faceResultIntervalMs = 0;
+    this.invalidateVitals("Camera changed; waiting for a fresh signal");
     return next.getVideoTracks()[0]?.getSettings?.().facingMode || this.facingMode;
   }
   async start() {
@@ -185,6 +209,23 @@ export class Perception extends EventTarget {
       worker.postMessage({ type: "init", role });
     });
   }
+  /**
+   * A worker that stops answering leaves its busy flag set forever, and the
+   * camera then silently produces no frames at all. A frame normally takes
+   * well under a second, so anything older than this is a stall, not a slow
+   * device: clear the flag, let the next frame through, and tell the patient.
+   */
+  checkWorkerStall(t) {
+    const stale = t - (this.workerFrameAt || 0);
+    if (this.busy && stale > WORKER_STALL_MS) {
+      this.busy = false;
+      this.emit("status", "Tracking interrupted. Reposition the camera.");
+    }
+    if (this.handBusy && t - (this.handWorkerFrameAt || 0) > WORKER_STALL_MS) {
+      this.handBusy = false;
+      this.emit("status", "Tracking interrupted. Reposition the camera.");
+    }
+  }
   async initMain() {
     const V = await import("../neuroface/vendor/vision_bundle.mjs");
     const files = await V.FilesetResolver.forVisionTasks(
@@ -203,6 +244,7 @@ export class Perception extends EventTarget {
         numFaces: 1,
         outputFaceBlendshapes: true,
         outputFacialTransformationMatrixes: true,
+        ...MODEL_THRESHOLDS.face,
       });
     } catch {
       const o = opts("../neuroface/models/face_landmarker.task");
@@ -211,6 +253,7 @@ export class Perception extends EventTarget {
         ...o,
         outputFaceBlendshapes: true,
         outputFacialTransformationMatrixes: true,
+        ...MODEL_THRESHOLDS.face,
       });
     }
     const create = async (Type, model, extra) => {
@@ -225,12 +268,12 @@ export class Perception extends EventTarget {
     this.hand = await create(
       V.HandLandmarker,
       "../neuroface/models/hand_landmarker.task",
-      { numHands: 2 },
+      { numHands: 2, ...MODEL_THRESHOLDS.hand },
     );
     this.pose = await create(
       V.PoseLandmarker,
       "../models/pose_landmarker_lite.task",
-      { numPoses: 1 },
+      { numPoses: 1, ...MODEL_THRESHOLDS.pose },
     );
     this.lastHand = 0;
     this.lastPose = 0;
@@ -238,6 +281,8 @@ export class Perception extends EventTarget {
   async loop() {
     if (!this.running) return;
     const t = performance.now();
+    // A worker that stopped answering must not freeze the camera silently.
+    this.checkWorkerStall(t);
     // Color sampling follows actual video frames, independent of slower face/hand
     // inference. Reuse the latest fresh landmarks and the existing camera only.
     if (!document.hidden && this.video.readyState >= 2 &&
@@ -281,6 +326,7 @@ export class Perception extends EventTarget {
       this.handBusy = true;
       this.lastHandTime = this.video.currentTime;
       this.lastHandFrame = t;
+      this.handWorkerFrameAt = t;
       const worker = this.handWorker;
       createImageBitmap(this.video)
         .then((bitmap) => {
@@ -302,6 +348,7 @@ export class Perception extends EventTarget {
       this.busy = true;
       this.lastTime = this.video.currentTime;
       this.lastFrame = t;
+      this.workerFrameAt = t;
       try {
         if (this.worker) {
           const bitmap = await createImageBitmap(this.video);
@@ -359,16 +406,12 @@ export class Perception extends EventTarget {
       // The engine classifies intent; only the parent confirmation gate may act.
       r = this.engine.process({ ...f, commandsEnabled: true });
     const currentLandmarks = d.face.faceLandmarks?.[0];
-    const previousLandmarks = this.faceResult?.faceLandmarks?.[0];
-    const elapsed = d.t - (this.faceResultAt ?? d.t);
-    if (currentLandmarks && previousLandmarks && elapsed > 0) {
-      let displacement = 0, count = 0;
-      for (let i = 0; i < Math.min(currentLandmarks.length, previousLandmarks.length); i += 8) {
-        displacement += Math.hypot(currentLandmarks[i].x - previousLandmarks[i].x, currentLandmarks[i].y - previousLandmarks[i].y);
-        count++;
-      }
-      this.vitalsMotion = .7 * (this.vitalsMotion || 0) + .3 * displacement / Math.max(1, count) * 1000 / elapsed;
-    } else this.vitalsMotion = 0;
+    // The face-motion estimate is measured over fixed time baselines rather
+    // than between consecutive frames, so it means the same thing at 10 fps
+    // and at 40 fps. A gap holds the last value: motion is unknown, not zero.
+    this.vitalsMotion = this.motionMeter
+      ? this.motionMeter.update(d.t, currentLandmarks)
+      : this.vitalsMotion || 0;
     this.faceResult = d.face;
     this.faceResultAt = d.t;
     this.vitalsFaceFeatures = f;
@@ -495,9 +538,36 @@ export class Perception extends EventTarget {
     this.snapshot.hands = this.hands || [];
     this.snapshot.cycles = { ...this.cycles };
   }
+  /**
+   * How old a face landmark ROI may be before its colour sample is rejected.
+   *
+   * The bound is 600 ms, or three observed face-result intervals on a device
+   * whose face results arrive slowly. A fixed 600 ms is only 1.8 intervals on
+   * a 3 Hz device, where one late face result would invalidate the vital
+   * signal for no reason. The bound is never tightened below the observed
+   * interval, and it is never shorter than it was before.
+   */
+  roiFreshnessMs() {
+    this.observeFaceResultAt();
+    return Math.max(600, 3 * (this.faceResultIntervalMs || 0));
+  }
+  /** Track the interval between face results, so a slow cadence is not read as stale. */
+  observeFaceResultAt() {
+    const at = this.faceResultAt || 0;
+    if (!at || at === this.observedFaceResultAt) return;
+    if (this.observedFaceResultAt) {
+      const interval = at - this.observedFaceResultAt;
+      if (interval > 0) {
+        this.faceResultIntervalMs = this.faceResultIntervalMs
+          ? this.faceResultIntervalMs * 0.7 + interval * 0.3
+          : interval;
+      }
+    }
+    this.observedFaceResultAt = at;
+  }
   samplePulse(result, f, t) {
     const lm = result?.faceLandmarks?.[0];
-    if (!lm || !f?.facePresent || f.faceQuality < 0.65 || t - (this.faceResultAt || 0) > 600) {
+    if (!lm || !f?.facePresent || f.faceQuality < 0.65 || t - (this.faceResultAt || 0) > this.roiFreshnessMs()) {
       this.pulse = this.vitals.invalidate("Position your face in frame, centered and well-lit", t);
       this.snapshot.pulse = this.pulse;
       return;
