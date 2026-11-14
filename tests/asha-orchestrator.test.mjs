@@ -224,17 +224,143 @@ test("a verified tool can suggest a module but never performs navigation", async
   assert.equal(result.orchestration.steps.at(-1).rejected, 1);
 });
 
-test("malformed model output is usable text but cannot invoke tools", async () => {
+test("malformed model output is never spoken as the answer", async () => {
   const provider = fakeProvider("A plain safe reply");
   const result = await createAshaOrchestrator({ provider }).run({
     patientId: "patient-a",
     profile,
     text: "Hello",
   });
-  assert.equal(result.reply, "A plain safe reply");
+  // Output that is not the promised structure is not shown as an answer.
+  assert.equal(
+    result.reply,
+    "I could not prepare a clear reply. Please try again.",
+  );
   assert.equal(result.proposal, undefined);
   assert.equal(result.suggestedModule, undefined);
   assert.equal(result.orchestration.verified, false);
+});
+
+test("a reply that claims a reading or a diagnosis is not spoken", async () => {
+  for (const claim of [
+    { type: "vital_value", text: "Your pulse is 72 bpm." },
+    { type: "diagnosis", text: "This looks like an infection." },
+    { type: "medication", text: "Take 500 mg of paracetamol." },
+    { type: "completed_action", text: "I have called your caregiver." },
+  ]) {
+    const provider = fakeProvider(
+      JSON.stringify({
+        reply: "Here is what I found.",
+        claims: [claim],
+        source_ids: [],
+        tool_calls: [],
+      }),
+    );
+    const result = await createAshaOrchestrator({ provider }).run({
+      patientId: "patient-a",
+      profile,
+      text: "How am I doing?",
+    });
+    assert.equal(
+      result.reply,
+      "I could not prepare a clear reply. Please try again.",
+      `a ${claim.type} claim was spoken`,
+    );
+  }
+});
+
+test("a reply that claims an action that did not happen is not spoken", async () => {
+  const provider = fakeProvider(
+    JSON.stringify({
+      reply: "Water is on the way. I have called your caregiver.",
+      claims: [],
+      source_ids: [],
+      tool_calls: [],
+    }),
+  );
+  const result = await createAshaOrchestrator({ provider }).run({
+    patientId: "patient-a",
+    profile,
+    text: "I want water",
+  });
+  assert.equal(
+    result.reply,
+    "I could not prepare a clear reply. Please try again.",
+  );
+});
+
+test("a reply with no citations is marked limited, not verified evidence", async () => {
+  const provider = fakeProvider(
+    '{"reply":"I am here and can help.","source_ids":[],"tool_calls":[]}',
+  );
+  const result = await createAshaOrchestrator({ provider }).run({
+    patientId: "patient-a",
+    profile,
+    text: "Hello",
+  });
+  const step = result.orchestration.steps.find(
+    (item) => item.tool === "verify_tool_calls",
+  );
+  assert.equal(step.status, "limited");
+});
+
+test("a reply that is not about the evidence it cites is not spoken", async () => {
+  const provider = fakeProvider(
+    JSON.stringify({
+      reply: "The weather in Dhaka is pleasant this evening.",
+      source_ids: ["guide:facespeak:2"],
+      tool_calls: [],
+    }),
+  );
+  const result = await createAshaOrchestrator({ provider }).run({
+    patientId: "patient-a",
+    profile,
+    text: "Can three blinks send water without confirmation?",
+    module: "facespeak",
+  });
+  assert.equal(
+    result.reply,
+    "I could not prepare a clear reply. Please try again.",
+  );
+});
+
+test("a module is only offered when the message is about it", async () => {
+  const orchestrator = createAshaOrchestrator({
+    provider: fakeProvider(
+      JSON.stringify({
+        reply: "The eye board works by looking at a target.",
+        source_ids: [],
+        tool_calls: [
+          { name: "suggest_module", arguments: { module: "vitalsense" } },
+        ],
+      }),
+    ),
+  });
+  const offTopic = await orchestrator.run({
+    patientId: "patient-a",
+    profile,
+    text: "How do I use the eye board?",
+    module: "eyespeak",
+  });
+  assert.equal(offTopic.suggestedModule, undefined);
+
+  const onTopic = await createAshaOrchestrator({
+    provider: fakeProvider(
+      JSON.stringify({
+        reply: "The pulse board reads colour from the face.",
+        source_ids: [],
+        tool_calls: [
+          { name: "suggest_module", arguments: { module: "vitalsense" } },
+        ],
+      }),
+    ),
+  }).run({
+    patientId: "patient-a",
+    profile,
+    text: "How do I use the pulse board?",
+    module: "vitalsense",
+  });
+  assert.equal(onTopic.suggestedModule, "vitalsense");
 });
 
 test("negation, general questions and ambiguous yes never prepare requests", async () => {

@@ -396,9 +396,7 @@ test("SenseAssist finds the need in a request and invents none", async () => {
   assert.ok(intent.failures.length === 0, JSON.stringify(intent.failures));
 });
 
-// Wave 7 — the retriever ranks on BM25 alone, so a query whose module the
-// bundle covers imperfectly can be answered by another module's text.
-test.todo("retrieval reaches the right knowledge concept", () => {
+test("retrieval reaches the right knowledge concept", () => {
   const retrieval = metrics.language.retrieval;
   assert.equal(retrieval.queries, retrievalQueries.length);
   assert.ok(
@@ -407,10 +405,7 @@ test.todo("retrieval reaches the right knowledge concept", () => {
   );
 });
 
-// Wave 7 — EyeSpeak ships as a patient module but the knowledge bundle has no
-// concept for it, so a patient asking about the gaze pointer is answered with
-// FaceSpeak text.
-test.todo("the knowledge bundle covers every module the app ships", () => {
+test("the knowledge bundle covers every module the app ships", () => {
   const gaps = metrics.language.retrievalGaps;
   assert.equal(gaps.queries, retrievalGapQueries.length);
   assert.equal(
@@ -422,9 +417,7 @@ test.todo("the knowledge bundle covers every module the app ships", () => {
 
 // ---------------------------------------------------------------- Orchestrator
 
-// Wave 7 — the orchestrator has no content guard: an unparseable reply is
-// spoken verbatim and a reply citing nothing is reported as verified.
-test.todo("the orchestrator refuses to speak an unparseable or unsafe reply", () => {
+test("the orchestrator refuses to speak an unparseable or unsafe reply", () => {
   const orchestrator = metrics.orchestrator;
   assert.equal(
     orchestrator.leakedAdversarialCount,
@@ -433,7 +426,7 @@ test.todo("the orchestrator refuses to speak an unparseable or unsafe reply", ()
   );
 });
 
-test.todo("the orchestrator does not report a reply with no citations as verified", () => {
+test("the orchestrator marks a reply with no citations as limited", () => {
   assert.equal(metrics.orchestrator.verifiedWithNoCitationsIsHonest, true);
 });
 

@@ -42,9 +42,7 @@ export default async function handler(req, res) {
     const daily = wellFormed
       ? path(b.patientId, "usage/" + new Date().toISOString().slice(0, 10))
       : null;
-    // Independent setup runs together instead of back-to-back: Maira profile
-    // discovery (cached per instance), authentication and the usage read.
-    if (wellFormed) provider.warm();
+    // The usage read runs while the request is authenticated.
     const usageRead = daily ? quiet(store.read(daily)) : null;
     const auth = await authenticate(req, b.patientId);
     if (!auth) return authFail(res);
@@ -52,6 +50,10 @@ export default async function handler(req, res) {
       return res
         .status(400)
         .json({ error: "Cloud assistance needs your consent." });
+    // Profile discovery is an outbound provider call, so it starts only
+    // after the request has been authenticated and the patient has agreed to
+    // cloud assistance.
+    if (wellFormed) provider.warm();
     if (!process.env.MAIRA_API_KEY || !process.env.MAIRA_PROJECT_KEY)
       return res
         .status(503)

@@ -40,7 +40,18 @@ export const okfDocuments = [
     "title": "FingerSpeak hand communication",
     "description": "Personal gesture practice with either or both hands.",
     "status": "draft",
-    "text": "Both hands are tracked. Choose a familiar pose and its meaning, then hold, relax and repeat three times to learn. Show the saved pose to propose a request and repeat a mapped pose to confirm. No hand ability assessment blocks opening FingerSpeak. If no usable gesture is captured, suggest FaceSpeak or caregiver assistance without locking the hand interface.",
+    "text": "Both hands are tracked. Choose a familiar pose and its meaning, then hold, relax and repeat eight times to learn. Show the saved pose to propose a request and repeat a mapped pose to confirm. No hand ability assessment blocks opening FingerSpeak. If no usable gesture is captured, suggest FaceSpeak or caregiver assistance without locking the hand interface.",
+    "provenance": "https://github.com/mysunatislam/neurobridge-asha-unified-app/blob/main/server/knowledge.js",
+    "verification": "source-text-parity"
+  },
+  {
+    "id": "guide:eyespeak",
+    "module": "eyespeak",
+    "type": "App Guide",
+    "title": "EyeSpeak gaze selection",
+    "description": "Calibrated eye-gaze selection with a board that follows the measured accuracy.",
+    "status": "draft",
+    "text": "EyeSpeak turns where the eyes look into a selection. The caregiver calibrates first: the patient looks at each target on the board until enough steady observations are collected, and the board is chosen from the measured accuracy - nine tiles, six large tiles, or two halves of the screen. Looking at a tile for long enough selects it. A selected word proposes the need, and a separate confirmation by the patient sends it to the caregiver; looking alone never sends anything. The gaze estimate is a camera measurement, not a clinical reading: an observation that does not fit the calibration is ignored rather than acted on. Head position, blinking and low light all reduce the accuracy of the estimate, and the board adapts to what was measured rather than to an assumption about the person.",
     "provenance": "https://github.com/mysunatislam/neurobridge-asha-unified-app/blob/main/server/knowledge.js",
     "verification": "source-text-parity"
   },

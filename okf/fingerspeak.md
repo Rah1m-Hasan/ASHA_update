@@ -15,4 +15,4 @@ sources:
 
 # Guidance
 
-Both hands are tracked. Choose a familiar pose and its meaning, then hold, relax and repeat three times to learn. Show the saved pose to propose a request and repeat a mapped pose to confirm. No hand ability assessment blocks opening FingerSpeak. If no usable gesture is captured, suggest FaceSpeak or caregiver assistance without locking the hand interface.
+Both hands are tracked. Choose a familiar pose and its meaning, then hold, relax and repeat eight times to learn. Show the saved pose to propose a request and repeat a mapped pose to confirm. No hand ability assessment blocks opening FingerSpeak. If no usable gesture is captured, suggest FaceSpeak or caregiver assistance without locking the hand interface.

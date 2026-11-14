@@ -1,4 +1,5 @@
 import { evaluateSafety, safetyMessage } from "../../../public/app/everyday/safety.js";
+import { replyIsSafe } from "./reply-guard.js";
 
 const VALUE_FIELDS = [
   "type",
@@ -109,13 +110,10 @@ function modelReply(result) {
   )
     return null;
   const reply = parsed.reply.trim();
-  // Defense in depth, not a claim that arbitrary medical model text is verified.
-  if (
-    /\b(?:ruled?\s*out|definitely\s*not|not\s*a)\s*(?:a\s*)?(?:heart\s*attack|emergency)|\byou\s*(?:are|'re)\s*(?:safe|fine)\b|\b(?:i|we)\s*(?:have\s*)?(?:called|contacted|notified|diagnosed|prescribed)\b|\b(?:raise|lift)\s*(?:your|the)\s*arms?\b|\b(?:take|start|increase|stop)\s*(?:\d+\s*(?:mg|tablets?)|aspirin|insulin|antibiotic)|হার্ট\s*অ্যাটাক\s*(?:নয়|নয়|হয়নি|হয়নি)|আপনি\s*(?:নিরাপদ|সুস্থ)\b|হাত\s*(?:তুলুন|ওঠান)/iu.test(
-      reply,
-    )
-  )
-    return null;
+  // Defense in depth, not a claim that arbitrary medical model text is
+  // verified. The same list the Asha orchestrator uses, so the two paths
+  // cannot drift apart.
+  if (!replyIsSafe(reply)) return null;
   return reply;
 }
 

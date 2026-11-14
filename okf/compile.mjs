@@ -8,6 +8,7 @@ const MODULES = [
   "assessment",
   "facespeak",
   "fingerspeak",
+  "eyespeak",
   "senseassist",
   "vitalsense",
   "posture",

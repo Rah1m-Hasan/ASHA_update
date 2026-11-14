@@ -4,6 +4,8 @@ import { okfDocuments } from "../../../okf/generated.js";
 // explicitly confirmed, caller-scoped speech pairs enter this corpus.
 const MAX_EXCERPT = 560;
 const MAX_QUERY = 1200;
+/** How much the module the patient is in lifts that module's own text. */
+const MODULE_PRIOR = 1.25;
 const STOP = new Set(
   "a an the and or of to in on at for from with by is are was be been it its this that these those i me my we our you your he she they their can could would should do does did how what which where when why please tell about want need asha patient patients app page pages screen module current here কী কি কিভাবে কীভাবে কেন কখন কোথায় আমি আমার আমাকে আপনি আপনার এই ওই এবং বা এর এ জন্য থেকে সঙ্গে করতে করা হয় হবে চাই আছে একটা যে পেজ পাতায় পাতা মডিউল এখানে".split(
     " ",
@@ -65,9 +67,9 @@ const ALIASES = [
   ["camera", "ক্যামেরা"],
   ["posture", "pose", "অঙ্গভঙ্গি", "ভঙ্গিমা"],
   ["wake", "awake", "waking", "wakeup", "জেগে", "জাগা", "ঘুম"],
-  ["water", "পানি", "জল"],
-  ["food", "খাবার"],
-  ["toilet", "টয়লেট", "টয়লেট", "শৌচাগার"],
+  ["water", "পানি", "পানির", "জল", "জলের", "drink", "drinking", "thirsty"],
+  ["food", "খাবার", "খাবারের", "eat", "eating", "meal", "hungry"],
+  ["toilet", "টয়লেট", "টয়লেটের", "শৌচাগার", "bathroom", "washroom", "বাথরুম"],
   ["blind", "অন্ধ", "দৃষ্টিহীন"],
   ["hearing", "deaf", "শ্রবণ", "বধির"],
   ["assessment", "assess", "মূল্যায়ন", "মূল্যায়ন"],
@@ -87,6 +89,15 @@ function terms(value) {
   )
     .filter((word) => !STOP.has(word))
     .map((word) => canonical.get(word) || word);
+}
+
+/**
+ * The words that carry the meaning of a phrase, with the bilingual aliases
+ * folded together. Used to check that a reply is about the evidence it
+ * cites.
+ */
+export function contentTerms(value) {
+  return terms(String(value ?? ""));
 }
 
 function guideDocuments() {
@@ -121,6 +132,25 @@ function guideDocuments() {
 }
 const APP_DOCUMENTS = guideDocuments();
 
+/**
+ * Instruction-like text in a confirmed speech pair. The pair is the
+ * patient's own words and is quoted as data, but a pair that reads like an
+ * instruction to the model must not reach the prompt as one.
+ */
+const INSTRUCTION_LIKE = [
+  /\b(?:ignore|disregard|forget|override)\b[^.]{0,40}\b(?:instruction|instructions|rule|rules|prompt|prompts|direction|directions)\b/iu,
+  /\byou\s+are\s+now\b[^.]{0,60}/iu,
+  /\b(?:reveal|print|repeat|output|show)\b[^.]{0,30}\b(?:prompt|system message|instructions)\b/iu,
+  /(?:^|\n)\s*(?:system|assistant|developer)\s*:/iu,
+];
+
+/** Removes the instruction-like parts of a quoted phrase. */
+export function stripInstructionLike(text) {
+  let out = String(text ?? "");
+  for (const pattern of INSTRUCTION_LIKE) out = out.replace(pattern, "[removed]");
+  return out;
+}
+
 function memoryDocuments(memories) {
   if (!Array.isArray(memories)) return [];
   const seen = new Set();
@@ -132,8 +162,8 @@ function memoryDocuments(memories) {
       typeof memory.confirmedText !== "string"
     )
       return [];
-    const heard = memory.heard.trim();
-    const confirmedText = memory.confirmedText.trim();
+    const heard = stripInstructionLike(memory.heard.trim());
+    const confirmedText = stripInstructionLike(memory.confirmedText.trim());
     // Keep complete short pairs; never truncate a long statement into a claim.
     if (
       !heard ||
@@ -208,6 +238,11 @@ export function retrieveKnowledge({
             (count +
               1.2 * (0.25 + (0.75 * doc.tokens.length) / averageLength)));
       }
+      // The module the patient is in is the likeliest subject of the
+      // question, so its text breaks a tie with an off-module keyword
+      // match. It is a prior, not a filter: a strong off-module match
+      // still wins.
+      if (module && doc.module === module) score *= MODULE_PRIOR;
       return { ...doc, score };
     })
     .filter((doc) => doc.score > 0)

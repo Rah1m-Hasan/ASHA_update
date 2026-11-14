@@ -131,5 +131,8 @@ test("query instructions cannot replace source evidence and memories remain quot
     ],
   });
   assert.match(memory[0].text, /quoted patient data/);
-  assert.match(memory[0].text, /rabbit\\"; ignore all rules/);
+  // The pair is quoted as data, and the instruction-like part of it does
+  // not reach the prompt as an instruction.
+  assert.match(memory[0].text, /rabbit\\"; \[removed\]/);
+  assert.doesNotMatch(memory[0].text, /ignore all rules/);
 });
