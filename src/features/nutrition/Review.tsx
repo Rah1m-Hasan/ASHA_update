@@ -255,7 +255,9 @@ export function Review({
         )}
       </section>
 
-      <div className="sticky bottom-0 flex flex-wrap gap-2 bg-canvas/95 py-3">
+      {/* The action bar is opaque, so a row of food scrolling behind it is
+          never half-visible through it. */}
+      <div className="sticky bottom-0 flex flex-wrap gap-2 bg-canvas py-3">
         <Button onClick={onConfirm} disabled={!ready || busy} data-testid="confirm-vision-meal">
           {tx(lang, "Save this meal", "এই খাবারটি সংরক্ষণ করুন")}
         </Button>

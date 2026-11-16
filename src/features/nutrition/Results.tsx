@@ -98,7 +98,7 @@ export function ItemCard({ r, lang, eaten, onEaten }: { r: ItemResult; lang: str
         {counted ? fmt(r.nutrients.kcal, "kcal", lang) : L(lang, STATUS[r.status])}
       </p>
       {!counted && r.reference && (
-        <p className="mt-1 text-sm text-muted">
+        <p className="mt-1 text-sm break-words text-muted">
           {r.reference.perServing
             ? tx(lang, `For reference: ${r.reference.kcal} kcal per serving on the label.`, `তথ্যের জন্য: লেবেলে প্রতি পরিবেশনে ${r.reference.kcal} কিলোক্যালরি।`)
             : tx(lang, `For reference: ${L("en", r.reference.label)} has ${r.reference.kcal} kcal per 100 g (${r.reference.databaseRecordId}).`, `তথ্যের জন্য: ${L("bn", r.reference.label)}-এ প্রতি ১০০ গ্রামে ${r.reference.kcal} কিলোক্যালরি (${r.reference.databaseRecordId})।`)}

@@ -165,7 +165,8 @@ export function VisionMealResult({
         </section>
       )}
 
-      <div className="sticky bottom-0 flex flex-wrap gap-2 bg-canvas/95 py-3">
+      {/* Opaque, so a row of food scrolling behind it is never half-visible. */}
+      <div className="sticky bottom-0 flex flex-wrap gap-2 bg-canvas py-3">
         <Button onClick={onSave} disabled={busy} data-testid="save-vision-meal">
           {tx(lang, "Save this meal", "এই খাবারটি সংরক্ষণ করুন")}
         </Button>
