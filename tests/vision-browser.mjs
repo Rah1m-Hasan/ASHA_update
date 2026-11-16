@@ -1,9 +1,23 @@
 import { createRequire } from "node:module";
 import fs from "node:fs/promises";
+import { existsSync } from "node:fs";
 const require = createRequire(import.meta.url);
 const {
   chromium,
 } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
+// The fixture photographs are not in the repository. This suite needs a real
+// face picture to run, so it says what is missing and stops, rather than
+// failing on a file that was never there.
+const missing = ["pose-test.jpg"].filter(
+  (f) => !existsSync(new URL(`../artifacts/${f}`, import.meta.url)),
+);
+if (missing.length) {
+  console.log(
+    `Vision: skipped, artifacts/${missing.join(", ")} is not on this machine`,
+  );
+  process.exit(0);
+}
+
 const browser = await chromium.launch({
   headless: true,
   executablePath: process.env.CHROME_PATH || undefined,

@@ -15,8 +15,87 @@ export const store = memoryAllowed
   (process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY)
     ? supabaseStore
     : blobStore;
+/**
+ * Which store is actually in use.
+ *
+ * The health check used to work this out from the environment on its own,
+ * so it reported "blob" while the app was running on the in-memory store.
+ */
+export const storageProvider = memoryAllowed
+  ? "memory"
+  : process.env.SUPABASE_URL &&
+      (process.env.SUPABASE_SECRET_KEY ||
+        process.env.SUPABASE_SERVICE_ROLE_KEY)
+    ? "supabase"
+    : "blob";
 export const base = (id) => `asha-live/v1/${id}`;
 export const path = (id, file) => `${base(id)}/${file}.json`;
+/** The origin used when the request carries none, or carries one that is not allowed. */
+export const DEFAULT_ORIGIN = "https://mysunatislam.github.io";
+/** The origins the API answers for. */
+export const ALLOWED_ORIGINS = [
+  "https://mysunatislam.github.io",
+  "https://neurobridge-asha-live.vercel.app",
+];
+/**
+ * Whether a request from this origin may be answered.
+ *
+ * A same-origin request - the browser talking to the host that served the
+ * page - is always allowed, whatever address that host is reached by, which
+ * is what makes the LAN address work.
+ */
+export function originAllowed(origin, host) {
+  if (!origin) return true;
+  if (sameHost(origin, host)) return true;
+  if (ALLOWED_ORIGINS.includes(origin)) return true;
+  if (process.env.VERCEL_URL && origin === `https://${process.env.VERCEL_URL}`)
+    return true;
+  if (
+    process.env.LOCAL_DEV === "1" &&
+    /^http:\/\/127\.0\.0\.1:\d+$/.test(origin)
+  )
+    return true;
+  return false;
+}
+/** Whether a string is an IPv4 or IPv6 address. */
+function isIpAddress(value) {
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(value))
+    return value.split(".").every((part) => Number(part) <= 255);
+  if (value.includes(":") && /^[0-9a-f:.]+$/i.test(value))
+    return value.split(":").length >= 3;
+  return false;
+}
+/**
+ * The address a request came from, used to spread the daily setup allowance.
+ *
+ * The address is only ever hashed into a rate-limit key: it is not stored
+ * and it does not identify a person.
+ *
+ * The last address in the forwarded chain is the one the closest proxy
+ * actually saw. A client that forges the header can put entries in front of
+ * it, but not remove the entry the proxy appends - so a forged header buys
+ * no fresh allowance. An address that is not an address at all is ignored,
+ * and a request with no usable address shares one bucket rather than getting
+ * a bucket of its own.
+ */
+export function clientIp(req) {
+  const headers = req?.headers || {};
+  const forwarded = String(headers["x-forwarded-for"] || "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  const real = String(headers["x-real-ip"] || "").trim();
+  const candidates = [...forwarded, ...(real ? [real] : [])].reverse();
+  for (const candidate of candidates) {
+    const bare = candidate.replace(/^\[/, "").replace(/\]$/, "");
+    // An IPv4 address may carry a port. An IPv6 address is used as it is.
+    const address = /^\d{1,3}(\.\d{1,3}){3}(:\d+)?$/.test(bare)
+      ? bare.replace(/:\d+$/, "")
+      : bare;
+    if (isIpAddress(address)) return address;
+  }
+  return "local";
+}
 /**
  * True when an Origin header points at the same host that served the request
  * (ignoring scheme). Used to accept same-origin traffic on any address the
@@ -34,32 +113,24 @@ export function sameHost(origin, host) {
 }
 export function begin(req, res) {
   res.setHeader("Cache-Control", "no-store");
-  res.setHeader(
-    "Access-Control-Allow-Origin",
-    "https://mysunatislam.github.io",
-  );
   res.setHeader("Vary", "Origin");
   res.setHeader("Access-Control-Allow-Headers", "content-type,authorization");
   res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+  const host = String(req.headers.host || "");
+  const requestOrigin = req.headers.origin || "";
+  const allowed = originAllowed(requestOrigin, host);
+  // The origin the browser asked for has to be the one it is given back.
+  // A fixed origin made every other allowed client - the live deployment,
+  // the LAN address - receive a response the browser would not let it read.
+  res.setHeader(
+    "Access-Control-Allow-Origin",
+    allowed && requestOrigin ? requestOrigin : DEFAULT_ORIGIN,
+  );
   if (req.method === "OPTIONS") {
     res.status(204).end();
     return false;
   }
-  const host = String(req.headers.host || "");
-  // A same-origin request (the browser talking to the host that served the
-  // page) is always allowed, whatever address that host is reached by.
-  const origin = sameHost(req.headers.origin, host)
-    ? null
-    : req.headers.origin;
-  if (
-    origin &&
-    ![
-      "https://mysunatislam.github.io",
-      "https://neurobridge-asha-live.vercel.app",
-      `https://${process.env.VERCEL_URL}`,
-    ].includes(origin) &&
-    !(process.env.LOCAL_DEV === "1" && /^http:\/\/127.0.0.1:\d+$/.test(origin))
-  ) {
+  if (!allowed) {
     res.status(403).json({ error: "Origin not allowed" });
     return false;
   }

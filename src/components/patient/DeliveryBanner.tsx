@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { StatusPill } from "@/components/dashboard/StatusPill";
 import { Button } from "@/components/ui/Button";
 import { retryUnsent } from "@/features/requests/send";
@@ -10,6 +11,9 @@ import { useSession } from "@/features/session/store";
 export function DeliveryBanner() {
   const { delivery } = useRequests();
   const cred = useSession((s) => s.patient);
+  // A retry that fails used to be an unhandled rejection: nothing happened on
+  // screen and the patient was left thinking it had been sent.
+  const [retryError, setRetryError] = useState<string | null>(null);
   if (delivery.state === "idle") return null;
   const map = {
     sending: { tone: "brand", text: "Sending…" },
@@ -23,10 +27,21 @@ export function DeliveryBanner() {
       <StatusPill tone={m.tone}>{m.text}</StatusPill>
       <p className="font-medium text-ink">{delivery.text}</p>
       {delivery.state === "failed" && cred && (
-        <Button size="sm" variant="secondary" className="ml-auto" onClick={() => void retryUnsent(cred)}>
+        <Button
+          size="sm"
+          variant="secondary"
+          className="ml-auto"
+          onClick={() => {
+            setRetryError(null);
+            retryUnsent(cred).catch(() =>
+              setRetryError("Still not delivered. Please try again in a moment."),
+            );
+          }}
+        >
           Retry
         </Button>
       )}
+      {retryError && <p className="w-full text-sm text-danger">{retryError}</p>}
       {delivery.state === "local" && <p className="w-full text-sm text-muted">Link a caregiver in Settings so requests reach them.</p>}
     </div>
   );

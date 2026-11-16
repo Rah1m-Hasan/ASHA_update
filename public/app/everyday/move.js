@@ -5,6 +5,21 @@ import {
   movementConfig,
   resolvePlan,
 } from "./move-engine.js";
+import {
+  checkSymptomText,
+  createLockout,
+  exerciseAllowed,
+  lockoutActive,
+  PAIN_AREAS,
+  SCREEN_QUESTIONS,
+  screen,
+  SESSION_SYMPTOMS,
+  startDecision,
+  symptomAction,
+  urgentGuidance,
+  restGuidance,
+} from "./move-safety.js";
+import { readSafetyState, writeSafetyState } from "./move-safety-state.js";
 
 const PHASES = {
   find_start: "Find the comfortable starting position",
@@ -91,6 +106,111 @@ export function mount(host, context) {
     ),
   );
   const controls = el("div", "", "module-form-grid");
+  // ---- The safety check ----
+  // The Everyday Move is a separately shipped surface, so it has to carry the
+  // same protections the React Move has: the screen, the in-session symptom
+  // report and the pause that follows a safety stop. The rules come from
+  // ./move-safety.js - the same module the React Move uses.
+  const stored = readSafetyState();
+  let lockout = stored.lockout ?? null;
+  let rememberAnswers = stored.remember === true;
+  let answers = {};
+  let painAreas = [];
+  if (rememberAnswers) {
+    answers = { ...stored.answers };
+    // "Right now" symptoms are never remembered. They are asked every time.
+    delete answers.emergency_now;
+    painAreas = [...stored.painAreas];
+  }
+  const safetyCard = el("section", "", "card safety-card");
+  safetyCard.id = "moveSafety";
+  safetyCard.append(el("h3", text("Safety check", "নিরাপত্তা যাচাই")));
+  safetyCard.append(
+    el(
+      "p",
+      text(
+        "A quick check before you start. ASHA doesn't diagnose; your answers decide what is safe to practise today.",
+        "শুরুর আগে দ্রুত যাচাই। ASHA রোগ নির্ণয় করে না; আপনার উত্তর ঠিক করে আজ কী নিরাপদ।",
+      ),
+      "muted",
+    ),
+  );
+  const questionList = el("div", "", "safety-questions");
+  const questionRows = SCREEN_QUESTIONS.map((question) => {
+    const row = el("div", "", "safety-question");
+    row.append(el("p", bn ? question.bn : question.en));
+    const options = el("div", "", "actions");
+    const buttons = ["no", "yes", "unsure"].map((value) => {
+      const button = el(
+        "button",
+        value === "no"
+          ? text("No", "না")
+          : value === "yes"
+            ? text("Yes", "হ্যাঁ")
+            : text("Not sure", "নিশ্চিত নই"),
+        "secondary",
+      );
+      button.type = "button";
+      button.dataset.question = question.id;
+      button.dataset.value = value;
+      button.addEventListener("click", () => answerQuestion(question.id, value));
+      options.append(button);
+      return button;
+    });
+    row.append(options);
+    questionList.append(row);
+    return { question, buttons };
+  });
+  safetyCard.append(questionList);
+  const painBox = el("div", "", "safety-pain");
+  painBox.id = "moveSafetyPain";
+  painBox.append(el("p", text("Where is the pain?", "কোথায় ব্যথা?")));
+  const painButtons = PAIN_AREAS.map((area) => {
+    const button = el("button", bn ? area.bn : area.en, "secondary");
+    button.type = "button";
+    button.dataset.area = area.id;
+    button.addEventListener("click", () => {
+      painAreas = painAreas.includes(area.id)
+        ? painAreas.filter((id) => id !== area.id)
+        : [...painAreas, area.id];
+      persistSafety();
+      renderSafety();
+    });
+    painBox.append(button);
+    return button;
+  });
+  safetyCard.append(painBox);
+  const rememberLabel = el("label", "", "safety-remember");
+  const rememberBox = document.createElement("input");
+  rememberBox.type = "checkbox";
+  rememberBox.id = "moveRemember";
+  rememberBox.checked = rememberAnswers;
+  rememberBox.addEventListener("change", () => {
+    rememberAnswers = rememberBox.checked;
+    persistSafety();
+    renderSafety();
+  });
+  rememberLabel.append(
+    rememberBox,
+    el(
+      "span",
+      text(
+        "Remember my safety answers on this device so I'm not asked every time. (“Right now” symptoms are always asked.)",
+        "আমার উত্তর এই ডিভাইসে মনে রাখুন, যাতে প্রতিবার জিজ্ঞাসা না করতে হয়। (“এখনকার” লক্ষণ সবসময় জিজ্ঞাসা করা হয়।)",
+      ),
+    ),
+  );
+  safetyCard.append(rememberLabel);
+  const safetyNotice = el("p", "", "notice");
+  safetyNotice.id = "moveSafetyNotice";
+  safetyNotice.setAttribute("role", "status");
+  safetyNotice.setAttribute("aria-live", "polite");
+  safetyCard.append(safetyNotice);
+  const guidance = el("div", "", "urgent");
+  guidance.id = "moveGuidance";
+  guidance.setAttribute("role", "alert");
+  guidance.hidden = true;
+  safetyCard.append(guidance);
   const exercise = select(
     Object.entries(EXERCISES).map(([key, value]) => [
       key,
@@ -155,12 +275,19 @@ export function mount(host, context) {
     text("Finish and save", "শেষ করে সংরক্ষণ করুন"),
     "secondary",
   );
+  const symptom = el(
+    "button",
+    text("Report a symptom", "লক্ষণ জানান"),
+    "secondary",
+  );
   start.id = "moveStart";
   pause.id = "movePause";
   finish.id = "moveFinish";
+  symptom.id = "moveSymptom";
   pause.disabled = true;
   finish.disabled = true;
-  actions.append(start, pause, finish);
+  symptom.disabled = true;
+  actions.append(start, pause, finish, symptom);
   const status = el(
     "p",
     text(
@@ -206,12 +333,62 @@ export function mount(host, context) {
     ),
   );
   phaseValue.id = "movePhase";
+  const symptomCard = el("section", "", "card safety-card");
+  symptomCard.id = "moveSymptoms";
+  symptomCard.hidden = true;
+  symptomCard.append(
+    el("h3", text("What are you feeling?", "কেমন লাগছে?")),
+  );
+  symptomCard.append(
+    el(
+      "p",
+      text(
+        "Choose one. ASHA's safety rules decide what happens next.",
+        "একটি বেছে নিন। ASHA-র নিরাপত্তা নিয়ম ঠিক করে পরেরটি কী হবে।",
+      ),
+      "muted",
+    ),
+  );
+  const symptomOptions = el("div", "", "actions");
+  for (const item of SESSION_SYMPTOMS) {
+    const button = el(
+      "button",
+      bn ? item.bn : item.en,
+      item.action === "emergency" ? "primary" : "secondary",
+    );
+    button.type = "button";
+    button.dataset.symptom = item.id;
+    button.addEventListener("click", () => reportSymptom(item.id));
+    symptomOptions.append(button);
+  }
+  symptomCard.append(symptomOptions);
+  const symptomForm = el("form", "", "actions");
+  const symptomInput = input("text", "", {
+    placeholder: text(
+      "Or describe it (English or Bangla)",
+      "অথবা লিখুন (বাংলা বা ইংরেজি)",
+    ),
+    maxlength: 400,
+  });
+  symptomInput.id = "moveSymptomText";
+  symptomInput.setAttribute("aria-label", text("Describe it", "বর্ণনা দিন"));
+  const symptomCheck = el("button", text("Check", "যাচাই"), "secondary");
+  symptomCheck.type = "submit";
+  symptomForm.append(symptomInput, symptomCheck);
+  symptomForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const value = symptomInput.value.trim();
+    if (value) reportSymptom(value);
+  });
+  symptomCard.append(symptomForm);
   panel.append(
+    safetyCard,
     controls,
     planField,
     guide,
     planNotice,
     actions,
+    symptomCard,
     status,
     metrics,
     phaseValue,
@@ -247,6 +424,164 @@ export function mount(host, context) {
     context.notify?.(message);
   };
 
+  // ---- Safety ----
+  // The rules live in ./move-safety.js, the same module the React Move uses.
+  // Nothing here decides anything on its own.
+  function persistSafety() {
+    writeSafetyState({
+      lockout,
+      answers: rememberAnswers ? answers : {},
+      painAreas: rememberAnswers ? painAreas : [],
+      remember: rememberAnswers,
+    });
+  }
+
+  function currentScreening() {
+    return screen(answers, { painAreas, lockout });
+  }
+
+  function showGuidance(lines, tone = "notice") {
+    guidance.className = tone;
+    guidance.replaceChildren();
+    for (const line of lines) guidance.append(el("p", line));
+    guidance.hidden = false;
+  }
+
+  function applyLockout(next) {
+    lockout = next;
+    persistSafety();
+  }
+
+  function answerQuestion(id, value) {
+    answers[id] = value;
+    if (id === "emergency_now" && value !== "no") {
+      // Lock at once. Answering "no" again must not restart the session.
+      applyLockout(
+        createLockout(
+          "emergency",
+          [
+            value === "unsure"
+              ? "Unsure warning symptoms"
+              : "Warning symptoms reported before exercise",
+          ],
+          Date.now(),
+        ),
+      );
+      showGuidance(urgentGuidance(bn ? "bn" : "en", "BD", []), "urgent");
+    }
+    persistSafety();
+    renderSafety();
+  }
+
+  /** Report a symptom during a session. Rules decide; there is no override. */
+  function reportSymptom(value) {
+    const known = SESSION_SYMPTOMS.some((item) => item.id === value);
+    const decision = known
+      ? { action: symptomAction(value), reasons: [value] }
+      : checkSymptomText(value, { region: "BD" });
+    symptomCard.hidden = true;
+    symptomInput.value = "";
+    if (decision.action === "emergency") {
+      stopCamera();
+      applyLockout(createLockout("emergency", decision.reasons, Date.now()));
+      showGuidance(
+        urgentGuidance(bn ? "bn" : "en", "BD", decision.reasons),
+        "urgent",
+      );
+    } else if (decision.action === "stop_rest") {
+      stopCamera();
+      applyLockout(createLockout("stop_rest", decision.reasons, Date.now()));
+      showGuidance(restGuidance(bn ? "bn" : "en", "BD"));
+    } else if (decision.action === "stop_exercise") {
+      stopCamera();
+      showGuidance([
+        text(
+          "Stopping this exercise. Don't push through sharp pain.",
+          "এই নড়াচড়া বন্ধ করা হচ্ছে। তীক্ষ্ণ ব্যথায় চেষ্টা করবেন না।",
+        ),
+      ]);
+    } else if (decision.action === "end") {
+      stopCamera();
+      showGuidance([
+        text(
+          "Let's ease off. Finish and save when you're ready.",
+          "ধীরে চলুন। প্রস্তুত হলে শেষ করে সংরক্ষণ করুন।",
+        ),
+      ]);
+    } else {
+      showGuidance([
+        text(
+          "No warning signs in that. Keep going at a comfortable pace.",
+          "এতে কোনো সতর্ক লক্ষণ নেই। স্বচ্ছন্দ গতিতে চালিয়ে যান।",
+        ),
+      ]);
+    }
+    renderSafety();
+  }
+
+  function renderSafety() {
+    for (const { question, buttons } of questionRows)
+      for (const button of buttons)
+        button.setAttribute(
+          "aria-pressed",
+          String(answers[question.id] === button.dataset.value),
+        );
+    const painAnswered = answers.pain === "yes" || answers.pain === "unsure";
+    painBox.hidden = !painAnswered;
+    for (const button of painButtons)
+      button.setAttribute(
+        "aria-pressed",
+        String(painAreas.includes(button.dataset.area)),
+      );
+    const screening = currentScreening();
+    const decision = startDecision(screening, {
+      clinicianPlan: mode.value === "rehab" && !!activePlan,
+      answers,
+      painAreas,
+    });
+    // A movement that loads a painful area is left out for today.
+    for (const option of exercise.options) {
+      const spec = EXERCISES[option.value];
+      if (!spec) continue;
+      option.disabled = !exerciseAllowed(spec, screening).allowed;
+    }
+    if (lockoutActive(lockout, Date.now())) {
+      safetyNotice.className = "urgent";
+      safetyNotice.textContent = text(
+        "Move is paused for your safety. The pause ends on its own; ASHA cannot give medical clearance.",
+        "নিরাপত্তার জন্য মুভ বন্ধ আছে। বিরতি নিজে থেকেই শেষ হবে; ASHA চিকিৎসা স্পষ্টীকরণ দিতে পারে না।",
+      );
+      return;
+    }
+    if (!decision.allowed) {
+      safetyNotice.className =
+        decision.kind === "emergency" ? "urgent" : "notice";
+      safetyNotice.textContent =
+        decision.kind === "answers"
+          ? text(
+              "Answer every safety question before starting.",
+              "শুরু করার আগে প্রতিটি নিরাপত্তা প্রশ্নের উত্তর দিন।",
+            )
+          : decision.reason ||
+            text(
+              "Let's check with your clinician first. ASHA cannot give medical clearance itself.",
+              "আগে চিকিৎসকের সঙ্গে কথা বলুন। ASHA নিজে চিকিৎসা স্পষ্টীকরণ দিতে পারে না।",
+            );
+      return;
+    }
+    safetyNotice.className = "notice";
+    safetyNotice.textContent =
+      decision.kind === "clinician_plan"
+        ? text(
+            "Your clinician's plan is used for this movement. ASHA cannot give medical clearance itself.",
+            "এই নড়াচড়ার জন্য আপনার চিকিৎসকের পরিকল্পনা ব্যবহার হবে। ASHA নিজে চিকিৎসা স্পষ্টীকরণ দিতে পারে না।",
+          )
+        : text(
+            "You can start practising. Stop if the movement causes pain, dizziness or discomfort.",
+            "আপনি অনুশীলন শুরু করতে পারেন। ব্যথা, মাথা ঘোরা বা অস্বস্তি হলে থামুন।",
+          );
+  }
+
   function stopCamera() {
     runVersion++;
     running = false;
@@ -255,6 +590,7 @@ export function mount(host, context) {
     session?.pause();
     pause.disabled = true;
     start.disabled = false;
+    symptom.disabled = true;
     finish.disabled = !session?.validFrames || !!savedId;
     for (const control of [
       exercise,
@@ -303,6 +639,7 @@ export function mount(host, context) {
         "দেখানো লক্ষ্য অনুশীলনের জন্য বদলানো যায়। স্বচ্ছন্দ সীমা বেছে নিন। পুনর্বাসনের পরিকল্পনা আপনার চিকিৎসক নির্ধারণ করবেন।",
       );
     }
+    renderSafety();
   }
 
   function resetSession() {
@@ -450,6 +787,52 @@ export function mount(host, context) {
     if (starting || running) return;
     try {
       refreshGuide();
+      // The safety check gates the session. It runs before anything else, so
+      // a warning sign can never be answered after the camera is already on.
+      const screening = currentScreening();
+      const decision = startDecision(screening, {
+        clinicianPlan: mode.value === "rehab" && !!activePlan,
+        answers,
+        painAreas,
+      });
+      if (!decision.allowed) {
+        if (
+          decision.kind === "emergency" &&
+          !lockoutActive(lockout, Date.now())
+        ) {
+          applyLockout(
+            createLockout("emergency", screening.reasons, Date.now()),
+          );
+          showGuidance(
+            urgentGuidance(bn ? "bn" : "en", "BD", screening.reasons),
+            "urgent",
+          );
+        }
+        announce(
+          decision.kind === "answers"
+            ? text(
+                "Answer every safety question before starting.",
+                "শুরু করার আগে প্রতিটি নিরাপত্তা প্রশ্নের উত্তর দিন।",
+              )
+            : decision.kind === "review"
+              ? text(
+                  "Let's check with your clinician first. ASHA cannot give medical clearance itself.",
+                  "আগে চিকিৎসকের সঙ্গে কথা বলুন। ASHA নিজে চিকিৎসা স্পষ্টীকরণ দিতে পারে না।",
+                )
+              : decision.reason ||
+                text(
+                  "Move is paused for your safety.",
+                  "নিরাপত্তার জন্য মুভ বন্ধ আছে।",
+                ),
+        );
+        renderSafety();
+        return;
+      }
+      const allowed = exerciseAllowed(EXERCISES[exercise.value], screening);
+      if (!allowed.allowed) {
+        announce(allowed.reason);
+        return;
+      }
       if (mode.value === "rehab" && !activePlan)
         throw new Error(
           text(
@@ -540,6 +923,7 @@ export function mount(host, context) {
       running = true;
       starting = false;
       pause.disabled = false;
+      symptom.disabled = false;
       start.textContent = text("Resume camera", "ক্যামেরা আবার চালু করুন");
       announce(
         text(
@@ -552,6 +936,11 @@ export function mount(host, context) {
       stopCamera();
       announce(error.message);
     }
+  });
+
+  symptom.addEventListener("click", () => {
+    symptomCard.hidden = false;
+    symptomInput.focus();
   });
 
   pause.addEventListener("click", () => {

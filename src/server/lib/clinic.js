@@ -230,7 +230,11 @@ export function createClinicService(store, now = () => Date.now()) {
               "Sharing permission changed. Choose your records again.",
             );
         } catch (error) {
-          await store.remove(written);
+          try {
+            await store.remove(written);
+          } catch {
+            // The rollback failing must not hide the error that caused it.
+          }
           throw error;
         }
         await audit(tenant, member, "records.shared", member.patientId);

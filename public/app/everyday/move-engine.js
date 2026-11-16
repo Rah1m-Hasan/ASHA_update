@@ -7,6 +7,10 @@ export const MOVE_MODEL = Object.freeze({
 
 export const EXERCISES = Object.freeze({
   knee_extension: {
+    id: "knee_extension",
+    // The same screening flags the React Move catalog uses, so the shared
+    // safety policy can leave a movement out when it loads a painful area.
+    screeningFlags: ["knee_injury"],
     label: "Seated knee extension",
     labelBn: "বসে হাঁটু সোজা করা",
     direction: "increase",
@@ -20,6 +24,10 @@ export const EXERCISES = Object.freeze({
       "স্থির চেয়ারে বসুন। পাশ থেকে হাঁটুর উচ্চতায় ক্যামেরা রাখুন। নিতম্ব, হাঁটু ও গোড়ালি দৃশ্যমান রাখুন। নিজের স্বচ্ছন্দ বা চিকিৎসকের অনুমোদিত নড়াচড়া করুন।",
   },
   elbow_flexion: {
+    id: "elbow_flexion",
+    // The same screening flags the React Move catalog uses, so the shared
+    // safety policy can leave a movement out when it loads a painful area.
+    screeningFlags: ["shoulder_injury"],
     label: "Elbow flexion",
     labelBn: "কনুই ভাঁজ করা",
     direction: "decrease",
@@ -33,6 +41,10 @@ export const EXERCISES = Object.freeze({
       "স্বচ্ছন্দে বসুন বা দাঁড়ান। যে হাত নাড়াবেন তার পাশে ক্যামেরা রাখুন। কাঁধ, কনুই ও কবজি দৃশ্যমান রাখুন এবং বাহু স্থির রাখুন।",
   },
   shoulder_flexion: {
+    id: "shoulder_flexion",
+    // The same screening flags the React Move catalog uses, so the shared
+    // safety policy can leave a movement out when it loads a painful area.
+    screeningFlags: ["shoulder_injury"],
     label: "Shoulder flexion",
     labelBn: "সামনে হাত তোলা",
     direction: "increase",
@@ -46,6 +58,10 @@ export const EXERCISES = Object.freeze({
       "স্বচ্ছন্দে বসুন বা দাঁড়ান এবং পাশে ক্যামেরা রাখুন। নিতম্ব, কাঁধ ও কনুই দৃশ্যমান রাখুন। কোণটি বাহুর অবস্থান থেকে আসে, তাই কনুই স্বচ্ছন্দে সোজা রাখুন।",
   },
   sit_to_stand: {
+    id: "sit_to_stand",
+    // The same screening flags the React Move catalog uses, so the shared
+    // safety policy can leave a movement out when it loads a painful area.
+    screeningFlags: ["balance"],
     label: "Sit to stand",
     labelBn: "বসা থেকে দাঁড়ানো",
     direction: "increase",

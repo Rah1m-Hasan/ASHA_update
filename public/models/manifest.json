@@ -14,7 +14,7 @@
       "source": "https://huggingface.co/onnx-community/yolo26n-pose-ONNX/resolve/main/onnx/model.onnx"
     },
     {
-      "file": "app/ort.wasm.min.mjs",
+      "file": "engine/ort.wasm.min.mjs",
       "bytes": 48259,
       "sha256": "6ef726f355b791129f7ddf3f62e7877a16b9b777abe87004b8ab306e6b9cf265",
       "source": "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/ort.wasm.min.mjs"

@@ -29,6 +29,12 @@ export function CareProvider({ children }: { children: React.ReactNode }) {
   const active = care.find((c) => c.patientId === activeId) ?? care[0] ?? null;
   const { data, error, loading, refresh } = useSessionData(active, 4000);
   const received = useRef(new Set<string>());
+  // The set of already-marked requests belongs to one patient. It used to be
+  // shared for the whole session, so it grew for ever and a request that had
+  // been seen for one patient stayed marked when another was selected.
+  useEffect(() => {
+    received.current = new Set();
+  }, [active?.patientId]);
 
   // Mark newly seen requests as received so the patient sees delivery progress.
   useEffect(() => {

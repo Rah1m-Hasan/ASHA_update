@@ -363,6 +363,41 @@ legend {
   color: #a92323;
   border: 1px solid #e4a39d;
 }
+.safety-questions {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+.safety-question {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+.safety-question p {
+  margin: 0 0 10px;
+  color: var(--ink);
+}
+.safety-pain {
+  margin-top: 16px;
+}
+.safety-pain p {
+  margin: 0 0 8px;
+}
+.safety-pain .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.safety-remember {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin-top: 16px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+.safety-remember input {
+  margin-top: 2px;
+}
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

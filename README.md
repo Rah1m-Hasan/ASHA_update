@@ -55,6 +55,11 @@ LAN demo without cloud storage: `ASHA_MEMORY_STORE=1 ASHA_MEMORY_STORE_PRODUCTIO
 Routes: `/` landing · `/app` app · `/app?module=facespeak|fingerspeak|senseassist|vitalsense|posture`
 · `/app?role=caregiver` (also `/care`).
 
+The 2026-11 repository audit: [`docs/FULL_AUDIT_REPORT.md`](docs/FULL_AUDIT_REPORT.md)
+(what was found and fixed) · [`docs/TEST_RESULTS.md`](docs/TEST_RESULTS.md) (what was
+run, and what could not be run here) · [`docs/REMAINING_ISSUES.md`](docs/REMAINING_ISSUES.md)
+(what is still open).
+
 
 A new application built from the preserved `neurobridge-asha-unified-web` assets. Original repositories are not modified.
 
@@ -135,6 +140,29 @@ npm start
 ```
 
 Local preview: http://127.0.0.1:4180. Every `/api/*` endpoint runs locally through `src/app/api/*/route.ts` and `src/server/handlers`; there is no development proxy to the deployed backend, and no secret is ever embedded in the client. Browser tests are in `tests/`, and use the desktop's bundled Playwright/Chrome paths; adapt these paths for another machine. Test artifacts are ignored by Git and deployment.
+
+### Tests
+
+```sh
+npm test                 # unit tests (node --test tests/*.test.mjs)
+npm run test:browser     # the two-phone request journey
+npm run test:everyday    # the Everyday companion, browser + offline
+npm run test:browser:all # every browser suite, one after another (~20 minutes)
+npm run models:check     # every pinned model matches its recorded size and SHA-256
+npm run tokens:check     # the generated palette is current and legible
+```
+
+Each browser suite also has a script of its own - `npm run test:browser:move`,
+`npm run test:browser:eyespeak`, `npm run test:browser:orchestration`, and so on
+for all of them - so a single journey can be re-run on its own. The browser
+suites expect a server on `http://127.0.0.1:4180`; run a production build
+(`npm run build && npm start`) rather than the dev server.
+
+Two suites talk to the **deployed** site rather than a local server:
+`npm run test:api:live` (the deployed API) and `npm run test:browser:production`
+(the deployed site end to end; it creates a temporary care circle and deletes it
+again). Both are deliberately **not** part of `test:browser:all`, so an ordinary
+full run never touches the deployment.
 
 `src/app/` is the Next.js App Router frontend and the `/api/*` routes; `src/server/handlers/` holds the request handlers and `src/server/lib/` the persistence, provider and retrieval code. The camera pipeline and the retained legacy static app live in `public/engine/`, `public/app/` and `public/neuroface/`. The original static export remains in Git history and supporting assets are reused. FingerSpeak is embedded from `neuroface/fingerspeak.html`, receiving hand results and the parent's existing media stream through a same-origin bridge; it cannot request another camera or microphone. Other legacy frontend routes are redirected/excluded on Vercel.
 

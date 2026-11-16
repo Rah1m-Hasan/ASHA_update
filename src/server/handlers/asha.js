@@ -1,12 +1,6 @@
-import {
-  begin,
-  body,
-  authenticate,
-  store,
-  path,
-  authFail,
-} from "../lib/common.js";
+import { begin, body, authenticate, authFail } from "../lib/common.js";
 import { clean } from "../lib/logic.js";
+import { claimUsage } from "../lib/usage.js";
 import {
   createMairaProvider,
   MairaProviderError,
@@ -16,13 +10,6 @@ import { urgentCompanionResponse } from "../../../public/app/everyday/companion-
 
 const provider = createMairaProvider();
 const orchestrator = createAshaOrchestrator({ provider });
-const quiet = (promise) => {
-  // Prevent an unhandled rejection if another step fails first; callers still
-  // await the original promise and receive its error.
-  promise.catch(() => {});
-  return promise;
-};
-
 export default async function handler(req, res) {
   if (!begin(req, res)) return;
   if (req.method !== "POST")
@@ -30,7 +17,7 @@ export default async function handler(req, res) {
   const started = Date.now();
   try {
     const b = body(req);
-    // Public local template: no account, provider discovery, usage read or cloud consent is needed.
+    // Public local template: no account, provider discovery, quota or cloud consent is needed.
     const urgent = urgentCompanionResponse(b.text, {
       language: b.language,
       mode: b.mode,
@@ -39,11 +26,6 @@ export default async function handler(req, res) {
     });
     if (urgent) return res.json(urgent);
     const wellFormed = /^[a-f0-9]{24}$/.test(b.patientId || "");
-    const daily = wellFormed
-      ? path(b.patientId, "usage/" + new Date().toISOString().slice(0, 10))
-      : null;
-    // The usage read runs while the request is authenticated.
-    const usageRead = daily ? quiet(store.read(daily)) : null;
     const auth = await authenticate(req, b.patientId);
     if (!auth) return authFail(res);
     if (b.consent !== true)
@@ -61,16 +43,17 @@ export default async function handler(req, res) {
     const text = clean(b.text, 600);
     if (!text)
       return res.status(400).json({ error: "Say or type something first." });
-    const usage = (await usageRead) || { count: 0, last: 0 };
-    if (usage.count >= 160 || Date.now() - usage.last < 1500)
-      return res
-        .status(429)
-        .json({ error: "Please wait a moment before asking again." });
-    await store.write(
-      daily,
-      { count: usage.count + 1, last: Date.now() },
-      true,
-    );
+    // The quota is claimed here, after the request has been authenticated
+    // and the person has agreed to cloud assistance, so an unconfigured
+    // provider does not spend anyone's daily allowance.
+    const claim = await claimUsage(b.patientId);
+    if (!claim.allowed)
+      return res.status(429).json({
+        error:
+          claim.reason === "daily"
+            ? "Daily cloud assistance limit reached. It resets tomorrow."
+            : "Please wait a moment before asking again.",
+      });
     const providerStarted = Date.now();
     const result = await orchestrator.run({
       patientId: b.patientId,

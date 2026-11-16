@@ -23,6 +23,9 @@ export default function PatientDetail() {
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [support, setSupport] = useState<SupportContext | null>(null);
   const [saved, setSaved] = useState("");
+  // A failed save used to be an unhandled rejection: nothing on screen
+  // changed and the caregiver was left thinking it had worked.
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (entry && active?.patientId !== id) select(id);
@@ -40,17 +43,27 @@ export default function PatientDetail() {
 
   async function save() {
     if (!entry || !assessment || !support) return;
-    await api("session", { cred: entry, body: { action: "update", label, assessment, supportContext: support, voice: profile?.voice ?? {} } });
-    sessionStore.upsertCare({ ...entry, label });
-    setSaved("Saved");
-    await refresh();
+    setError("");
+    try {
+      await api("session", { cred: entry, body: { action: "update", label, assessment, supportContext: support, voice: profile?.voice ?? {} } });
+      sessionStore.upsertCare({ ...entry, label });
+      setSaved("Saved");
+      await refresh();
+    } catch {
+      setError("Couldn't save. Check the connection and try again.");
+    }
   }
 
   async function remove() {
     if (!entry || !confirm(`Delete ${entry.label}'s care circle for everyone? This can't be undone.`)) return;
-    await api("session", { cred: entry, body: { action: "delete", confirm: "DELETE" } });
-    sessionStore.removeCare(entry.patientId);
-    router.push("/dashboard/caregiver/patients");
+    setError("");
+    try {
+      await api("session", { cred: entry, body: { action: "delete", confirm: "DELETE" } });
+      sessionStore.removeCare(entry.patientId);
+      router.push("/dashboard/caregiver/patients");
+    } catch {
+      setError("Couldn't delete the care circle. Nothing was deleted. Try again.");
+    }
   }
 
   return (
@@ -65,6 +78,11 @@ export default function PatientDetail() {
           </>
         }
       />
+      {error && (
+        <p className="mb-4 rounded-xl bg-danger-soft px-4 py-3 text-sm text-danger ring-1 ring-danger-line" role="alert">
+          {error}
+        </p>
+      )}
       <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
         <Panel title="Abilities" description="Guides suggestions only">
           {assessment ? <AssessmentFields value={assessment} onChange={(a) => (setAssessment(a), setSaved(""))} /> : <p className="text-muted">Loading…</p>}

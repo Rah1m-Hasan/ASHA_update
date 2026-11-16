@@ -1,4 +1,5 @@
-import { begin, body, store } from "../lib/common.js";
+import { randomBytes } from "node:crypto";
+import { begin, body, clientIp, store } from "../lib/common.js";
 import { hash } from "../lib/logic.js";
 import { createClinicService, ClinicError } from "../lib/clinic.js";
 import { memoryStore } from "../lib/memory-store.js";
@@ -20,9 +21,7 @@ export default async function handler(req, res) {
           .status(400)
           .json({ error: "Confirm you want to create a clinic workspace." });
       const today = new Date().toISOString().slice(0, 10);
-      const ip = hash(
-        String(req.headers["x-forwarded-for"] || "local").split(",")[0],
-      );
+      const ip = hash(clientIp(req));
       const prefix = `asha-everyday/limits/${today}/${ip}/`;
       if ((await store.list(prefix, 10)).length >= 10)
         return res
@@ -31,10 +30,13 @@ export default async function handler(req, res) {
             error:
               "Daily workspace setup limit reached. Reopen your private invitation.",
           });
-      const result = await service.create(input.name);
-      await store.write(prefix + result.tenant + ".json", {
+      // The marker is written before the workspace exists. It used to be
+      // written after, so a marker that failed left a live workspace with an
+      // admin secret nobody was ever told about.
+      await store.write(prefix + randomBytes(8).toString("hex") + ".json", {
         at: new Date().toISOString(),
       });
+      const result = await service.create(input.name);
       return res.json(resultWithStorageMode(result));
     }
     const bearer = String(req.headers.authorization || "").replace(

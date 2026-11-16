@@ -1,15 +1,9 @@
-import {
-  begin,
-  body,
-  authenticate,
-  authFail,
-  store,
-  path,
-} from "../lib/common.js";
+import { begin, body, authenticate, authFail } from "../lib/common.js";
 import { clean } from "../lib/logic.js";
 import { evaluateSafety, safetyMessage } from "../../../public/app/everyday/safety.js";
 import { createMairaProvider } from "../lib/maira-provider.js";
 import { createCareService } from "../lib/care-service.js";
+import { claimUsage } from "../lib/usage.js";
 
 const care = createCareService(createMairaProvider());
 export default async function handler(req, res) {
@@ -44,16 +38,17 @@ export default async function handler(req, res) {
           .slice(0, 5)
           .filter((r) => r?.consent_scope === "care" && r?.module === "care")
       : [];
-    const key = path(
-      input.patientId,
-      "usage/" + new Date().toISOString().slice(0, 10),
-    );
-    const usage = (await store.read(key)) || { count: 0, last: 0 };
-    if (usage.count >= 160 || Date.now() - usage.last < 1500)
-      return res
-        .status(429)
-        .json({ error: "Please wait before asking again." });
-    await store.write(key, { count: usage.count + 1, last: Date.now() }, true);
+    // The same quota the /api/asha path uses. Both endpoints share one
+    // allowance, and the claim is taken atomically, so a burst of requests
+    // cannot pass the check a hundred times over.
+    const claim = await claimUsage(input.patientId);
+    if (!claim.allowed)
+      return res.status(429).json({
+        error:
+          claim.reason === "daily"
+            ? "Daily cloud assistance limit reached. It resets tomorrow."
+            : "Please wait before asking again.",
+      });
     const result = await care.explain({
       patientId: input.patientId,
       text,
@@ -64,7 +59,10 @@ export default async function handler(req, res) {
       consent: true,
     });
     return res.json(result);
-  } catch {
+  } catch (error) {
+    // A failure here used to disappear without a trace, so there was no way
+    // to tell a provider fault from a fault in this handler.
+    console.error("care request failure", error?.name);
     return res
       .status(503)
       .json({

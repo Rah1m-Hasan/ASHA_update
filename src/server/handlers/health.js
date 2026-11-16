@@ -1,3 +1,5 @@
+import { storageProvider } from "../lib/common.js";
+
 export default function handler(req, res) {
   res.setHeader("Cache-Control", "no-store");
   res.json({
@@ -12,11 +14,9 @@ export default function handler(req, res) {
           process.env.SUPABASE_SERVICE_ROLE_KEY)) ||
       process.env.BLOB_READ_WRITE_TOKEN
     ),
-    storageProvider:
-      process.env.SUPABASE_URL &&
-      (process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY)
-        ? "supabase"
-        : "blob",
+    // The store that is really in use, not one worked out from the
+    // environment: the in-memory store used to be reported as "blob".
+    storageProvider,
     pushConfigured: !!process.env.VAPID_PRIVATE_KEY,
   });
 }

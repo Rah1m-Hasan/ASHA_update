@@ -5,6 +5,7 @@ import {
   begin,
   body,
   authenticate,
+  clientIp,
   publicProfile,
   store,
   path,
@@ -19,18 +20,18 @@ import {
   voice,
   clean,
   eventValue,
+  requestKinds,
   safeStatus,
   pushEndpoint,
 } from "../lib/logic.js";
+import { mergeReceipt, listAcks, writeReceipt } from "../lib/receipts.js";
 export default async function handler(req, res) {
   if (!begin(req, res)) return;
   try {
     const b = req.method === "POST" ? body(req) : {};
     if (b.action === "create") {
       // Durable, per-day creation budget. No patient data in the rate key.
-      const ip = hash(
-        String(req.headers["x-forwarded-for"] || "local").split(",")[0],
-      );
+      const ip = hash(clientIp(req));
       const today = new Date().toISOString().slice(0, 10);
       const quota = await store.list(`asha-live/limits/${today}/${ip}/`, 15);
       if (quota.length >= 12)
@@ -68,11 +69,22 @@ export default async function handler(req, res) {
       const acks = await Promise.all(
         e.map((e) => store.read(path(id, "receipts/" + e.id))),
       );
+      // The receipt and the acknowledgement live in separate documents, so
+      // the dashboard's automatic "received" write and the caregiver's
+      // "acknowledged" write cannot overwrite each other. See
+      // src/server/lib/receipts.js.
+      const byEvent = await listAcks(
+        id,
+        e.map((x) => x.id),
+      );
       return res.json({
         profile: publicProfile(p),
         role,
         status: await store.read(path(id, "status")),
-        events: e.map((x, i) => ({ ...x, receipt: acks[i] || null })),
+        events: e.map((x, i) => ({
+          ...x,
+          receipt: mergeReceipt(acks[i], byEvent.get(x.id)),
+        })),
         vapidPublicKey: process.env.VAPID_PUBLIC_KEY || null,
       });
     }
@@ -102,6 +114,12 @@ export default async function handler(req, res) {
       const file = path(id, "events/" + b.id);
       const prior = await store.read(file);
       if (prior) return res.json({ event: prior, duplicate: true });
+      // An unsupported kind is a bad request, not a server failure. It used
+      // to be reported as a 503, which told the patient their request had
+      // not been delivered and asked them to retry something that could
+      // never succeed.
+      if (!requestKinds.includes(b.kind))
+        return res.status(400).json({ error: "Unsupported request kind" });
       const ev = eventValue(b);
       if (
         !ev.confirmed &&
@@ -118,7 +136,16 @@ export default async function handler(req, res) {
           .status(429)
           .json({ error: "Too many requests. Please wait a moment." });
       const event = { ...ev, id: b.id, at: new Date().toISOString() };
-      await store.write(file, event);
+      try {
+        await store.write(file, event);
+      } catch (e) {
+        // Two sends of the same request can reach the server together. The
+        // store refuses the second write; that is a duplicate, not a
+        // failure, so the stored event is returned instead of a 503.
+        const stored = await store.read(file);
+        if (!stored) throw e;
+        return res.json({ event: stored, duplicate: true });
+      }
       let push = "not_enabled";
       const subscription = await store.read(path(id, "push"));
       if (subscription && process.env.VAPID_PRIVATE_KEY) {
@@ -152,15 +179,7 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "Invalid request ID" });
       if (!(await store.read(path(id, "events/" + b.id))))
         return res.status(404).json({ error: "Request not found" });
-      const prev = await store.read(path(id, "receipts/" + b.id));
-      const receipt = {
-        receivedAt: prev?.receivedAt || new Date().toISOString(),
-        acknowledgedAt:
-          b.action === "ack"
-            ? new Date().toISOString()
-            : prev?.acknowledgedAt || null,
-      };
-      await store.write(path(id, "receipts/" + b.id), receipt, true);
+      const receipt = await writeReceipt(id, b.action, b.id);
       return res.json({ receipt });
     }
     if (b.action === "subscribe" && role === "caregiver") {
@@ -180,9 +199,25 @@ export default async function handler(req, res) {
       role === "caregiver" &&
       b.confirm === "DELETE"
     ) {
-      const keys = await store.list(base(id) + "/", 1000);
-      await store.remove(keys);
-      return res.json({ deleted: true });
+      // A listing is capped, so a large care circle holds more keys than one
+      // listing returns. Removing one batch and reporting success left the
+      // rest of the circle behind while telling the caregiver it was gone.
+      // The batches are removed until the listing comes back empty.
+      let removed = 0;
+      for (let round = 0; round < 20; round++) {
+        const keys = await store.list(base(id) + "/", 500);
+        if (!keys.length) break;
+        await store.remove(keys);
+        removed += keys.length;
+        if (keys.length < 500) break;
+      }
+      const left = await store.list(base(id) + "/", 1);
+      if (left.length)
+        return res.status(409).json({
+          error:
+            "Part of this care circle could not be removed. Try again in a moment.",
+        });
+      return res.json({ deleted: true, removed });
     }
     return res
       .status(403)

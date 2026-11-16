@@ -117,7 +117,10 @@ try {
     0,
   );
 
-  await page.locator("#settingsButton").click();
+  // The settings entry point is the header button labelled "Open Settings". The
+  // old #settingsButton no longer exists, so the test could not reach the
+  // screen it was written for.
+  await page.locator("#landingMenuToggle").click();
   await page.locator("#ashaLanguage").selectOption("mixed");
   await page.locator("#cloudConsent").check();
   await page.locator("#settingsBack").click();

@@ -1,8 +1,11 @@
-import { store, base } from "../lib/common.js";
+import { begin, store, base } from "../lib/common.js";
 import { hash, equal } from "../lib/logic.js";
 import { cleanupEveryday } from "../lib/everyday-retention.js";
 export default async function handler(req, res) {
-  res.setHeader("Cache-Control", "no-store");
+  // The same headers and preflight handling as every other route, so a
+  // browser or a monitoring service gets a 204 for an OPTIONS request
+  // instead of an unauthorised JSON body.
+  if (!begin(req, res)) return;
   if (
     !process.env.CRON_SECRET ||
     !equal(
@@ -27,8 +30,16 @@ export default async function handler(req, res) {
       today = new Date().toISOString().slice(0, 10);
     const old = limits.filter((k) => k.split("/")[2] < today);
     await store.remove(old);
-    res.json({ expiredSessionsRemoved: removed, ...(await cleanupEveryday(store)) });
-  } catch {
+    // The provider quota slots of earlier days are of no use to anyone.
+    const slots = await store.list("asha-live/usage/", 5000);
+    const oldSlots = slots.filter((k) => k.split("/")[2] < today);
+    await store.remove(oldSlots);
+    res.json({
+      expiredSessionsRemoved: removed,
+      ...(await cleanupEveryday(store)),
+    });
+  } catch (error) {
+    console.error("cleanup failure", error?.name);
     res.status(503).json({ error: "Cleanup unavailable" });
   }
 }

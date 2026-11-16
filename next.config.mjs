@@ -6,10 +6,17 @@ const securityHeaders = [
     key: "Permissions-Policy",
     value: "camera=(self), microphone=(self), geolocation=()",
   },
+  // The dashboard holds a live care circle, so it must not be framed by another
+  // site: a framed page can be made to show one button where another is.
+  // Same-origin only - the FingerSpeak studio and the Everyday companion are
+  // embedded from this same origin.
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
 ];
 
 const nextConfig = {
   reactStrictMode: true,
+  // Do not advertise the framework to anyone who asks.
+  poweredByHeader: false,
   async headers() {
     return [
       { source: "/(.*)", headers: securityHeaders },

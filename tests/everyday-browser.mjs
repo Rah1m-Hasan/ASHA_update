@@ -298,13 +298,42 @@ try {
   await screenshot(page, "eyespeak-mobile");
   await noOverflow(page, "EyeSpeak mobile");
   await route(page, "move", "#moveExercise");
+  // The safety check comes first: the session must not start until it has
+  // been answered.
+  await page
+    .getByRole("button", { name: "Start camera and practice", exact: true })
+    .click();
+  await contains(
+    page.locator(".move-controls"),
+    /Answer every safety question before starting/i,
+  );
+  const safetyQuestions = page.locator(".safety-question");
+  assert.equal(await safetyQuestions.count(), 7);
+  for (let index = 0; index < 7; index++)
+    await safetyQuestions
+      .nth(index)
+      .getByRole("button", { name: "No", exact: true })
+      .click();
   await page
     .getByRole("button", { name: "Start camera and practice", exact: true })
     .click();
   await contains(page.locator(".move-controls"), /permission denied/i);
+  // A warning sign stops the session at once and pauses it for twelve hours.
+  // The pause has to survive a reload, or closing the page would undo it.
+  await safetyQuestions
+    .first()
+    .getByRole("button", { name: "Yes", exact: true })
+    .click();
+  await contains(page.locator("#moveGuidance"), /Get urgent medical help now/);
+  await page.reload();
+  await route(page, "move", "#moveExercise");
+  await contains(
+    page.locator("#moveSafetyNotice"),
+    /Move is paused for your safety/i,
+  );
   await noOverflow(page, "Move mobile");
   console.log(
-    "PASS EyeSpeak touch, English/Bangla letters, undo/delete, switch selection, focus escape, and graceful camera permission denial",
+    "PASS EyeSpeak touch, English/Bangla letters, undo/delete, switch selection, focus escape, graceful camera permission denial, and the Move safety check with its twelve-hour pause",
   );
 
   // Urgent templates must run offline even with cloud consent checked. No provider call is allowed.

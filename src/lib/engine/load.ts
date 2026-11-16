@@ -28,7 +28,13 @@ function script(src: string) {
 export function loadClassicScripts() {
   classic ??= (async () => {
     for (const src of CLASSIC) await script(src);
-  })();
+  })().catch((error) => {
+    // A failed load is not kept. One dropped connection used to leave the
+    // rejected promise cached for the whole session, so the engine could not
+    // be loaded again even after the network came back.
+    classic = null;
+    throw error;
+  });
   return classic;
 }
 

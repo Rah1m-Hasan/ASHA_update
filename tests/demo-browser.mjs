@@ -2,9 +2,23 @@
 import { createRequire } from "node:module";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
+import { existsSync } from "node:fs";
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 const base = process.env.ASHA_TEST_BASE || "http://127.0.0.1:4180/";
+// The fixture photographs are not in the repository. This suite needs a real
+// face picture to run, so it says what is missing and stops, rather than
+// failing on a file that was never there.
+const missing = ["portrait-test.jpg"].filter(
+  (f) => !existsSync(new URL(`../artifacts/${f}`, import.meta.url)),
+);
+if (missing.length) {
+  console.log(
+    `Demo entry: skipped, artifacts/${missing.join(", ")} is not on this machine`,
+  );
+  process.exit(0);
+}
+
 const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROME_PATH || undefined });
 const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
 const errors = [], createRequests = [], aiRequests = [], caregiverEvents = [];

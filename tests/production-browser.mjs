@@ -1,3 +1,7 @@
+// This suite runs against the deployed site (https://neurobridge-asha-live.vercel.app), not a local
+// server: it checks the real public deployment end to end. It creates a temporary care circle and
+// deletes it again in a finally block. It is deliberately NOT part of `npm run test:browser:all`,
+// so an ordinary full run never touches the deployment.
 import { createRequire } from "node:module";
 import fs from "node:fs/promises";
 import assert from "node:assert/strict";
