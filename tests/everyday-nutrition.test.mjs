@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   FOODS,
+  ALL_FOODS,
   FOOD_DATA_VERSION,
   NUTRIENTS,
   RECIPE_TEMPLATES,
@@ -49,7 +50,16 @@ test("English, transliteration, Bangla and multiple-term search use the same ing
   assert.equal(searchFoods("ডাল")[0].id, "lentils-boiled");
   assert.equal(searchFoods("  SOYBEAN oil  ")[0].id, "soybean-oil");
   assert.equal(searchFoods("unknown magic food").length, 0);
-  assert.equal(searchFoods("").length, FOODS.length);
+  // An empty search offers the whole catalogue: the eleven legacy records and the wider
+  // USDA-backed ones that came with the food catalogue build.
+  assert.equal(searchFoods("").length, ALL_FOODS.length);
+  assert.equal(FOODS.length, 11, "the eleven records the Everyday interface always showed are unchanged");
+  assert.equal(new Set(ALL_FOODS.map((food) => food.id)).size, ALL_FOODS.length);
+  assert.equal(new Set(ALL_FOODS.map((food) => food.fdcId)).size, ALL_FOODS.length);
+  for (const ref of ALL_FOODS) {
+    assert.ok(ref.databaseRecordId || ref.fdcId, `${ref.id} must name its source record`);
+    assert.ok(ref.source.publisher, `${ref.id} must name its publisher`);
+  }
 });
 
 test("portions use grams or explicitly declared serving grams, without hidden spoon or cup conversions", () => {
@@ -187,10 +197,21 @@ test("photo quality identifies generic low-light/detail failure and abstains on 
   );
   assert.throws(() => checkPhotoQuality(new Uint8Array(10), 200, 200));
   assert.throws(() => checkPhotoQuality([], 1, 1));
+  // The vision status is now the REAL status of what is installed, not a standing "no".
   const vision = foodVisionStatus();
-  assert.equal(vision.available, false);
-  assert.equal(vision.model_id, null);
-  assert.match(vision.reason, /No licensed, validated food-trained weights/);
+  assert.equal(vision.available, true);
+  assert.equal(vision.model_id, "yolov8_foodseg103");
+  assert.equal(vision.task, "instance_segmentation");
+  assert.equal(vision.classes, 104);
+  assert.match(vision.license.weights, /AGPL/);
+  assert.equal(vision.runtime.location, "browser");
+  // The measured numbers must be the ones the benchmark actually produced.
+  assert.equal(vision.measured.images, 200);
+  assert.ok(vision.measured.precision > 0 && vision.measured.precision < 1);
+  assert.ok(vision.measured.f1 > 0 && vision.measured.f1 < 1);
+  assert.match(vision.measured.dataset, /FoodSeg103/);
+  // It must not claim the model can name a Bangladeshi dish, because it cannot.
+  assert.match(vision.reason, /cannot name a Bangladeshi dish/);
 });
 
 test("correction calculations do not mutate originals and repeated revisions do not duplicate assumptions", () => {

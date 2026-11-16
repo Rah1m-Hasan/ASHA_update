@@ -131,6 +131,16 @@ The supplied provider key successfully supports text reasoning and speech interp
 
 Camera-model tests use official MediaPipe fixtures, not patient validation. Mobile performance and real gesture accuracy depend on device, lighting and positioning; calibrate on the actual patient's phone.
 
+**Nutrition food recognition.** The Nutrition module segments a photo on the device with a
+YOLOv8n-seg model over FoodSeg103's 104 ingredient classes and offers the results as catalogue
+*candidates*. It does **not** name a Bangladeshi dish, and its model score is not a probability:
+over 200 labelled photographs the highest-scoring wrong answer was "cabbage" at 0.99, and on a
+real plate of kidney beans the model said "chocolate" at 0.662. Every food is confirmed by the
+person, and nutrition comes from USDA food records and the person's amounts, never from the
+model. The portion estimate from a photograph has **not** been measured. See
+`docs/NUTRITION_AI_ACCURACY_REPORT.md` for the numbers and
+`docs/NUTRITION_AI_IMPLEMENTATION_REPORT.md` for what is and is not verified.
+
 ## Development
 
 ```sh

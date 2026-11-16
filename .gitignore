@@ -14,3 +14,7 @@ next-env.d.ts
 .tmp/
 .playwright-cli/
 .certs/
+
+# Evaluation datasets are fetched, not committed. They are third-party photographs and are large.
+# Fetch with: node scripts/nutrition-fetch-dataset.mjs
+datasets/

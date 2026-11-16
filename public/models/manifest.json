@@ -28,6 +28,16 @@
       "publishedAt": "2023-04-26",
       "license": "Apache-2.0 (stated in the model's embedded TFLite metadata)",
       "use": "Nutrition: experimental whole-fruit suggestions only (ImageNet classes banana, Granny Smith, strawberry)"
+    },
+    {
+      "file": "models/yolov8_foodseg103.onnx",
+      "bytes": 14707923,
+      "sha256": "d81ba2e44c45cead8c20581f2185928fa1a33fbf0e8643fbce4bdf476df201c5",
+      "source": "https://huggingface.co/magnusdtd/yolov8-foodseg103/resolve/main/yolov8_foodseg103.onnx",
+      "downloadedAt": "2026-11-16",
+      "publishedAt": "2025-11-19",
+      "license": "AGPL-3.0 (stated in the model's embedded metadata); training dataset FoodSeg103 is Apache-2.0",
+      "use": "Nutrition: instance segmentation of 104 ingredient-level food classes, run on-device on a still photograph. Proposals only - the person confirms every food."
     }
   ]
 }

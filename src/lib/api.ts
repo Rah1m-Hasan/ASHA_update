@@ -8,7 +8,7 @@ export class ApiError extends Error {
 
 /** Calls the Asha API with a patient or caregiver credential. */
 export async function api<T = unknown>(
-  endpoint: "session" | "asha" | "health",
+  endpoint: "session" | "asha" | "health" | "nutrition",
   { cred, body }: { cred?: Credential | null; body?: Record<string, unknown> } = {},
 ): Promise<T> {
   const url = new URL(`/api/${endpoint}`, window.location.origin);

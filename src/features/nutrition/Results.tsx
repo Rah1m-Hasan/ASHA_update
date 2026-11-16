@@ -185,6 +185,10 @@ function verificationText(v: string, lang: string) {
   if (v === "api_verified") return tx(lang, "checked against the USDA API", "USDA API-তে যাচাই করা");
   if (v === "cross_checked") return tx(lang, "cross-checked copy, API check pending", "প্রতিলিপি মিলিয়ে দেখা, API যাচাই বাকি");
   if (v === "entered_by_person") return tx(lang, "typed in by you", "আপনার লেখা");
+  // A recipe's numbers come from its ingredients, not from a laboratory measurement of the dish.
+  if (v === "derived_recipe")
+    return tx(lang, "ASHA's ingredient estimate - not a laboratory value", "আশার উপকরণের হিসাব - গবেষণাগারের মাপ নয়");
+  if (v === "source_verified") return tx(lang, "read from the USDA food table", "USDA খাদ্য সারণি থেকে নেওয়া");
   return v;
 }
 

@@ -1,5 +1,5 @@
 const CACHE = "asha-live-v2";
-const EVERYDAY_CACHE = 'asha-everyday-v2';
+const EVERYDAY_CACHE = 'asha-everyday-v3';
 const EVERYDAY_ASSETS = ['/everyday.html', '/app/everyday/main.js', '/app/everyday/style.css', '/app/everyday/fonts.css',
   '/app/asha-tokens.css', '/app/asha-fonts.css',
   '/fonts/figtree-latin.woff2', '/fonts/figtree-latin-ext.woff2', '/fonts/fraunces-latin.woff2', '/fonts/fraunces-latin-ext.woff2', '/fonts/anek-bangla-latin.woff2', '/fonts/anek-bangla-bangla.woff2',
@@ -7,6 +7,11 @@ const EVERYDAY_ASSETS = ['/everyday.html', '/app/everyday/main.js', '/app/everyd
   '/app/everyday/safety.js', '/app/everyday/companion-safety.js', '/app/everyday/care.js', '/app/everyday/clinic.js', '/app/everyday/nutrition.js', '/app/everyday/foods.js',
   '/app/everyday/move.js', '/app/everyday/move-engine.js', '/app/everyday/eyespeak.js', '/app/everyday/gaze-engine.js',
   '/app/speech-capture.js', '/engine/speech-capture.js', '/engine/uuid.js', '/engine/camera-support.js',
+  '/app/nutrition/catalogue/index.js', '/app/nutrition/catalogue/records.js', '/app/nutrition/catalogue/recipes.js',
+  '/app/nutrition/engine.js', '/app/nutrition/portion.js',
+  '/app/nutrition/vision/map.js', '/app/nutrition/vision/contract.js', '/app/nutrition/vision/policy.js',
+  '/app/nutrition/vision/quality.js', '/app/nutrition/vision/seg-codec.js', '/app/nutrition/vision/seg-labels.js',
+  '/engine/food-segmenter-worker.js',
   '/assets/assets/images/asha-avatar.png', '/assets/brand/asha-favicon-48.png'];
 self.addEventListener("install", (event) => {
   self.skipWaiting();
@@ -34,7 +39,10 @@ self.addEventListener("fetch", (event) => {
   if (
     event.request.method === "GET" &&
     u.origin === self.location.origin &&
-    (/\.(task|onnx|wasm)$/.test(u.pathname) || u.pathname.startsWith('/neuroface/vendor/'))
+    (/\.(task|onnx|wasm)$/.test(u.pathname) ||
+      u.pathname === '/engine/ort.wasm.min.mjs' ||
+      u.pathname === '/engine/ort-wasm-simd-threaded.mjs' ||
+      u.pathname.startsWith('/neuroface/vendor/'))
   ) {
     event.respondWith(
       caches.open(CACHE).then(async (cache) => {

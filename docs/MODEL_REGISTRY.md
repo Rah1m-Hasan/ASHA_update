@@ -22,3 +22,26 @@ Candidate experiments, **not installed**: food-fine-tuned MobileNetV3/EfficientN
 Weights now reside at `public/neuroface/models/face_landmarker.task` and `public/models/pose_landmarker_lite.task`, still served at `/neuroface/models/face_landmarker.task` and `/models/pose_landmarker_lite.task`. Shared browser inference and speech code is in `public/engine`; Everyday code remains in `public/app/everyday`. Provider/store code is server-only under `src/server/lib`, reached through `src/server/handlers` and Next API routes.
 
 The migration adds the locked Next.js `16.4.3`, React/React DOM `19.3.1` runtime, plus Tailwind CSS/PostCSS `4.3.3`, TypeScript `5.9.3` and matching type/build tooling. Existing `@vercel/blob@2.8.0`, `web-push@3.6.7`, locked transitive packages and Prettier remain. Browser QA uses the already installed Playwright runtime. OS ASR/TTS availability and Bangla voices vary by device; no external font or speech pack is bundled.
+
+
+## The food segmenter
+
+| Installed asset | Pin / source | Precision and input | Disk bytes | Licence / data boundary |
+| --- | --- | --- | ---: | --- |
+| `public/models/yolov8_foodseg103.onnx` | YOLOv8n-seg, FoodSeg103, 768x768; pinned in `public/models/manifest.json` | Instance segmentation, 104 ingredient classes, 768x768 NCHW | 14,707,923 | **AGPL-3.0** weights over the **Apache-2.0** FoodSeg103 dataset; `public/models/FOODSEG-LICENSE.txt` |
+| `public/engine/ort-wasm-simd-threaded.wasm` + `.mjs` | ONNX Runtime Web 1.22, vendored; pinned in `public/engine/manifest.json` | CPU/WASM, no GPU | 11,210,254 + 20,856 | MIT (onnxruntime); `public/engine/ORT-LICENSE.txt` |
+
+The runtime was previously fetched unpinned from a CDN at run time. It is now served from this
+app's own origin, pinned by SHA-256, and cached by the service worker, so the Nutrition module
+works offline and nothing is fetched from a third party while the app is in use.
+
+Measured on 200 labelled FoodSeg103 validation images through the shipping worker: region
+precision 65.6 %, recall 58.5 %, F1 61.9 %; p50 612 ms, p95 658 ms on desktop Chromium; **0**
+external requests. The split is **in-domain** for this model, so it measures the implementation
+rather than generalisation.
+
+`scripts/nutrition-model-acceptance.mjs` is the gate that keeps a broken model out: it runs the
+model on labelled photographs and refuses one whose scores do not vary, that answers with the
+same class every time, or whose top-1 accuracy is below the floor. It exists because a
+published ONNX Food-101 model was found to have all-zero convolution weights and produced a
+uniform softmax on every image while passing every size-and-hash check.

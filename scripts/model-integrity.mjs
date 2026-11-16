@@ -29,6 +29,9 @@ export const MANIFESTS = [
   { file: "public/models/manifest.json", base: publicDir, key: "file" },
   // Every path is relative to public/neuroface/.
   { file: "public/neuroface/vendor/manifest.json", base: path.join(publicDir, "neuroface"), key: "path" },
+  // Every path is relative to public/engine/. The ONNX Runtime WASM binary, which
+  // used to be fetched from a CDN at run time and so was never checked here.
+  { file: "public/engine/manifest.json", base: path.join(publicDir, "engine"), key: "path" },
 ];
 
 export async function readManifests() {

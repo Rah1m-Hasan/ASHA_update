@@ -1,4 +1,6 @@
 /** Offline ingredient reference, not a food-recognition model or diet prescription. */
+import { RECORDS as CATALOGUE_RECORDS } from "../nutrition/catalogue/index.js";
+
 export const FOOD_DATA_VERSION = "usda-sr-legacy-asha-2026-11-10";
 export const CALCULATOR_VERSION = "1.0.0";
 export const NUTRIENTS = Object.freeze({
@@ -138,6 +140,44 @@ export const FOODS = Object.freeze([
   ),
 ]);
 
+/**
+ * The wider catalogue, in the legacy shape.
+ *
+ * The eleven records above are the ones the Everyday interface has always shown, and they keep
+ * their short names and their exact numbers. The records below come from the same USDA SR Legacy
+ * source through `scripts/build-nutrition-catalogue.mjs`, which reads the bulk CSV and writes the
+ * values and the portion weights without hand-typing them.
+ *
+ * A record that is already in the list above is not added twice: the older entry wins, so nothing
+ * the Everyday interface already showed changes.
+ */
+// A record is skipped when the list above already has it, either under the same id or the same
+// USDA id. Two names for one food would let the same food be logged twice under two labels.
+const LEGACY_IDS = new Set(FOODS.map((item) => item.id));
+const LEGACY_FDC_IDS = new Set(FOODS.map((item) => item.fdcId));
+const CATALOGUE_FOODS = CATALOGUE_RECORDS.filter(
+  (record) => !LEGACY_IDS.has(record.id) && !LEGACY_FDC_IDS.has(record.fdcId),
+).map((record) =>
+  Object.freeze({
+    id: record.id,
+    fdcId: record.fdcId,
+    en: record.en,
+    bn: record.bn,
+    description: `${record.en} · ${record.category}, ${record.state}`,
+    aliases: Object.freeze(record.aliases ?? []),
+    per100g: Object.freeze(record.per100g),
+    source: Object.freeze(record.source),
+    category: record.category,
+    state: record.state,
+    portions: Object.freeze(record.portions ?? []),
+    databaseRecordId: record.databaseRecordId,
+    verification: Object.freeze(record.verification ?? { status: "source_verified" }),
+  }),
+);
+
+/** Every single-ingredient food the interface may offer. */
+export const ALL_FOODS = Object.freeze([...FOODS, ...CATALOGUE_FOODS]);
+
 // These are ASHA-authored editable assembly examples, NOT measured Bangladesh recipe entries.
 // Weights refer to the edible ingredient state named above, including retained oil/salt.
 export const RECIPE_TEMPLATES = Object.freeze(
@@ -220,7 +260,7 @@ export const RECIPE_TEMPLATES = Object.freeze(
 );
 
 export function getFood(id) {
-  return FOODS.find((item) => item.id === id);
+  return ALL_FOODS.find((item) => item.id === id);
 }
 
 export function searchFoods(query = "") {
@@ -230,7 +270,7 @@ export function searchFoods(query = "") {
     .trim()
     .split(/\s+/)
     .filter(Boolean);
-  return FOODS.filter((item) =>
+  return ALL_FOODS.filter((item) =>
     words.every((word) =>
       `${item.en} ${item.bn} ${item.description} ${item.aliases.join(" ")}`
         .toLocaleLowerCase()
@@ -407,11 +447,51 @@ export function checkPhotoQuality(rgba, width, height) {
   };
 }
 
+/**
+ * What the food vision on this device actually is.
+ *
+ * This used to answer `{available: false}` no matter what was installed. It now reports the real
+ * model, its licence and the accuracy that was MEASURED on labelled photographs, so the interface
+ * can tell the truth about what is running.
+ *
+ * The measured numbers come from `scripts/nutrition-benchmark.mjs`, which drives the shipping
+ * worker through 200 labelled FoodSeg103 validation photographs:
+ *
+ *   region-level precision 65.6 %, recall 58.5 %, F1 61.9 % (TP 494, FP 259, FN 350)
+ *   p50 612 ms, p95 658 ms on a desktop browser
+ *   0 requests to any external service
+ *
+ * Read this carefully: FoodSeg103 is the dataset the model was TRAINED on, so these numbers
+ * measure the implementation, not generalisation, and they are certainly not Bangladeshi food.
+ * The score is a model score, not a probability that the person ate that food.
+ */
 export function foodVisionStatus() {
   return {
-    available: false,
-    model_id: null,
+    available: true,
+    model_id: "yolov8_foodseg103",
+    model_version: "foodseg103-768",
+    task: "instance_segmentation",
+    classes: 104,
+    license: {
+      weights: "AGPL-3.0",
+      dataset: "Apache-2.0",
+      notice: "public/models/FOODSEG-LICENSE.txt",
+    },
+    runtime: {
+      name: "onnxruntime-web",
+      version: "1.22.0",
+      location: "browser",
+      wasm: "vendored, same origin",
+    },
+    measured: {
+      dataset: "FoodSeg103 validation (in-domain for this model)",
+      images: 200,
+      precision: 0.656,
+      recall: 0.585,
+      f1: 0.619,
+      evaluated_on: "2026-11-16",
+    },
     reason:
-      "No licensed, validated food-trained weights are installed. Choose foods and confirm amounts manually.",
+      "ASHA finds ingredients in the picture and offers them as candidates. It cannot name a Bangladeshi dish, so every food is confirmed by the person before it is saved.",
   };
 }

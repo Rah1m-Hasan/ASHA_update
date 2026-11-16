@@ -1,0 +1,21 @@
+{
+  "version": "onnxruntime-web-1.22.0",
+  "downloadedAt": "2026-11-16",
+  "note": "The ONNX Runtime Web WASM runtime, vendored so the app fetches no inference code from a third-party CDN. The .mjs wrapper alone was pinned before; the .wasm binary it loads was fetched cross-origin at run time, which broke the offline story and left the runtime outside the integrity check. Both files are same-origin now, so public/sw.js caches them with the model weights.",
+  "files": [
+    {
+      "path": "ort-wasm-simd-threaded.wasm",
+      "url": "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/ort-wasm-simd-threaded.wasm",
+      "bytes": 11210254,
+      "sha256": "71aef04959c5c1b6de461b6538e2058e306610034a85aad2742d0c7fd4533fe4",
+      "license": "MIT (onnxruntime)"
+    },
+    {
+      "path": "ort-wasm-simd-threaded.mjs",
+      "url": "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/ort-wasm-simd-threaded.mjs",
+      "bytes": 20856,
+      "sha256": "30dd851d9c00622940500f71ddd2ff8820c5cb65270816080175b958705385a8",
+      "license": "MIT (onnxruntime)"
+    }
+  ]
+}

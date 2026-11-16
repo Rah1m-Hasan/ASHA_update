@@ -20,3 +20,25 @@ All inference stays in the browser. No raw camera images are sent to the cloud. 
 https://storage.googleapis.com/mediapipe-models/image_classifier/efficientnet_lite0/int8/latest/efficientnet_lite0.tflite
 
 Its embedded TFLite metadata states the Apache License 2.0. It was trained on ImageNet's 1,000 general classes, so it is **not a food model** and does not recognise Bangladeshi meals. ASHA Nutrition uses only three of its classes (banana, Granny Smith apple, strawberry) to *suggest* a whole fruit, labelled experimental, which the person must confirm. Every other food is chosen by the person. It runs in a Web Worker on frames sampled about three times a second; no image leaves the device.
+
+
+## The food segmenter
+
+`yolov8_foodseg103.onnx` is a YOLOv8n instance-segmentation export trained on FoodSeg103 (104
+ingredient classes), exported at 768x768.
+
+| | |
+|---|---|
+| Licence | **AGPL-3.0** for the weights, **Apache-2.0** for the FoodSeg103 dataset. See `FOODSEG-LICENSE.txt`. |
+| Precedent | The repository already ships an AGPL-3.0 model (`yolo26n-pose.onnx`), so this follows an established decision rather than introducing a new one. |
+| Pinned by | `public/models/manifest.json`, checked by `npm run models:check` |
+| Runtime | ONNX Runtime Web 1.22, **vendored** under `public/engine/` (`ort-wasm-simd-threaded.wasm`, MIT) and pinned in `public/engine/manifest.json` |
+| Where it runs | In the browser, CPU/WASM. No GPU, no paid service, no upload. |
+| Measured | Region precision 65.6 %, recall 58.5 %, F1 61.9 % over 200 FoodSeg103 validation images (in-domain); p50 612 ms |
+
+The runtime was previously fetched unpinned from a CDN at run time. It is now served from this
+app's own origin, pinned by hash, and cached by the service worker, so the module works
+offline and nothing is fetched from a third party while the app is in use.
+
+Nutrition5k's `metadata.csv` is **not** committed either: it is fetched for the benchmark and
+the folder is git-ignored.

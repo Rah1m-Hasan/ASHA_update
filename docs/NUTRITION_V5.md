@@ -2,7 +2,13 @@
 
 Dashboard route: `/dashboard/patient/nutrition` (Wellbeing › Nutrition, and a card on the patient home). Bangla and English throughout. Data version `asha-nutrition-v5/2026-11-10`, calculator `asha-nutrition-engine/1.0.0`.
 
-**What this is not:** ASHA does not recognise meals from photos. The camera model is a general ImageNet classifier that is not trained on food. ASHA uses it only to *suggest* banana, apple or strawberries, always labelled experimental, and the person confirms or removes the suggestion. Every other food is chosen by the person from a list. Calories come from USDA food records and the person's answers, never from the picture.
+**What this is not:** ASHA does not name a Bangladeshi dish from a photograph, and it does not
+estimate a portion it has been given no scale for. The camera model is a YOLOv8n-seg instance
+segmenter (FoodSeg103, 104 ingredient classes). It finds *where* each food is on the plate and
+offers catalogue *candidates*; the person confirms, corrects or removes every one of them.
+Nutrition comes from USDA food records and the person's amounts, never from the model. A model
+score is shown as a score and never as a percentage - over 200 labelled photographs the
+highest-scoring wrong answer was "cabbage" at 0.99.
 
 ## Flow
 
@@ -117,3 +123,24 @@ The three fruit photos are ImageNet samples, which this model was trained on, so
 - **HEIC** opens only where the browser can decode it (Safari). Elsewhere the person is told how to switch the iPhone camera to "Most Compatible". No HEIC decoder is bundled.
 - Not built: second side-view photo, barcode or label scanning, beverages, remembered preferences, clinician review of logs.
 - Phones, battery, heat and real-world camera conditions are unmeasured.
+
+
+## The food segmenter (added 2026-11-16)
+
+| | |
+|---|---|
+| Model | `yolov8_foodseg103.onnx`, YOLOv8n-seg, 104 ingredient classes, 768x768 |
+| Licence | AGPL-3.0 weights, Apache-2.0 dataset (`public/models/FOODSEG-LICENSE.txt`) |
+| Runtime | ONNX Runtime Web 1.22, **vendored** under `public/engine/`, CPU/WASM, no GPU |
+| Where it runs | In the browser, in a Web Worker. **No photo is uploaded.** |
+| First run | ~26 MB (14.7 MB model + 11.2 MB runtime), same-origin, service-worker cached |
+| Measured | Region precision 65.6 %, recall 58.5 %, F1 61.9 % on 200 FoodSeg103 validation images (in-domain); p50 612 ms |
+
+The catalogue grew to 76 sourced single-ingredient records and 10 Bangladeshi recipes, all
+generated from the USDA SR Legacy bulk CSV by `scripts/build-nutrition-catalogue.mjs`. A generic
+biryani never substitutes for a chicken one.
+
+Recognition is **never applied automatically**. The flow is: segment, offer candidates, the
+person confirms, the calculator runs, the person confirms the meal, the server recalculates and
+stores it. See `docs/NUTRITION_AI_ARCHITECTURE.md` for the pipeline and
+`docs/NUTRITION_AI_ACCURACY_REPORT.md` for the measured numbers.

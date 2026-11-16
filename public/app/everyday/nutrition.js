@@ -12,6 +12,8 @@ import {
   checkPhotoQuality,
   foodVisionStatus,
 } from "./foods.js";
+import { candidatesFor } from "../nutrition/vision/map.js";
+import { getEntry } from "../nutrition/catalogue/index.js";
 
 /** A real offline manual meal journal. Food vision is intentionally unavailable. */
 export function mount(host, context) {
@@ -308,6 +310,161 @@ export function mount(host, context) {
       "ছবি ছোট: বড় ছবি দিন।",
     ),
   };
+  // The canvas of the chosen photo, kept so the food finder can look at it. It is not stored and
+  // it is not uploaded: the segmentation happens in this browser.
+  let photoCanvas = null;
+
+  const finderNote = make("p", "", "muted", photo);
+  finderNote.setAttribute("role", "status");
+  const finderHost = make("div", undefined, undefined, photo);
+
+  /**
+   * Ask the on-device segmenter what it can see in the photo.
+   *
+   * It returns INGREDIENT regions, not dishes, and it is often wrong: on a real plate of kidney
+   * beans it answered "chocolate" with a score of 0.66. So the number is shown as a score and not
+   * as a percentage, and every region has to be confirmed and given a weight by the person.
+   */
+  async function findFoods() {
+    finderNote.textContent = t(
+      "Looking at the picture…",
+      "ছবিটি দেখা হচ্ছে…",
+    );
+    finderHost.replaceChildren();
+    if (!photoCanvas) {
+      finderNote.textContent = t(
+        "Choose a photo first.",
+        "প্রথমে একটি ছবি বাছুন।",
+      );
+      return;
+    }
+    let worker;
+    try {
+      worker = new Worker("/engine/food-segmenter-worker.js", { type: "module" });
+    } catch {
+      finderNote.textContent = t(
+        "The food finder is not available on this device. Choose the foods yourself.",
+        "এই ডিভাইসে খাবার খুঁজে বের করার ফিচার নেই। খাবারগুলো নিজে বেছে নিন।",
+      );
+      return;
+    }
+    const items = await new Promise((resolve) => {
+      const timer = setTimeout(() => resolve(null), 30000);
+      worker.onmessage = ({ data }) => {
+        if (data.type === "result") {
+          clearTimeout(timer);
+          resolve(data.items ?? []);
+        } else if (data.type === "error") {
+          clearTimeout(timer);
+          resolve(null);
+        }
+      };
+      worker.onerror = () => {
+        clearTimeout(timer);
+        resolve(null);
+      };
+      worker.postMessage({ type: "init" });
+      const bitmapPromise = createImageBitmap(photoCanvas);
+      bitmapPromise.then((bitmap) =>
+        worker.postMessage({ type: "detect", id: 1, bitmap }, [bitmap]),
+      );
+    });
+    worker.terminate();
+    if (items === null) {
+      finderNote.textContent = t(
+        "The food finder could not finish. Choose the foods yourself.",
+        "খাবার খুঁজে বের করা শেষ হতে পারেনি। খাবারগুলো নিজে বেছে নিন।",
+      );
+      return;
+    }
+    if (!items.length) {
+      finderNote.textContent = t(
+        "ASHA found nothing it could name in this picture. Choose the foods yourself.",
+        "আশা এই ছবিতে কোনো খাবার চিনতে পারেনি। খাবারগুলো নিজে বেছে নিন।",
+      );
+      return;
+    }
+    finderNote.textContent = t(
+      "ASHA found these areas. Choose what each one is and give the amount. Nothing is added until you press Add.",
+      "আশা এই অংশগুলো পেয়েছে। প্রতিটির নাম ও পরিমাণ বেছে নিন। 'যোগ করুন' চাপলে তবেই যোগ হবে।",
+    );
+    finderHost.replaceChildren();
+    for (const item of items) {
+      const candidates = candidatesFor(item.className);
+      const card = make("fieldset", undefined, "card", finderHost);
+      make(
+        "legend",
+        `${item.className} · ${t("camera score", "ক্যামেরার স্কোর")} ${Number(item.score).toFixed(2)}`,
+        undefined,
+        card,
+      );
+      make(
+        "p",
+        t(
+          "This is a score, not a probability.",
+          "এটি একটি স্কোর, সম্ভাবনা নয়।",
+        ),
+        "muted",
+        card,
+      );
+      const options = [];
+      if (candidates) {
+        const primary = getEntry(candidates.foodId);
+        if (primary) options.push([primary.id, bn ? primary.bn : primary.en]);
+        for (const alternative of candidates.alternatives ?? []) {
+          const entry = getEntry(alternative);
+          if (entry) options.push([entry.id, bn ? entry.bn : entry.en]);
+        }
+      }
+      if (!options.length) {
+        make(
+          "p",
+          t(
+            "ASHA has no food for this area. Skip it, or add the food by name below.",
+            "আশার এই অংশের জন্য কোনো খাবার নেই। বাদ দিন, অথবা নিচে নাম লিখে খাবারটি যোগ করুন।",
+          ),
+          "muted",
+          card,
+        );
+        continue;
+      }
+      const choice = select(t("This is", "এটি"), options, card);
+      const grams = number(t("Grams", "গ্রাম"), card, "", ".1");
+      grams.required = true;
+      button(
+        t("Add", "যোগ করুন"),
+        () => {
+          const value = Number(grams.value);
+          if (!value || value <= 0) {
+            errorStatus.textContent = t(
+              "Enter how many grams this is.",
+              "এটি কত গ্রাম তা লিখুন।",
+            );
+            return;
+          }
+          draft.push({
+            foodId: choice.value,
+            grams: value,
+            minGrams: value,
+            maxGrams: value,
+          });
+          renderIngredients();
+          renderSummary();
+          errorStatus.textContent = "";
+        },
+        card,
+        true,
+      );
+    }
+  }
+
+  const findButton = button(
+    t("Find the food in this picture", "এই ছবিতে খাবার খুঁজুন"),
+    () => void findFoods(),
+    photo,
+  );
+  findButton.disabled = true;
+
   file.addEventListener("change", async () => {
     const generation = ++photoGeneration;
     photoQuality = null;
@@ -352,6 +509,8 @@ export function mount(host, context) {
         canvas.width,
         canvas.height,
       );
+      photoCanvas = canvas;
+      findButton.disabled = false;
       preview.src = url;
       preview.hidden = false;
       quality.textContent = photoQuality.warnings.length
@@ -371,6 +530,10 @@ export function mount(host, context) {
   function clearPhoto() {
     photoGeneration++;
     photoQuality = null;
+    photoCanvas = null;
+    findButton.disabled = true;
+    finderHost.replaceChildren();
+    finderNote.textContent = "";
     file.value = "";
     quality.textContent = "";
     if (previewUrl) URL.revokeObjectURL(previewUrl);

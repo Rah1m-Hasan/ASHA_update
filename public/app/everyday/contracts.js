@@ -8,7 +8,7 @@ export const FEATURES = Object.freeze({
   eyespeak: true,
   care: true,
   clinic: true,
-  foodVision: false,
+  foodVision: true,
   offlineAsr: false,
   clinicalRelease: false,
   signedReleasePacks: false,

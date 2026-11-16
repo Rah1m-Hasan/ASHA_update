@@ -18,6 +18,13 @@ import { NutritionFlow } from "@/features/nutrition/state.js";
 import { nutritionStore, useNutrition, type MealLog } from "@/features/nutrition/store";
 import type { Answer, Capture, Item, Meal, Question, Suggestion, Text, VisionResult } from "@/features/nutrition/types";
 import { useFoodVision } from "@/features/nutrition/useFoodVision";
+import { CATALOGUE_LITE, toReviewFoods, useFoodSegmenter } from "@/features/nutrition/useFoodSegmenter";
+import { Review, type ReviewFood } from "@/features/nutrition/Review";
+import { VisionMealResult, type VisionMeal } from "@/features/nutrition/VisionResult";
+import { calculateMeal } from "../../../../../public/app/nutrition/engine.js";
+import { MISSING_INFO_TEXT } from "../../../../../public/app/nutrition/vision/contract.js";
+import { sessionStore } from "@/features/session/store";
+import { api } from "@/lib/api";
 import { engineModule } from "@/lib/engine/load";
 import type { CameraSupportModule } from "@/lib/engine/types";
 import { cn } from "@/lib/cn";
@@ -63,6 +70,13 @@ export default function NutritionPage() {
   const log = useNutrition((s) => s.log);
   const perception = usePerception();
   const vision = useFoodVision();
+  const segmenter = useFoodSegmenter();
+  // The picture's own review. `visionFoods` is what the camera proposed, `visionMeal` is what the
+  // person confirmed. They are kept apart: a proposal is never silently a record.
+  const [visionFoods, setVisionFoods] = useState<ReviewFood[]>([]);
+  const [visionMissing, setVisionMissing] = useState<{ code: string; message: string; messageBn: string }[]>([]);
+  const [visionMeal, setVisionMeal] = useState<VisionMeal | null>(null);
+  const [visionBusy, setVisionBusy] = useState(false);
 
   const [screen, setScreen] = useState<Screen>("IDLE");
   const flow = useRef<NutritionFlow | null>(null);
@@ -395,14 +409,160 @@ export default function NutritionPage() {
     go("IMAGE_VALIDATED");
   };
 
+  // ---- the picture path: segment, then ask -------------------------------------------------------------------------
+  // The food segmenter finds WHERE each food is on the plate. It is loaded only now, never at
+  // startup: the model plus the runtime is about 26 MB and most visits never analyse a photo.
   const acceptPhoto = async () => {
     const c = workCanvas.current;
     if (!c || !go("ANALYZING")) return;
-    const r = await analyzeStill(c);
     mealId.current = requestId();
-    setItems(toItems(r.suggestions, r.vision, "upload"));
-    go("FOOD_REVIEW");
+    setVisionBusy(true);
+    segmenter.load();
+    const r = await segmenter.detect(c);
+    setVisionBusy(false);
+    if (r.timedOut || r.items.length === 0) {
+      // The detector did not answer, or the picture held nothing it could name. Nothing is
+      // invented to fill the gap: the person is asked to name the food themselves.
+      const fallback = await analyzeStill(c);
+      setItems(toItems(fallback.suggestions, fallback.vision, "upload"));
+      setNotice(
+        tx(
+          lang,
+          "ASHA could not find any food in this picture. Please choose the foods yourself.",
+          "আশা এই ছবিতে কোনো খাবার খুঁজে পায়নি। খাবারগুলো নিজে বেছে নিন।",
+        ),
+      );
+      go("FOOD_REVIEW");
+      return;
+    }
+    const foods = toReviewFoods(r.items as never, c.width, c.height);
+    setVisionFoods(foods);
+    setVisionMissing(
+      foods.length === 0
+        ? []
+        : [
+            {
+              code: "no_portion",
+              message: MISSING_INFO_TEXT.portion_required.en,
+              messageBn: MISSING_INFO_TEXT.portion_required.bn,
+            },
+          ],
+    );
+    setVisionMeal(null);
+    go("VISION_REVIEW");
   };
+
+  /** The person changed one of the camera's proposals. The correction replaces the proposal. */
+  const changeVisionFood = useCallback((uid: string, patch: Partial<ReviewFood>) => {
+    setVisionFoods((all) => all.map((f) => (f.uid === uid ? { ...f, ...patch } : f)));
+  }, []);
+
+  const removeVisionFood = useCallback((uid: string) => {
+    setVisionFoods((all) => all.filter((f) => f.uid !== uid));
+  }, []);
+
+  const addVisionFood = useCallback((foodId: string) => {
+    const entry = CATALOGUE_LITE.find((c) => c.foodId === foodId);
+    if (!entry) return;
+    setVisionFoods((all) => [
+      ...all,
+      {
+        uid: `manual-${foodId}-${all.length}`,
+        foodId,
+        proposedName: entry.name,
+        proposedNameBn: entry.nameBn,
+        score: null,
+        modelLabel: null,
+        alternatives: [],
+        grams: null,
+        method: null,
+        uncertainty: null,
+        areaRatio: null,
+        region: null,
+        unidentified: false,
+        corrected: true,
+      },
+    ]);
+  }, []);
+
+  /** Calculate the confirmed foods. The calculator is the shared one, so the server agrees. */
+  const confirmVisionFoods = useCallback(() => {
+    const chosen = visionFoods.filter((f) => !f.unidentified && f.foodId && f.grams && f.grams > 0);
+    const meal = calculateMeal(
+      chosen.map((f) => ({ uid: f.uid, foodId: f.foodId as string, grams: f.grams as number })),
+    );
+    setVisionMeal({
+      status: meal.status,
+      total: meal.total,
+      excluded: meal.excluded.map((uid) => visionFoods.find((f) => f.uid === uid)?.proposedName ?? uid),
+      items: meal.items.map((item) => {
+        const food = visionFoods.find((f) => f.uid === item.uid);
+        return {
+          foodId: item.foodId,
+          name: food?.proposedName ?? item.foodId,
+          nameBn: food?.proposedNameBn ?? item.foodId,
+          grams: item.portionGrams,
+          method: food?.method ?? "weighed",
+          nutrients: item.nutrients,
+          databaseRecordId: item.databaseRecordId,
+          assumptions: (item.assumptions ?? []) as { en: string; bn: string }[],
+        };
+      }),
+    });
+    go("VISION_RESULT");
+  }, [go, visionFoods]);
+
+  /** Save the confirmed meal. The server recalculates it; this is only the local mirror. */
+  const saveVisionMeal = useCallback(async () => {
+    if (!visionMeal) return;
+    setVisionBusy(true);
+    const cred = sessionStore.get().patient;
+    const items = visionMeal.items.map((i) => ({ foodId: i.foodId, grams: i.grams, method: i.method }));
+    try {
+      if (cred) {
+        await api("nutrition", { cred, body: { action: "log", confirmed: true, items } });
+      }
+    } catch (err) {
+      setNotice(
+        tx(
+          lang,
+          "The meal could not be saved to the server, so it is only on this device for now.",
+          "খাবারটি সার্ভারে সংরক্ষণ করা যায়নি, তাই এখন শুধু এই ডিভাইসে আছে।",
+        ),
+      );
+    }
+    // The local mirror is written either way: the person's record of their own meal is not lost
+    // because a network call failed.
+    nutritionStore.addLog({
+      id: mealId.current || requestId(),
+      loggedAt: new Date().toISOString(),
+      captureMethod: "upload",
+      status: visionMeal.status,
+      total: Object.fromEntries(Object.entries(visionMeal.total).map(([k, v]) => [k, { min: v ?? 0, max: null }])),
+      eaten: null,
+      excluded: visionMeal.excluded,
+      items: visionMeal.items.map((i) => ({
+        uid: i.foodId,
+        dishId: i.foodId,
+        label: { en: i.name, bn: i.nameBn },
+        status: "estimate",
+        eaten: null,
+        nutrients: Object.fromEntries(Object.entries(i.nutrients).map(([k, v]) => [k, { min: v ?? 0, max: null }])),
+        canonical: { grams: i.grams, method: i.method },
+        answers: {},
+        sources: i.databaseRecordId
+          ? [{ databaseRecordId: i.databaseRecordId, databaseSource: "USDA FoodData Central", dataVersion: null, verification: "source_verified" }]
+          : [],
+      })),
+      dataVersion: "asha-nutrition-v5/2026-11-10",
+      engineVersion: "asha-nutrition-engine/1",
+      model: { id: "yolov8_foodseg103", version: "foodseg103-768" },
+      photoStored: false,
+    });
+    setVisionBusy(false);
+    setLoggedId(mealId.current);
+    go("LOGGED");
+  }, [go, lang, visionMeal]);
 
   // ---- review, questions, result ----------------------------------------------------------------
   const confirmStill = () => {
@@ -756,6 +916,33 @@ export default function NutritionPage() {
             </Button>
           </div>
         </div>
+      )}
+
+      {screen === "VISION_REVIEW" && (
+        <Review
+          lang={lang}
+          foods={visionFoods}
+          photoUrl={photo}
+          catalogue={CATALOGUE_LITE}
+          missing={visionMissing}
+          busy={visionBusy}
+          onChange={changeVisionFood}
+          onRemove={removeVisionFood}
+          onAdd={addVisionFood}
+          onConfirm={confirmVisionFoods}
+          onDiscard={discard}
+        />
+      )}
+
+      {screen === "VISION_RESULT" && visionMeal && (
+        <VisionMealResult
+          lang={lang}
+          meal={visionMeal}
+          busy={visionBusy}
+          onSave={() => void saveVisionMeal()}
+          onEdit={() => go("VISION_REVIEW")}
+          onDiscard={discard}
+        />
       )}
 
       {screen === "FOOD_REVIEW" && (

@@ -34,6 +34,9 @@ test("the manifests cover every model the engine loads", async () => {
     "public/models/pose_landmarker_lite.task",
     "public/models/yolo26n-pose.onnx",
     "public/models/efficientnet_lite0_int8.tflite",
+    "public/models/yolov8_foodseg103.onnx",
+    "public/engine/ort-wasm-simd-threaded.wasm",
+    "public/engine/ort-wasm-simd-threaded.mjs",
     "public/neuroface/models/face_landmarker.task",
     "public/neuroface/models/hand_landmarker.task",
   ]) {

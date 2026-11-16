@@ -1,6 +1,18 @@
 # Nutrition data, calculations and release boundaries
 
 Version: `usda-sr-legacy-asha-2026-11-10`. Calculator: `1.0.0`. Verified on 2026-11-10.
+Shared catalogue version: `sr-legacy-2018-04/2026-11-16` (`public/app/nutrition/catalogue/records.js`).
+
+The shared catalogue now holds **76 single-ingredient records** and **10 recipes**, all generated
+from the USDA SR Legacy bulk CSV by `scripts/build-nutrition-catalogue.mjs`. Every value - the
+per-100 g nutrients and the household portion weights - is read out of the CSV by that script;
+none is typed by hand. The generator refuses to emit a record that is missing a nutrient, so a
+gap is a build failure rather than a silent zero.
+
+Measured against Nutrition5k's own recipe totals over **1,191 real meals** (34.1 % of the
+dataset; the rest contain an ingredient with no catalogue record): energy MAE **36.18 kcal**,
+RMSE **104.67 kcal**; fat MAE 2.40 g; carbohydrate MAE 3.29 g; protein MAE 2.23 g.
+See `docs/NUTRITION_AI_ACCURACY_REPORT.md`.
 
 ## Shipped source records
 

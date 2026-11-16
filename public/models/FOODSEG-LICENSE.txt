@@ -1,0 +1,45 @@
+Food segmentation model - licence and provenance
+================================================
+
+File
+----
+public/models/yolov8_foodseg103.onnx
+  14,707,923 bytes
+  SHA-256 d81ba2e44c45cead8c20581f2185928fa1a33fbf0e8643fbce4bdf476df201c5
+  Source: https://huggingface.co/magnusdtd/yolov8-foodseg103/resolve/main/yolov8_foodseg103.onnx
+  Retrieved: 2026-11-16
+
+Licence
+-------
+The model weights carry "AGPL-3.0" in their own embedded metadata. The full
+GNU Affero General Public License v3 text is in the neighbouring file
+YOLO-LICENSE.txt, which is the same licence and is kept as one copy.
+
+The training dataset is FoodSeg103 (EduardoPacheco/FoodSeg103 on Hugging Face),
+which is licensed Apache-2.0. The dataset licence and the weights licence are
+not the same thing: the dataset terms do not relicense the weights.
+
+Why this file exists
+--------------------
+The repository already ships one AGPL-3.0 model, yolo26n-pose.onnx, with its
+licence text committed alongside it (YOLO-LICENSE.txt). This model follows the
+same precedent: the weights are distributed with their licence, the source of
+the weights is recorded, and the size and hash are pinned in manifest.json so
+the file can be verified byte for byte.
+
+Scope
+-----
+This model is used by the Nutrition module to propose food regions in a still
+photograph. It runs entirely on the patient's own device. It never sees a
+Bangladeshi dish it was not trained on and it never produces a nutrition value:
+it proposes regions and class names, and the person confirms or corrects every
+one of them.
+
+A note on Ultralytics terms
+---------------------------
+The weights were exported with Ultralytics YOLOv8. Ultralytics publishes its
+own licence and an enterprise offering for commercial use of its code and
+models. This repository records that here so the position is visible to whoever
+releases it: the weights state AGPL-3.0, the training data is Apache-2.0, and
+any commercial release of this project should take a licence opinion on the
+Ultralytics terms before shipping.
