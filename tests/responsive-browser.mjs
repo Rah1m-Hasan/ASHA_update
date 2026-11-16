@@ -29,6 +29,7 @@ const PATHS = [
   "/login",
   "/register",
   "/dashboard/patient",
+  "/dashboard/patient/assistant",
   "/dashboard/patient/communicate",
   "/dashboard/patient/nutrition",
   "/dashboard/patient/eyespeak",
@@ -41,8 +42,23 @@ const PATHS = [
   "/everyday.html",
 ];
 
-const fakePerception =
-  "export function getPerception(){return {on(){return()=>{}},running:false,start(){},stop(){}}}";
+// The same stub the other browser suites use: a Perception that never opens a
+// camera and never runs a model.
+const fakePerception = `
+export class Perception extends EventTarget {
+  constructor() { super(); this.running = false; this.snapshot = {}; this.pulse = {}; this.module = ""; this.facing = "user"; window.__perception = this; }
+  async start() { this.running = true; }
+  stop() { this.running = false; }
+  setCalibration() {}
+  setActiveModule(name) { this.module = name; }
+  setMoveTracking() {}
+  async setFacingMode(f) { this.facing = f; return f; }
+  resetFaceReference() {}
+  resetVitalsBaseline() {}
+  resetVitalsSession() {}
+  emit(type, detail) { this.dispatchEvent(new CustomEvent(type, {detail})); }
+}
+`;
 
 const browser = await chromium.launch({
   executablePath: process.env.CHROME_PATH || undefined,
@@ -113,6 +129,8 @@ for (const size of SIZES) {
           const cs = getComputedStyle(el);
           return cs.visibility !== "hidden" && cs.display !== "none";
         })
+        // A control hidden from the accessibility tree needs no name.
+        .filter((el) => el.getAttribute("aria-hidden") !== "true")
         .filter((el) => !name(el))
         .map((el) => el.tagName.toLowerCase() + (el.id ? "#" + el.id : ""));
     });
