@@ -9,8 +9,10 @@
     "start": "next start",
     "serve:lan": "node scripts/serve-lan.mjs",
     "test": "node --test tests/*.test.mjs",
+    "audit:visual": "node scripts/visual-audit.mjs",
+    "audit:visual:strict": "node scripts/visual-audit.mjs --strict",
     "test:browser": "node tests/browser.mjs",
-    "test:browser:all": "npm run test:browser && npm run test:browser:auth-workspace && npm run test:browser:blink && npm run test:browser:blink-request && npm run test:browser:camera-error && npm run test:browser:demo && npm run test:browser:demo-recovery && npm run test:browser:eye-cursor && npm run test:browser:eyespeak && npm run test:browser:eyespeak-real-model && npm run test:browser:face-hand && npm run test:browser:facespeak-stretch && npm run test:browser:home && npm run test:browser:move && npm run test:browser:next-patient && npm run test:browser:nutrition && npm run test:browser:orchestration && npm run test:browser:shared-camera && npm run test:browser:shared-camera-lifecycle && npm run test:browser:speech && npm run test:browser:studio && npm run test:browser:vision && npm run test:browser:vitals-ui && npm run test:everyday:browser && npm run test:everyday:offline",
+    "test:browser:all": "npm run test:browser && npm run test:browser:auth-workspace && npm run test:browser:blink && npm run test:browser:blink-request && npm run test:browser:camera-error && npm run test:browser:demo && npm run test:browser:demo-recovery && npm run test:browser:eye-cursor && npm run test:browser:eyespeak && npm run test:browser:eyespeak-real-model && npm run test:browser:face-hand && npm run test:browser:facespeak-stretch && npm run test:browser:home && npm run test:browser:move && npm run test:browser:next-patient && npm run test:browser:nutrition && npm run test:browser:orchestration && npm run test:browser:shared-camera && npm run test:browser:shared-camera-lifecycle && npm run test:browser:speech && npm run test:browser:studio && npm run test:browser:vision && npm run test:browser:vitals-ui && npm run test:everyday:browser && npm run test:everyday:offline && npm run test:browser:responsive",
     "test:browser:auth-workspace": "node tests/auth-workspace-browser.mjs",
     "test:browser:blink": "node tests/blink-browser.mjs",
     "test:browser:blink-request": "node tests/blink-request-browser.mjs",
@@ -44,7 +46,8 @@
     "okf": "node okf/compile.mjs",
     "tokens": "node scripts/tokens.mjs",
     "tokens:check": "node scripts/tokens.mjs --check",
-    "models:check": "node scripts/model-integrity.mjs"
+    "models:check": "node scripts/model-integrity.mjs",
+    "test:browser:responsive": "node tests/responsive-browser.mjs"
   },
   "dependencies": {
     "@vercel/blob": "2.8.0",
