@@ -14,7 +14,7 @@ export default function CaregiverSettings() {
   return (
     <>
       <PageHeader title="Settings" />
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Panel title="Notifications" description="Get a phone notification when a request arrives. The dashboard also updates every few seconds while open.">
           {active ? (
             <div className="flex flex-wrap items-center gap-3">

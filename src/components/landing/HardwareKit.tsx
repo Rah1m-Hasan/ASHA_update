@@ -51,7 +51,7 @@ export function HardwareKit() {
       </Container>
 
       <Container width="content" className="mt-16">
-        <div className="grid gap-12 sm:grid-cols-3 sm:gap-10">
+        <div className="grid grid-cols-1 gap-12 sm:grid-cols-3 sm:gap-10">
           {kit.parts.map((p, i) => (
             <Reveal key={p.key}>
               <FeatureItem title={p.title} kicker={`0${i + 1}`}>

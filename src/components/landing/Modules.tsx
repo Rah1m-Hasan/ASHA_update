@@ -28,7 +28,7 @@ export function Modules() {
       <Container width="text" className="mt-20 sm:mt-28">
         <ol className="divide-y divide-line">
           {modules.map((m, i) => (
-            <Reveal as="li" key={m.key} className="grid gap-4 py-8 sm:grid-cols-[48px_1fr] sm:gap-6">
+            <Reveal as="li" key={m.key} className="grid grid-cols-1 gap-4 py-8 sm:grid-cols-[48px_minmax(0,1fr)] sm:gap-6">
                 <span className="grid size-12 place-items-center rounded-2xl bg-surface text-brand shadow-card">
                   <ModuleIcon module={m.key} size={22} />
                 </span>

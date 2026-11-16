@@ -95,7 +95,7 @@ export default function PatientHome() {
           <fieldset className="mb-4 rounded-2xl bg-surface p-5 ring-1 ring-line">
             <legend className="sr-only">Areas on your home</legend>
             <p className="mb-3 text-sm text-muted">Choose what appears on your home. Everything stays in the menu, and nothing is deleted.</p>
-            <ul className="grid gap-2 sm:grid-cols-2">
+            <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
               {[...shown, ...hidden].map((a) => (
                 <li key={a.id}>
                   <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl px-3 hover:bg-wash">
@@ -113,7 +113,7 @@ export default function PatientHome() {
           </fieldset>
         )}
 
-        <ul className="grid gap-3 md:grid-cols-2">
+        <ul className="grid grid-cols-1 gap-3 md:grid-cols-2">
           {shown.map((a) => (
             <AreaCard key={a.id} area={a} suggested={suggested.includes(a.id) && !home.recent.some((v) => v.area === a.id)} />
           ))}

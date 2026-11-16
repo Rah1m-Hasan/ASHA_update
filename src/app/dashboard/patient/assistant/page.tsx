@@ -68,7 +68,7 @@ export default function AssistantPage() {
   return (
     <>
       <PageHeader title="Talk to Asha" description="Short, friendly answers. Asha can suggest a request, but you always confirm it." />
-      <div className="grid gap-6 lg:grid-cols-[1fr_300px]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
         <Panel bodyClassName="flex h-[min(68vh,640px)] flex-col p-0">
           <div className="flex-1 space-y-4 overflow-y-auto p-5" aria-live="polite">
             {messages.map((m, i) => (
@@ -107,7 +107,7 @@ export default function AssistantPage() {
               onChange={(e) => setInput(e.target.value)}
               maxLength={600}
               placeholder="Type to Asha"
-              className="h-12 flex-1 rounded-xl border border-line px-4 focus:border-brand focus:ring-2 focus:ring-brand/20 focus:outline-none"
+              className="h-12 min-w-0 flex-1 rounded-xl border border-line px-4 focus:border-brand focus:ring-2 focus:ring-brand/20 focus:outline-none"
             />
             <Button type="submit" className="h-12 w-12 px-0" aria-label="Send" disabled={busy}>
               <SendIcon size={18} />

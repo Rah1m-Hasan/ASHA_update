@@ -127,7 +127,7 @@ export default function FaceSpeakPage() {
           </>
         }
       />
-      <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.3fr_minmax(0,1fr)]">
         <div className="space-y-4">
           <CameraView />
           <div className="flex flex-wrap gap-2">
@@ -204,7 +204,7 @@ export default function FaceSpeakPage() {
         </div>
       </div>
 
-      <div className="mt-6 grid gap-6 md:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
         <Panel title="Eye openness" description="Dips are blinks">
           <Sparkline values={ear} />
         </Panel>

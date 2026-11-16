@@ -176,6 +176,9 @@ label {
   position: sticky;
   top: 0;
   height: calc(100dvh - 96px);
+  /* On a short or landscape screen the rail is shorter than its links, so it
+     scrolls: every destination has to stay reachable. */
+  overflow-y: auto;
   border-right: 1px solid var(--line);
 }
 .sidebar > a {
@@ -224,7 +227,9 @@ label {
   padding-left: 16px;
 }
 main {
-  padding: 42px clamp(20px, 4vw, 68px);
+  /* The companion bubble floats over the bottom-right corner, so the page
+     keeps that much room clear at the end. */
+  padding: 42px clamp(20px, 4vw, 68px) 104px;
   min-width: 0;
 }
 .page-top {
@@ -315,8 +320,9 @@ textarea {
 }
 input[type="checkbox"],
 input[type="radio"] {
-  width: 18px;
-  height: 18px;
+  /* 24px is the smallest target WCAG 2.5.8 accepts. */
+  width: 24px;
+  height: 24px;
   vertical-align: middle;
   accent-color: var(--accent);
   margin-right: 7px;
@@ -739,6 +745,20 @@ progress {
   }
 }
 @media (max-width: 700px) {
+  /* The companion bubble floats over the bottom-right corner. On a phone it
+     takes a smaller footprint and sits tighter to the corner, so it covers
+     less of whatever is under it. */
+  .companion {
+    bottom: 14px;
+    right: 14px;
+  }
+  .asha-bubble {
+    width: 56px;
+    height: 56px;
+  }
+  .bubble-letter {
+    font-size: 2.1rem;
+  }
   .topbar {
     height: 78px;
     padding: 12px 18px;

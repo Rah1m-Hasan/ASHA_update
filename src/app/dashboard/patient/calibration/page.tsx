@@ -32,7 +32,7 @@ export default function CalibrationPage() {
   return (
     <>
       <PageHeader title="Calibration" description="Asha learns your own movements from real samples. Only movements you complete are turned on." />
-      <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.3fr_minmax(0,1fr)]">
         <div className="space-y-4">
           <CameraView />
           {view ? (

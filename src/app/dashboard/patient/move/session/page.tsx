@@ -362,14 +362,15 @@ export default function LiveSession() {
 
   if (!plan && !s)
     return (
-      <EmptyState title={tx(lang, "No plan yet", "এখনো প্ল্যান নেই")} action={<ButtonLink href={`${BASE}/start`}>{tx(lang, "Build a plan", "প্ল্যান তৈরি")}</ButtonLink>}>
+      <EmptyState headingLevel={1} title={tx(lang, "No plan yet", "এখনো প্ল্যান নেই")} action={<ButtonLink href={`${BASE}/start`}>{tx(lang, "Build a plan", "প্ল্যান তৈরি")}</ButtonLink>}>
         Choose a goal and ASHA suggests a starter routine you can change.
       </EmptyState>
     );
 
   // ---------- Before starting ----------
   if (!s) {
-    if (lockoutActive(lockout, Date.now())) return <p className="text-muted">{tx(lang, "Workouts are paused for your safety.", "নিরাপত্তার জন্য ব্যায়াম বন্ধ।")}</p>;
+    if (lockoutActive(lockout, Date.now()))
+      return <Panel className="mx-auto max-w-2xl" titleLevel={1} title={tx(lang, "Workouts are paused for your safety.", "নিরাপত্তার জন্য ব্যায়াম বন্ধ।")} />;
     const answered = ask.every((q: { id: string }) => precheck[q.id]) && (!(precheck.pain === "yes" || precheck.pain === "unsure") || pain.length > 0 || "pain" in conditions);
     return (
       <div className="max-w-3xl">
@@ -426,7 +427,7 @@ export default function LiveSession() {
             {tx(lang, "How should ASHA count?", "কীভাবে গুনবে?")}
           </h2>
           <p className="mb-3 mt-0.5 text-sm text-muted">{tx(lang, "Each exercise starts with a short demonstration and a practice try that isn't counted.", "প্রতিটি ব্যায়াম শুরু হয় ছোট একটি প্রদর্শন আর একটি অনুশীলন দিয়ে, যা গোনা হয় না।")}</p>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Choice selected={mode === "camera"} onClick={() => setMode("camera")}>
               <span className="block font-medium text-ink">{tx(lang, "Camera counts tracked exercises", "ক্যামেরা গুনবে")}</span>
               <span className="block text-sm text-muted">{tx(lang, "On-device only. Video is never uploaded or saved. You can switch to manual at any time.", "শুধু এই ডিভাইসে। ভিডিও কখনো আপলোড বা সংরক্ষণ হয় না। যেকোনো সময় নিজে গোনায় যেতে পারবেন।")}</span>
@@ -477,7 +478,7 @@ export default function LiveSession() {
   if (s.state === "SAFETY_STOP")
     return (
       <div className="mx-auto max-w-2xl space-y-4">
-        {!lockoutActive(lockout, Date.now()) && <UrgentCard reasons={s.safety?.reasons ?? []} kind={s.safety?.action === "stop_rest" ? "rest" : "emergency"} />}
+        {!lockoutActive(lockout, Date.now()) && <UrgentCard headingLevel={1} reasons={s.safety?.reasons ?? []} kind={s.safety?.action === "stop_rest" ? "rest" : "emergency"} />}
         <p className="text-sm text-muted">{tx(lang, "This workout has ended and the camera is off. What you completed was saved to Progress.", "ব্যায়াম শেষ হয়েছে এবং ক্যামেরা বন্ধ। যা করেছেন তা অগ্রগতিতে সংরক্ষিত।")}</p>
         <ButtonLink href={`${BASE}/progress`} variant="secondary">
           {tx(lang, "View progress", "অগ্রগতি দেখুন")}
@@ -642,7 +643,7 @@ export default function LiveSession() {
 
       {unwell && <SymptomPicker onPick={report} onClose={() => setUnwell(false)} text={symptomText} setText={setSymptomText} />}
 
-      <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[3fr_minmax(0,2fr)]">
         <div className="min-w-0 space-y-3">
           {showCamera && ex && lesson ? (
             <>
@@ -816,7 +817,7 @@ export default function LiveSession() {
 
               {(s.state === "EXERCISE" || s.state === "TRACKING_LOST") && ex && step && (
                 <Panel title={title(ex, lang)} description={lesson ? pick(lesson.keyTip, lang) : undefined} action={step.clinicianLocked ? <StatusPill tone="brand">Clinician plan</StatusPill> : undefined}>
-                  <div className="grid grid-cols-[auto_1fr] items-end gap-4">
+                  <div className="grid grid-cols-[auto_minmax(0,1fr)] items-end gap-4">
                     <div>
                       <p className="text-sm text-muted">{tx(lang, "Set", "সেট")}</p>
                       <p className="text-2xl font-semibold tabular-nums text-ink">
@@ -961,7 +962,7 @@ function VisibilityList({ view, lang }: { view: View | null; lang: Lang }) {
   if (!view) return <p className="mt-3 text-sm text-muted">{tx(lang, "Waiting for the camera…", "ক্যামেরার অপেক্ষা…")}</p>;
   const name = (n: string) => n.replace(/_/g, " ");
   return (
-    <ul className="mt-3 grid gap-1 text-sm sm:grid-cols-2" data-testid="move-visibility">
+    <ul className="mt-3 grid grid-cols-1 gap-1 text-sm sm:grid-cols-2" data-testid="move-visibility">
       {view.points.map((p) => (
         <li key={p.name} className={cn("flex items-center gap-2", p.visible ? "text-good" : "text-warn")}>
           <span aria-hidden="true">{p.visible ? "✓" : "✕"}</span>
@@ -1020,7 +1021,7 @@ function SymptomPicker({ onPick, onClose, text, setText }: { onPick: (v: string)
   const lang = useMove((s) => s.language);
   return (
     <Panel className="mb-6 ring-2 ring-danger-line" title={tx(lang, "What are you feeling?", "কেমন লাগছে?")} description="Choose one. ASHA's safety rules decide what happens next.">
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         {SESSION_SYMPTOMS.map((x: { id: string; en: string; bn: string; action: string }) => (
           <button
             key={x.id}

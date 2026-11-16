@@ -17,7 +17,7 @@ export function Principles() {
         </Reveal>
       </Container>
       <Container width="content" className="mt-14">
-        <div className="grid gap-12 md:grid-cols-3 md:gap-10">
+        <div className="grid grid-cols-1 gap-12 md:grid-cols-3 md:gap-10">
           {principles.map((p, i) => (
             <Reveal key={p.title}>
               <FeatureItem title={p.title} icon={icons[i]}>

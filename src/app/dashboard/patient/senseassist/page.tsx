@@ -61,7 +61,7 @@ export default function SenseAssistPage() {
   return (
     <>
       <PageHeader title="SenseAssist" description="Speak, check what was heard, and let Asha suggest what you meant. You confirm before anything is spoken or sent." />
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Panel title="1. Speak" description="Listening runs for up to 90 seconds and pauses while Asha talks.">
           <div className="flex flex-wrap items-center gap-3">
             <Button

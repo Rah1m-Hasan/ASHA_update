@@ -39,7 +39,12 @@ export default function PatientDetail() {
     setSupport(profile.supportContext);
   }, [profile]);
 
-  if (!entry) return <p className="text-muted">This patient isn’t linked on this device.</p>;
+  if (!entry)
+    return (
+      <Panel titleLevel={1} title="Patient not found">
+        <p className="text-muted">This patient isn’t linked on this device.</p>
+      </Panel>
+    );
 
   async function save() {
     if (!entry || !assessment || !support) return;
@@ -83,7 +88,7 @@ export default function PatientDetail() {
           {error}
         </p>
       )}
-      <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.4fr_minmax(0,1fr)]">
         <Panel title="Abilities" description="Guides suggestions only">
           {assessment ? <AssessmentFields value={assessment} onChange={(a) => (setAssessment(a), setSaved(""))} /> : <p className="text-muted">Loading…</p>}
         </Panel>

@@ -57,7 +57,7 @@ export default function MoveProgress() {
       <div className="max-w-3xl">
         <PageHeader title={tx(lang, "Progress", "অগ্রগতি")} />
         <div className="rounded-2xl bg-surface ring-1 ring-line">
-          <EmptyState title={tx(lang, "No workouts yet", "এখনো কোনো ব্যায়াম নেই")} action={<ButtonLink href={`${BASE}/session`}>{tx(lang, "Start a workout", "ব্যায়াম শুরু করুন")}</ButtonLink>}>
+          <EmptyState headingLevel={2} title={tx(lang, "No workouts yet", "এখনো কোনো ব্যায়াম নেই")} action={<ButtonLink href={`${BASE}/session`}>{tx(lang, "Start a workout", "ব্যায়াম শুরু করুন")}</ButtonLink>}>
             {tx(lang, "Your completed workouts, reps and hold times will show here. They stay on this device.", "শেষ করা ব্যায়াম, কতবার ও কত সেকেন্ড ধরে রেখেছেন তা এখানে দেখা যাবে। এগুলো এই ডিভাইসেই থাকে।")}
           </EmptyState>
         </div>

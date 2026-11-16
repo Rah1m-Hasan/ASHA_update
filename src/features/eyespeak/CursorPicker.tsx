@@ -121,7 +121,7 @@ export function CursorPicker({
       <p className="px-4 pt-3 text-center text-sm text-ink" role="status">
         These are close together on the screen. Look at the one you meant and {how}.
       </p>
-      <div className="grid flex-1 gap-[3vmin] p-[3vmin]" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+      <div className="grid grid-cols-1 flex-1 gap-[3vmin] p-[3vmin]" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
         {tiles.map((t) => (
           <button
             key={t.id}

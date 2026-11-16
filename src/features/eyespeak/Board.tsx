@@ -284,7 +284,7 @@ export function Board({
           {status}
         </p>
       )}
-      <div ref={grid} className="grid flex-1 gap-[3vmin] p-[3vmin]" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+      <div ref={grid} className="grid grid-cols-1 flex-1 gap-[3vmin] p-[3vmin]" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
         {tiles.map((t, i) => {
           const yes = t.id === "confirm-yes";
           const on = scan && i === lit;

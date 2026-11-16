@@ -33,7 +33,9 @@ export function Dialog({
       }}
       aria-label={title}
       className={cn(
-        "m-auto w-[min(92vw,480px)] rounded-3xl bg-surface p-0 text-ink shadow-float backdrop:bg-veil/40 backdrop:backdrop-blur-sm",
+        // A tall dialog must still be reachable on a short screen, so the box is
+        // capped and scrolls inside rather than running off the viewport.
+        "m-auto max-h-[min(88dvh,720px)] w-[min(92vw,480px)] overflow-y-auto overscroll-contain rounded-3xl bg-surface p-0 text-ink shadow-float backdrop:bg-veil/40 backdrop:backdrop-blur-sm",
         className,
       )}
     >

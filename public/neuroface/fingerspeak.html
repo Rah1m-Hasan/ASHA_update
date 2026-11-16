@@ -96,7 +96,8 @@
   .gesture-row label{font-size:10px; color:var(--text-dim); font-family:var(--mono); letter-spacing:0.4px;}
   .sample-count{ font-family:var(--mono); font-size:11px; color:var(--text-dim); min-width:52px; text-align:center; }
   .sample-count.ready{color:var(--teal);}
-  .remove-x{ background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:15px; padding:2px 6px; }
+  .remove-x{ background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:15px;
+    padding:2px 6px; min-width:24px; min-height:24px; display:inline-grid; place-items:center; }
   .remove-x:hover{color:var(--red);}
   .remove-x:disabled{opacity:.25; cursor:not-allowed;}
   .protected-tag{ font-size:9px; font-family:var(--mono); color:var(--teal); border:1px solid var(--teal-dim);
@@ -295,7 +296,7 @@
       <div class="btn-row" style="margin-top:8px;">
         <button class="btn small" id="exportBtn">Export profile</button>
         <button class="btn small" id="importBtn">Import profile</button>
-        <input type="file" id="importFile" accept="application/json">
+        <input type="file" id="importFile" aria-label="Import profile file" accept="application/json">
       </div>
       <div class="capture-quality" id="captureQuality"></div>
 
@@ -716,9 +717,9 @@ function renderGestureList(){
     row.className = 'gesture-row';
     row.innerHTML = `
       <div class="col name"><label>GESTURE</label>
-        <input type="text" value="${esc(g.name)}" data-id="${g.id}" data-field="name" ${g.protected?'readonly':''}></div>
+        <input type="text" aria-label="Gesture name" value="${esc(g.name)}" data-id="${g.id}" data-field="name" ${g.protected?'readonly':''}></div>
       <div class="col phrase"><label>SPOKEN PHRASE</label>
-        <input type="text" value="${esc(g.phrase)}" placeholder="${g.name==='Rest' ? '(no phrase — neutral state)' : 'What FingerSpeak says'}" data-id="${g.id}" data-field="phrase" ${g.protected?'disabled':''}></div>
+        <input type="text" aria-label="Spoken phrase for ${esc(g.name)}" value="${esc(g.phrase)}" placeholder="${g.name==='Rest' ? '(no phrase — neutral state)' : 'What FingerSpeak says'}" data-id="${g.id}" data-field="phrase" ${g.protected?'disabled':''}></div>
       <div class="col" style="align-items:center;"><label>SAMPLES</label>
         <div class="sample-count ${g.samples.length>=REPS_PER_GESTURE ? 'ready':''}">${g.samples.length} / ${REPS_PER_GESTURE}</div></div>
       <button class="btn small" data-record="${g.id}">Record</button>

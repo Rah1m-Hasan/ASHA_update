@@ -32,7 +32,9 @@ export function LinkConnect() {
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder="Paste the private link"
-        className="h-11 flex-1 rounded-xl border border-line px-3 focus:border-brand focus:outline-none"
+        // `flex-1` would set the *height* basis while the form is a column,
+        // so it only applies once the form lies out as a row.
+        className="h-11 w-full rounded-xl border border-line px-3 focus:border-brand focus:outline-none sm:flex-1"
       />
       <Button type="submit" disabled={!value.trim()}>
         Connect

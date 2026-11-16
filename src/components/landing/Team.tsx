@@ -26,7 +26,7 @@ export function Team() {
         </Reveal>
       </Container>
       <Container width="content" className="mt-14">
-        <ul className="grid gap-10 sm:grid-cols-3">
+        <ul className="grid grid-cols-1 gap-10 sm:grid-cols-3">
           {team.map((m, i) => (
             <Reveal as="li" key={m.name} className="text-center">
                 <Image

@@ -41,7 +41,7 @@ export function DashboardShell({
   };
 
   return (
-    <div className="min-h-dvh bg-wash lg:grid lg:grid-cols-[272px_1fr]">
+    <div className="min-h-dvh bg-wash lg:grid lg:grid-cols-[272px_minmax(0,1fr)]">
       <a href="#dashboard-main" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-lg focus:bg-surface focus:px-3 focus:py-2">
         Skip to content
       </a>
@@ -60,17 +60,19 @@ export function DashboardShell({
 
       <div className="flex min-w-0 flex-col">
         <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-line bg-surface/90 px-4 backdrop-blur sm:px-6">
-          <button className="grid size-10 place-items-center rounded-xl hover:bg-wash lg:hidden" aria-label="Open menu" onClick={() => setOpen(true)}>
+          <button className="grid size-10 shrink-0 place-items-center rounded-xl hover:bg-wash lg:hidden" aria-label="Open menu" onClick={() => setOpen(true)}>
             {open ? <CloseIcon /> : <MenuIcon />}
           </button>
-          <p className="font-semibold text-ink lg:hidden">{titleFor(role, pathname)}</p>
+          {/* The title gives way first on a narrow phone: it truncates rather
+              than pushing the controls in the top bar off the screen. */}
+          <p className="min-w-0 flex-1 truncate font-semibold text-ink lg:hidden">{titleFor(role, pathname)}</p>
           <p className="hidden text-sm text-muted lg:block">{role === "patient" ? "Patient space" : "Caregiver space"}</p>
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex shrink-0 items-center gap-2">
             {topbarExtra}
             <ThemeToggle className="size-10" />
             <button
               onClick={switchRole}
-              className="flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-medium text-ink ring-1 ring-line hover:bg-wash"
+              className="flex h-10 shrink-0 items-center gap-2 rounded-xl px-3 text-sm font-medium text-ink ring-1 ring-line hover:bg-wash"
               title={`Switch to the ${other} view`}
             >
               <SwapIcon size={16} className="text-muted" />

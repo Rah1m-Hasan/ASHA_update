@@ -32,7 +32,7 @@ export default function PatientSettings() {
   return (
     <>
       <PageHeader title="Settings" />
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Panel title="Asha’s voice">
           <label className="text-sm font-medium text-ink">
             Voice

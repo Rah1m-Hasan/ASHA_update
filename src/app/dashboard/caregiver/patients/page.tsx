@@ -16,7 +16,7 @@ export default function PatientsPage() {
   return (
     <>
       <PageHeader title="Patients" description="Everyone in your care circles on this device." actions={<ButtonLink href="/dashboard/caregiver/patients/new" size="sm">Add patient</ButtonLink>} />
-      <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.5fr_minmax(0,1fr)]">
         <Panel bodyClassName="p-2">
           <ul>
             {care.map((c) => (

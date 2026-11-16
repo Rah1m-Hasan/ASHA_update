@@ -194,7 +194,7 @@ export default function MoveSafety() {
         >
           <ul className="divide-y divide-line">
             {RULES.map((r) => (
-              <li key={r.action} className="grid gap-2 py-4 sm:grid-cols-[14rem_1fr] sm:gap-6">
+              <li key={r.action} className="grid grid-cols-1 gap-2 py-4 sm:grid-cols-[14rem_minmax(0,1fr)] sm:gap-6">
                 <div>
                   <p className={cn("font-medium", r.tone)}>{tx(lang, r.en, r.bn)}</p>
                   <p className="text-sm text-muted">{tx(lang, r.noteEn, r.noteBn)}</p>
@@ -238,7 +238,7 @@ export default function MoveSafety() {
                 </Button>
               </div>
             ) : (
-              <form onSubmit={saveClearance} className="grid gap-4 sm:grid-cols-2">
+              <form onSubmit={saveClearance} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <label className="block text-sm text-ink">
                   Clinician&apos;s name
                   <input className={field} value={clear.clinicianName} onChange={(e) => setClear({ ...clear, clinicianName: e.target.value })} required />

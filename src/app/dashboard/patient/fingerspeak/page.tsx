@@ -100,7 +100,7 @@ export default function FingerSpeakPage() {
           </a>
         }
       />
-      <div className="mb-6 grid gap-6 lg:grid-cols-[1fr_1.2fr]">
+      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-[1fr_minmax(0,1.2fr)]">
         <div className="space-y-3">
           <CameraView compact />
           <div className="flex flex-wrap gap-2" aria-live="polite">

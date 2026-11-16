@@ -40,7 +40,7 @@ export default function VitalSensePage() {
           </>
         }
       />
-      <div className="grid gap-6 xl:grid-cols-[1.2fr_1fr]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.2fr_minmax(0,1fr)]">
         <div className="space-y-3">
           <CameraView />
           <div className="flex flex-wrap items-center gap-2">
@@ -71,7 +71,7 @@ export default function VitalSensePage() {
           </Panel>
         </div>
       </div>
-      <div className="mt-6 grid gap-6 md:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
         <Panel title="Pulse waveform">
           <Sparkline values={p?.signal ?? []} />
         </Panel>

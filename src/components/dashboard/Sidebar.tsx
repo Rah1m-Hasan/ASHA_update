@@ -57,7 +57,7 @@ export function Sidebar({
                       onClick={onNavigate}
                       aria-current={on ? "page" : undefined}
                       className={cn(
-                        "flex h-10 items-center gap-3 rounded-xl px-3 text-[15px] font-medium transition-colors",
+                        "flex h-10 min-w-0 items-center gap-3 rounded-xl px-3 text-[15px] font-medium transition-colors",
                         on
                           ? "bg-brand text-on-brand"
                           : "text-ink hover:bg-brand-soft",
@@ -65,9 +65,11 @@ export function Sidebar({
                     >
                       <Icon
                         size={19}
-                        className={on ? "text-on-brand" : "text-muted"}
+                        className={cn("shrink-0", on ? "text-on-brand" : "text-muted")}
                       />
-                      <span className="flex-1">{label}</span>
+                      <span className="min-w-0 flex-1 truncate" title={label}>
+                        {label}
+                      </span>
                       {!!count && (
                         <span
                           className={cn(

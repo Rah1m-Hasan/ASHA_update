@@ -181,7 +181,7 @@ export default function MyPlan() {
           </section>
         ) : (
           <div className="rounded-2xl bg-surface ring-1 ring-line">
-            <EmptyState title={tx(lang, "No plan yet", "এখনো প্ল্যান নেই")} action={<ButtonLink href={`${BASE}/start`}>{tx(lang, "Build a plan", "প্ল্যান তৈরি")}</ButtonLink>}>
+            <EmptyState headingLevel={2} title={tx(lang, "No plan yet", "এখনো প্ল্যান নেই")} action={<ButtonLink href={`${BASE}/start`}>{tx(lang, "Build a plan", "প্ল্যান তৈরি")}</ButtonLink>}>
               {tx(lang, "Answer a few questions, one at a time, and ASHA suggests a starter plan you can change.", "একটি একটি করে কয়েকটি প্রশ্নের উত্তর দিন, ASHA একটি শুরুর প্ল্যান দেবে যা আপনি বদলাতে পারবেন।")}
             </EmptyState>
           </div>

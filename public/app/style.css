@@ -1710,6 +1710,13 @@ select,
 textarea {
   font: inherit;
 }
+input[type="checkbox"],
+input[type="radio"] {
+  /* 24px is the smallest target WCAG 2.5.8 accepts. */
+  width: 24px;
+  height: 24px;
+  accent-color: var(--accent);
+}
 button {
   cursor: pointer;
   color: inherit;

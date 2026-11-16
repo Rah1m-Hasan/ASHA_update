@@ -22,7 +22,7 @@ export default function PosturePage() {
   return (
     <>
       <PageHeader title="Posture" description="Camera-based position and movement. A sustained change leads to a gentle question, never an automatic alert." />
-      <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.3fr_minmax(0,1fr)]">
         <div className="space-y-3">
           <CameraView />
           <StatusPill tone={p?.valid ? "good" : state === "on" ? "warn" : "neutral"}>{p?.valid ? "Upper body tracked" : p?.label ?? "Camera off"}</StatusPill>
@@ -46,7 +46,7 @@ export default function PosturePage() {
           </Panel>
         </div>
       </div>
-      <div className="mt-6 grid gap-6 md:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
         <Panel title="Lean over time">
           <Sparkline values={lean} />
         </Panel>

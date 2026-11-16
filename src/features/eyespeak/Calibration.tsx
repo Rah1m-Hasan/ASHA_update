@@ -133,8 +133,10 @@ export function Calibration({ mode, model: existing, feed, onDone, onCancel }: {
       <p className="absolute inset-x-0 top-5 text-center text-sm text-muted">
         {step?.check ? "Checking accuracy" : "Calibrating"} · dot {index + 1} of {total}. Look at the centre of the dot.
       </p>
+      {/* The cap is a share of the containing block, not of the viewport:
+          90vw includes the scrollbar and could push past the panel. */}
       {hint && (
-        <p role="status" className="absolute inset-x-0 top-12 mx-auto w-fit max-w-[90vw] rounded-full bg-warn-soft px-4 py-1.5 text-center text-sm text-warn ring-1 ring-warn-line">
+        <p role="status" className="absolute inset-x-0 top-12 mx-auto w-fit max-w-[min(90%,30rem)] rounded-full bg-warn-soft px-4 py-1.5 text-center text-sm text-warn ring-1 ring-warn-line">
           {hint}
         </p>
       )}

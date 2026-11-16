@@ -31,13 +31,13 @@ export function AuthShowcase({ copy }: { copy: ShowcaseCopy }) {
         <ShowcaseScene />
 
         <div className="max-w-md">
-          <p className="text-sm font-semibold tracking-wide text-white/70 uppercase">
+          <p className="text-sm font-semibold tracking-wide text-white/85 uppercase">
             {copy.eyebrow}
           </p>
           <h2 className="mt-3 text-4xl leading-[1.1] font-medium tracking-tight text-balance">
             {copy.title}
           </h2>
-          <p className="mt-4 text-lg leading-7 text-white/80">{copy.text}</p>
+          <p className="mt-4 text-lg leading-7 text-white/85">{copy.text}</p>
         </div>
       </div>
     </aside>
@@ -83,7 +83,7 @@ function ShowcaseScene() {
         ))}
       </div>
 
-      <p className="mt-8 text-center text-xs font-medium text-white/75">
+      <p className="mt-8 text-center text-xs font-medium text-white/85">
         Example care conversation
       </p>
       {/* Request → acknowledgement */}
@@ -103,7 +103,7 @@ function ShowcaseScene() {
           </span>
           <span className="text-sm">
             <span className="block font-medium">“I’m on my way.”</span>
-            <span className="text-white/75">Caregiver acknowledged</span>
+            <span className="text-white/85">Caregiver acknowledged</span>
           </span>
         </div>
       </div>

@@ -119,7 +119,7 @@ export function QuestionCard({
 
         {question.kind === "share" && question.fields && (
           <form
-            className="grid gap-3 sm:grid-cols-2"
+            className="grid grid-cols-1 gap-3 sm:grid-cols-2"
             onSubmit={(e) => {
               e.preventDefault();
               const [f1, f2] = question.fields!;
@@ -139,7 +139,7 @@ export function QuestionCard({
 
         {question.kind === "fields" && question.fields && (
           <form
-            className="grid gap-3 sm:grid-cols-2"
+            className="grid grid-cols-1 gap-3 sm:grid-cols-2"
             onSubmit={(e) => {
               e.preventDefault();
               const bad = question.fields!.find((f) => fields[f.id].trim() !== "" && !inRange(fields[f.id], f));
@@ -159,7 +159,7 @@ export function QuestionCard({
         )}
 
         {question.options && (
-          <div className="grid gap-2 sm:grid-cols-2" role="group" aria-label={L(lang, question.text)}>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" role="group" aria-label={L(lang, question.text)}>
             {question.options.map((o) => (
               <button
                 key={o.id}

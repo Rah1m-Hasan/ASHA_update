@@ -98,7 +98,7 @@ export default function ClinicianPrograms() {
           </a>
         </Panel>
       ) : data && me ? (
-        <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.4fr_minmax(0,1fr)]">
           <Panel title={data.name ?? "Your clinic"} action={moveShared ? <StatusPill tone="good">Move shared</StatusPill> : <StatusPill tone="warn">Move not shared</StatusPill>}>
             {!moveShared ? (
               <div className="space-y-3 text-ink">

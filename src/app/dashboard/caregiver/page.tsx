@@ -39,7 +39,7 @@ export default function CaregiverOverview() {
         }
       />
 
-      <div className="grid gap-6 xl:grid-cols-[1.4fr_1fr]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.4fr_minmax(0,1fr)]">
         <Panel title="Needs your response" description={open.length ? `${open.length} waiting` : undefined}>
           {open.length ? (
             <div className="space-y-3">

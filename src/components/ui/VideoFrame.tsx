@@ -64,13 +64,13 @@ export function VideoFrame({ src, poster, posterAlt, label, duration, mode = "cl
           )}
           {poster && <span className="absolute inset-0 bg-gradient-to-t from-veil/50 via-transparent to-transparent" />}
           {label && (
-            <span className="absolute bottom-5 left-1/2 flex -translate-x-1/2 items-center gap-3 rounded-full bg-veil/75 py-2 pr-5 pl-2 whitespace-nowrap backdrop-blur-md transition group-enabled:group-hover:bg-veil/90 sm:bottom-8">
-              <span className="grid size-10 place-items-center rounded-full bg-surface text-brand">
+            <span className="absolute bottom-5 left-1/2 flex max-w-[calc(100%-2rem)] -translate-x-1/2 items-center gap-3 rounded-full bg-veil/75 py-2 pr-5 pl-2 backdrop-blur-md transition group-enabled:group-hover:bg-veil/90 sm:bottom-8">
+              <span className="grid size-10 shrink-0 place-items-center rounded-full bg-surface text-brand">
                 <PlayIcon />
               </span>
-              <span className="text-left leading-tight">
-                <span className="block font-medium">{label}</span>
-                <span className="block text-sm text-white/80">{src ? duration : "Video coming soon"}</span>
+              <span className="min-w-0 text-left leading-tight">
+                <span className="block truncate font-medium">{label}</span>
+                <span className="block truncate text-sm text-white/80">{src ? duration : "Video coming soon"}</span>
               </span>
             </span>
           )}

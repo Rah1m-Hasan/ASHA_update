@@ -748,7 +748,7 @@ export default function NutritionPage() {
       {(screen === "IDLE" || screen === "MODE_SELECTED") && (
         <div className="space-y-6">
           {notice && <p className="rounded-xl bg-warn-soft px-4 py-3 text-warn ring-1 ring-warn-line">{notice}</p>}
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <button type="button" onClick={() => void startLive()} className="flex min-h-36 flex-col items-start gap-3 rounded-2xl bg-brand p-5 text-left text-on-brand shadow-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-brand/40" data-testid="nutrition-scan">
               <CameraIcon size={28} />
               <span className="text-xl font-semibold">{tx(lang, "Scan food live", "লাইভ স্ক্যান")}</span>
@@ -823,7 +823,7 @@ export default function NutritionPage() {
           {screen === "SNAPSHOT_FROZEN" && (
             <div className="space-y-3" data-testid="nutrition-frozen">
               <StillFindings still={still} lang={lang} />
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 <Button onClick={confirmStill} disabled={!still} data-testid="nutrition-confirm">
                   {tx(lang, "Confirm and continue", "নিশ্চিত করে এগোন")}
                 </Button>
@@ -1040,7 +1040,7 @@ export default function NutritionPage() {
               <span className="text-sm text-muted">{tx(lang, "or choose for each food below.", "বা নিচে প্রতিটি খাবারের জন্য বাছুন।")}</span>
             </div>
           )}
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             {meal.items.map((r) => (
               <ItemCard key={r.uid} r={r} lang={lang} eaten={eaten[r.uid] ?? null} onEaten={screen === "RESULT" ? (c) => setEaten((e) => ({ ...e, [r.uid]: c })) : undefined} />
             ))}

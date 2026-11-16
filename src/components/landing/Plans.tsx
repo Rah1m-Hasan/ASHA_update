@@ -20,7 +20,7 @@ export function Plans() {
         </Reveal>
       </Container>
       <Container width="content" className="mt-14">
-        <div className="grid gap-5 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
           {plans.map((p, i) => {
             const featured = "featured" in p && p.featured;
             return (

@@ -20,7 +20,9 @@ export function SectionHeading({
 }) {
   const Tag = level === 1 ? "h1" : "h2";
   return (
-    <div className={cn(align === "center" ? "mx-auto text-center" : "text-left", "max-w-[664px]", className)}>
+    // The reading column is the Container's `text` width, so it is defined
+    // once. The heading itself may be wider than the column it sits in.
+    <div className={cn(align === "center" ? "mx-auto text-center" : "text-left", className)}>
       {eyebrow && <Eyebrow className="mb-5">{eyebrow}</Eyebrow>}
       <Tag
         className={cn(

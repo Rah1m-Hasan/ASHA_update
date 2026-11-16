@@ -58,7 +58,7 @@ export function EnquiryForm() {
       onChange={() => draft && setDraft(null)}
     >
       <h3 className="text-2xl font-medium text-ink">How can we help?</h3>
-      <div className="mt-6 grid gap-5 sm:grid-cols-2">
+      <div className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2">
         <label className="text-sm font-medium text-ink">
           Your name
           <input name="name" required maxLength={100} autoComplete="name" className={field} />

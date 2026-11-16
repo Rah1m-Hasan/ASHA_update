@@ -15,7 +15,7 @@ export function AuthLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="grid min-h-dvh lg:grid-cols-2">
+    <div className="grid grid-cols-1 min-h-dvh lg:grid-cols-2">
       <AuthShowcase copy={showcase} />
       <main className="flex flex-col px-4 py-8 sm:px-10">
         <div className="flex items-center justify-between">

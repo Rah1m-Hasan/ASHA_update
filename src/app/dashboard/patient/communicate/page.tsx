@@ -59,7 +59,7 @@ export default function CommunicatePage() {
         </ul>
       </section>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Panel title="Say something" description="Asha speaks it aloud. Send it to your caregiver if you like.">
           <div className="flex flex-wrap gap-2">
             {PHRASES.map((p) => (

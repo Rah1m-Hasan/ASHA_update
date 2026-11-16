@@ -117,11 +117,15 @@ function Wizard() {
   }
 
   // The layout already shows the urgent guidance while a lockout runs; nothing here can start a workout.
-  if (lockoutActive(lockout, Date.now())) return <p className="text-muted">{tx(lang, "Move is paused for your safety.", "নিরাপত্তার জন্য মুভ বন্ধ আছে।")}</p>;
-  if (screening.status === "emergency_stop") return <UrgentCard reasons={screening.reasons} />;
+  if (lockoutActive(lockout, Date.now()))
+    return (
+      <Panel className="mx-auto max-w-2xl" titleLevel={1} title={tx(lang, "Move is paused for your safety.", "নিরাপত্তার জন্য মুভ বন্ধ আছে।")} />
+    );
+  if (screening.status === "emergency_stop") return <UrgentCard headingLevel={1} reasons={screening.reasons} />;
 
   const card = (heading: string, body: React.ReactNode, help?: string) => (
-    <Panel className="mx-auto max-w-2xl" title={<span className="text-lg">{heading}</span>} description={help}>
+    // Each step is a page in its own right, so its question is the heading.
+    <Panel className="mx-auto max-w-2xl" titleLevel={1} title={<span className="text-lg">{heading}</span>} description={help}>
       <div aria-live="polite">{body}</div>
       <div className="mt-6 flex justify-between">
         {index > 0 ? (
@@ -141,7 +145,7 @@ function Wizard() {
   if (step === "category")
     return card(
       tx(lang, "What do you want to work on?", "কী নিয়ে কাজ করতে চান?"),
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {CATEGORIES.map((c) => (
           <Choice key={c.id} selected={a.category === c.id} onClick={() => (set({ category: c.id, goal: undefined }), next())}>
             <span className="block font-medium text-ink">{lang === "bn" ? c.titleBn : c.title}</span>
@@ -181,7 +185,7 @@ function Wizard() {
     return card(
       tx(lang, "What best describes your goal?", "আপনার লক্ষ্য কোনটি?"),
       <div className="space-y-3">
-        <div className="grid gap-3">
+        <div className="grid grid-cols-1 gap-3">
           {(GOALS[a.category as keyof typeof GOALS] ?? []).map((g: { id: string; label: string; clarify?: string }) => (
             <Choice key={g.id} selected={a.goal === g.id} onClick={() => (set({ goal: g.id, clarified: !g.clarify }), g.clarify ? undefined : next())}>
               <span className="font-medium text-ink">{g.label}</span>
@@ -204,7 +208,7 @@ function Wizard() {
   if (step === "level")
     return card(
       tx(lang, "How active are you now?", "এখন আপনি কতটা সক্রিয়?"),
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {LEVELS.map((l) => (
           <Choice key={l.id} selected={a.level === l.id} onClick={() => (set({ level: l.id }), next())}>
             <span className="font-medium text-ink">{tx(lang, l.en, l.bn)}</span>
@@ -216,7 +220,7 @@ function Wizard() {
   if (step === "access")
     return card(
       tx(lang, "Any movement needs?", "চলাচলে কোনো প্রয়োজন?"),
-      <div className="grid gap-3">
+      <div className="grid grid-cols-1 gap-3">
         <Choice selected={a.seatedOnly === false && !a.needSupport} onClick={() => (set({ seatedOnly: false, needSupport: false }), next())}>
           <span className="font-medium text-ink">I can stand and move freely</span>
         </Choice>
@@ -232,7 +236,7 @@ function Wizard() {
   if (step === "equipment")
     return card(
       tx(lang, "Do you have a stable chair?", "স্থির চেয়ার আছে?"),
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <Choice selected={a.noChair === false} onClick={() => (set({ noChair: false }), next())}>
           <span className="font-medium text-ink">Yes, a stable chair without wheels</span>
         </Choice>
@@ -277,7 +281,7 @@ function Wizard() {
     return card(
       tx(lang, "Where is the pain?", "কোথায় ব্যথা?"),
       <div className="space-y-3">
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {PAIN_AREAS.map((p: { id: string; en: string; bn: string }) => (
             <Choice key={p.id} selected={painAreas.includes(p.id)} onClick={() => setPainAreas((x) => (x.includes(p.id) ? x.filter((y) => y !== p.id) : [...x, p.id]))}>
               <span className="font-medium text-ink">{tx(lang, p.en, p.bn)}</span>
@@ -294,7 +298,7 @@ function Wizard() {
   if (step === "camera")
     return card(
       tx(lang, "Camera or manual?", "ক্যামেরা নাকি নিজে গোনা?"),
-      <div className="grid gap-3">
+      <div className="grid grid-cols-1 gap-3">
         <Choice selected={a.mode === "camera"} onClick={() => (set({ mode: "camera" }), buildPlan(), next())}>
           <span className="block font-medium text-ink">Use my camera to count</span>
           <span className="block text-sm text-muted">Video is processed on this device and is never uploaded or saved. Only your counts are kept, here on this device.</span>

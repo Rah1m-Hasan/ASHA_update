@@ -20,7 +20,7 @@ export function Contact() {
           lead="For families, care teams, hospitals and partners. Tell us what you want to explore — we’ll discuss the next step and confirm a suitable time."
         />
       </Container>
-      <Container width="content" className="mt-14 grid gap-8 lg:grid-cols-[1fr_1.6fr]">
+      <Container width="content" className="mt-14 grid grid-cols-1 gap-8 lg:grid-cols-[1fr_minmax(0,1.6fr)]">
         <div>
           <ul className="space-y-3">
             {channels.map((c) => (

@@ -116,7 +116,7 @@ export function DemoPlayer({ exerciseId, lang, className, compact = false }: { e
             ))}
           </div>
         )}
-        <span className="absolute right-2 top-2 rounded-full bg-surface/90 px-2 py-0.5 text-[11px] font-medium text-muted ring-1 ring-line">{tx(lang, "Illustration", "চিত্র")}</span>
+        <span className="absolute right-2 top-2 rounded-full bg-surface/90 px-2 py-0.5 text-xs font-medium text-muted ring-1 ring-line">{tx(lang, "Illustration", "চিত্র")}</span>
       </div>
       <figcaption className="border-t border-line bg-surface px-4 py-3">
         <p className="min-h-12 text-base font-medium text-ink" aria-live="polite" data-testid="demo-caption" lang={lang === "bn" ? "bn" : "en"}>

@@ -57,14 +57,24 @@ export function useNow(ms = 1000) {
 }
 
 /** Urgent guidance card. Shown for emergency stops; it has no "continue exercising" action. */
-export function UrgentCard({ reasons = [], kind = "emergency" }: { reasons?: string[]; kind?: "emergency" | "rest" }) {
+export function UrgentCard({
+  reasons = [],
+  kind = "emergency",
+  headingLevel = 2,
+}: {
+  reasons?: string[];
+  kind?: "emergency" | "rest";
+  /** 1 when the card is the whole page, so it is the page's heading. */
+  headingLevel?: 1 | 2;
+}) {
   const lang = useMove((s) => s.language);
   const lines = kind === "emergency" ? urgentGuidance(lang, "BD", reasons) : restGuidance(lang, "BD");
+  const Heading = `h${headingLevel}` as "h1" | "h2";
   return (
     <section role="alert" aria-live="assertive" className={cn("rounded-2xl p-5 ring-1", kind === "emergency" ? "bg-danger-soft ring-danger-line" : "bg-warn-soft ring-warn-line")}>
-      <h2 className={cn("text-lg font-semibold", kind === "emergency" ? "text-danger" : "text-warn")}>
+      <Heading className={cn("text-lg font-semibold", kind === "emergency" ? "text-danger" : "text-warn")}>
         {kind === "emergency" ? tx(lang, "Stop. Get urgent help now.", "থামুন। এখনই জরুরি সহায়তা নিন।") : tx(lang, "Stop and rest.", "থামুন এবং বিশ্রাম নিন।")}
-      </h2>
+      </Heading>
       <ul className={cn("mt-2 list-disc space-y-1 pl-5", kind === "emergency" ? "text-danger" : "text-warn")}>
         {lines.map((l: string) => (
           <li key={l}>{l}</li>

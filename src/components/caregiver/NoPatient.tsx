@@ -10,6 +10,8 @@ export function NoPatient() {
     <Panel>
       <EmptyState
         icon={<UsersIcon />}
+        // This state replaces the whole page, so its title is the page heading.
+        headingLevel={1}
         title="No patients yet"
         action={
           <div className="flex flex-col items-center gap-4">

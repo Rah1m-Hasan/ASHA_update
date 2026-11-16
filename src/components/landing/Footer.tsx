@@ -6,7 +6,7 @@ export function Footer() {
   return (
     <footer className="bg-wash pt-16 pb-10">
       <Container width="wide">
-        <div className="grid gap-10 md:grid-cols-[1.5fr_repeat(3,1fr)]">
+        <div className="grid grid-cols-1 gap-10 md:grid-cols-[1.5fr_repeat(3,minmax(0,1fr))]">
           <div>
             <Wordmark height={26} />
             <p className="mt-4 max-w-xs text-muted">{footer.tagline}</p>

@@ -63,7 +63,7 @@ export function PlanEditor({ program, onChange, screening, readOnly }: { program
                 {alternatives.length > 0 && (
                   <label className="block text-xs text-muted">
                     Swap for
-                    <select className="mt-1 h-10 rounded-lg bg-surface px-2 text-sm text-ink ring-1 ring-line" value="" onChange={(ev) => ev.target.value && swap(i, ev.target.value)}>
+                    <select className="mt-1 h-10 max-w-full rounded-lg bg-surface px-2 text-sm text-ink ring-1 ring-line" value="" onChange={(ev) => ev.target.value && swap(i, ev.target.value)}>
                       <option value="">Easier or different…</option>
                       {alternatives.map((id: string) => (
                         <option key={id} value={id}>
