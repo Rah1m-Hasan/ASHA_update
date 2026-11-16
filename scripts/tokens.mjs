@@ -142,12 +142,16 @@ const FONTS = {
 // A type scale, so a heading is never an arbitrary pixel value. The "-sm"
 // steps are the small-screen sizes; a heading pair is `text-display-sm
 // sm:text-display-lg`, so a 4.25rem line never lands on a phone.
+//
+// The two large steps are fluid, so the jump at the `sm` breakpoint is a ramp
+// rather than a step: at 640px a display heading is still 2.5rem, exactly the
+// small-screen size, and it grows with the window from there.
 const TYPE = {
   display: ["3.5rem", { "line-height": "1.02", "letter-spacing": "-0.03em" }],
-  "display-lg": ["4.25rem", { "line-height": "0.98", "letter-spacing": "-0.035em" }],
+  "display-lg": ["clamp(2.5rem, 5.5vw, 4.25rem)", { "line-height": "0.98", "letter-spacing": "-0.035em" }],
   "display-sm": ["2.5rem", { "line-height": "1.06", "letter-spacing": "-0.025em" }],
   title: ["2rem", { "line-height": "1.15", "letter-spacing": "-0.02em" }],
-  "title-lg": ["2.5rem", { "line-height": "1.1", "letter-spacing": "-0.025em" }],
+  "title-lg": ["clamp(2.125rem, 3.4vw, 2.5rem)", { "line-height": "1.1", "letter-spacing": "-0.025em" }],
   "title-sm": ["2.125rem", { "line-height": "1.18", "letter-spacing": "-0.02em" }],
   lead: ["1.125rem", { "line-height": "1.65" }],
   label: ["0.875rem", { "line-height": "1.45" }],
