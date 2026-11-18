@@ -7,14 +7,12 @@ import {
   authFail,
 } from "../lib/common.js";
 import { clean } from "../lib/logic.js";
-import {
-  createMairaProvider,
-  MairaProviderError,
-} from "../lib/maira-provider.js";
+import { MairaProviderError } from "../lib/maira-provider.js";
+import { createLlmProvider } from "../lib/llm-provider.js";
 import { createAshaOrchestrator } from "../lib/asha-orchestrator.js";
 import { urgentCompanionResponse } from "../../../public/app/everyday/companion-safety.js";
 
-const provider = createMairaProvider();
+const provider = createLlmProvider();
 const orchestrator = createAshaOrchestrator({ provider });
 const quiet = (promise) => {
   // Prevent an unhandled rejection if another step fails first; callers still
@@ -52,7 +50,7 @@ export default async function handler(req, res) {
       return res
         .status(400)
         .json({ error: "Cloud assistance needs your consent." });
-    if (!process.env.MAIRA_API_KEY || !process.env.MAIRA_PROJECT_KEY)
+    if (!provider.configured())
       return res
         .status(503)
         .json({ error: "Asha cloud connection is not configured." });
@@ -87,7 +85,7 @@ export default async function handler(req, res) {
     });
     res.setHeader(
       "Server-Timing",
-      `setup;dur=${providerStarted - started}, maira;dur=${Date.now() - providerStarted}, total;dur=${Date.now() - started}`,
+      `setup;dur=${providerStarted - started}, ${provider.kind === "maira" ? "maira" : "llm"};dur=${Date.now() - providerStarted}, total;dur=${Date.now() - started}`,
     );
     console.info("asha orchestration", {
       task: result.orchestration.task,

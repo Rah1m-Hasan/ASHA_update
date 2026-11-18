@@ -196,15 +196,18 @@ function evidenceBlock(sources) {
 
 function orchestration(
   task,
-  model,
+  generated,
   sourceCount,
   verified,
   accepted = 0,
   rejected = 0,
 ) {
+  const local = generated?.profileName === "ollama-local";
   return {
     task,
-    model,
+    model: generated?.model,
+    ...(local ? { provider: "ollama-local" } : {}),
+    ...(generated?.fallback ? { fallback: true } : {}),
     verified,
     steps: [
       { tool: "select_model", status: "completed" },
@@ -213,7 +216,7 @@ function orchestration(
         status: "completed",
         resultCount: sourceCount,
       },
-      { tool: "maira_generate", status: "completed" },
+      { tool: local ? "local_generate" : "maira_generate", status: "completed" },
       {
         tool: "verify_tool_calls",
         status: verified ? "completed" : "limited",
@@ -306,7 +309,7 @@ export function createAshaOrchestrator({ provider }) {
         sources,
         orchestration: orchestration(
           task,
-          generated.model,
+          generated,
           sources.length,
           valid,
         ),
@@ -352,7 +355,7 @@ export function createAshaOrchestrator({ provider }) {
         : {}),
       orchestration: orchestration(
         task,
-        generated.model,
+        generated,
         sources.length,
         verified,
         tools.accepted,
