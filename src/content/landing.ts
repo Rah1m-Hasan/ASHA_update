@@ -202,7 +202,7 @@ export const closing = {
 export const footer = {
   tagline: "Care that understands beyond words.",
   groups: [
-    { title: "Product", links: [{ label: "Try Asha", href: site.appUrl }, { label: "Modules", href: "#modules" }, { label: "Hardware kit", href: "#kit" }, { label: "Plans", href: "#plans" }] },
+    { title: "Product", links: [{ label: "Try Asha", href: site.appUrl }, { label: "Modules", href: "#modules" }, { label: "Hardware kit", href: "#kit" }, { label: "Plans", href: "#plans" }, { label: "How Asha uses AI", href: "/ai" }] },
     { title: "Company", links: [{ label: "Why Asha", href: "#why" }, { label: "Team", href: "#team" }, { label: "Contact", href: "#contact" }] },
     { title: "Connect", links: [{ label: "Email", href: "mailto:mysunatislam@gmail.com" }, { label: "WhatsApp", href: "https://wa.me/8801641576801" }, { label: "Source", href: site.sourceUrl }] },
   ],
