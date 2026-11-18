@@ -458,8 +458,13 @@ export function createAshaOrchestrator({
         language: resolvedLanguage,
       });
       const explicit = requestIntent(safeText, safeHistory);
+      const NEED_BN = { water: "পানি", food: "খাবার", toilet: "টয়লেট", comfort: "আরাম", help: "সাহায্য" };
       return {
-        reply: guide.reply,
+        reply: explicit
+          ? resolvedLanguage === "bn" || resolvedLanguage === "mixed"
+            ? `আমি আপনার কেয়ারগিভারকে ${NEED_BN[explicit]}-এর কথা জানাতে পারি। পাঠানোর আগে নিশ্চিত করুন।`
+            : `I can ask your caregiver: "${proposedText(explicit)}". Please confirm before it is sent.`
+          : guide.reply,
         language: resolvedLanguage,
         sources: guide.sources,
         answeredBy: "guide",

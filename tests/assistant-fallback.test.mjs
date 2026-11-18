@@ -97,3 +97,21 @@ test("guide answers never come back empty, in English or Bangla", () => {
   }
   assert.match(guideAnswer({ query: "আপনি কে" }).reply, /[ঀ-৿]/u);
 });
+
+test("with an AI Gateway key, a rejected MAIRA key falls back to the gateway", async () => {
+  const { createLlmProvider } = await import("../src/server/lib/llm-provider.js");
+  const seen = [];
+  const fetchImpl = async (url, init) => {
+    seen.push(String(url));
+    if (String(url).includes("gigalogy")) return new Response("{}", { status: 401 });
+    assert.match(init.headers.authorization, /^Bearer gw-test$/);
+    return Response.json({ choices: [{ message: { content: '{"reply":"Hi from the backup.","source_ids":[]}' } }] });
+  };
+  const provider = createLlmProvider({ env: { MAIRA_API_KEY: "k", MAIRA_PROJECT_KEY: "p", AI_GATEWAY_API_KEY: "gw-test" }, fetchImpl });
+  const result = await createAshaOrchestrator({ provider, retrieve: () => [] }).run({ patientId: "p", profile, text: "Hello" });
+  assert.equal(result.reply, "Hi from the backup.");
+  assert.equal(result.orchestration.model, "google/gemini-2.5-flash");
+  assert.ok(seen.some((u) => u.includes("ai-gateway.vercel.sh")));
+  // Without the key nothing changes: MAIRA only.
+  assert.equal(createLlmProvider({ env: { MAIRA_API_KEY: "k", MAIRA_PROJECT_KEY: "p" }, fetchImpl }).kind, "maira");
+});
