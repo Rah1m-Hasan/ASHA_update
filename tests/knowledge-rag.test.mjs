@@ -143,3 +143,48 @@ test("A hand pose in FingerSpeak is not read as a mention of the posture guide",
     ),
   );
 });
+
+test("Contextual retrieval: a chunk's own context is embedded between the header and the text", async () => {
+  const concept = CORPUS.find((c) => c.id === "guide:caregiver");
+  const seen = [];
+  const recording = async (text) => {
+    seen.push(text);
+    return fakeEmbed(text);
+  };
+  const { chunks: plain } = await semanticChunks(concept, fakeEmbed);
+  const id = plain[0].id;
+  const context = "From the caregiver guide: how requests are acknowledged.";
+  const { chunks } = await semanticChunks(concept, recording, undefined, {
+    [id]: context,
+    "guide:other#1-1": "unused",
+  });
+  assert.deepEqual(
+    chunks.map((c) => c.id),
+    plain.map((c) => c.id),
+  );
+  assert.equal(chunks[0].context, context);
+  assert.ok(chunks.slice(1).every((c) => c.context === ""));
+  assert.ok(seen.includes(`${chunks[0].header} ${context} ${chunks[0].body}`));
+});
+
+test("Every committed chunk context names a chunk the chunker can produce for the current corpus", async () => {
+  const { CHUNK_CONTEXTS } = await import(
+    "../supabase/functions/asha-knowledge/corpus.ts"
+  );
+  const ids = Object.keys(CHUNK_CONTEXTS);
+  assert.ok(ids.length > 0);
+  for (const id of ids) {
+    const [conceptId, span] = id.split("#");
+    const concept = CORPUS.find((c) => c.id === conceptId);
+    assert.ok(concept, id);
+    const [from, to] = span.split("-").map(Number);
+    assert.ok(
+      from >= 1 && to >= from && to <= splitSentences(concept.text).length,
+      id,
+    );
+    assert.ok(
+      CHUNK_CONTEXTS[id].length > 20 && CHUNK_CONTEXTS[id].length <= 400,
+      id,
+    );
+  }
+});

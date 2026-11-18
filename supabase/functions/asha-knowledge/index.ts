@@ -5,7 +5,12 @@
 // Request text is never logged or stored.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.118.0";
-import { CORPUS, CORPUS_VERSION } from "./corpus.ts";
+import {
+  CHUNK_CONTEXTS,
+  CONTEXTS_VERSION,
+  CORPUS,
+  CORPUS_VERSION,
+} from "./corpus.ts";
 import {
   CHUNKER_VERSION,
   buildEdges,
@@ -17,7 +22,7 @@ import {
 } from "./rag.ts";
 
 const MODEL = "gte-small";
-const VERSION = `${CORPUS_VERSION}:${CHUNKER_VERSION}:${MODEL}`;
+const VERSION = `${CORPUS_VERSION}:${CHUNKER_VERSION}-${CONTEXTS_VERSION}:${MODEL}`;
 const session = new Supabase.ai.Session(MODEL);
 
 function projectKeys(): string[] {
@@ -48,17 +53,66 @@ async function same(a: string, b: string) {
   for (let i = 0; i < x.length; i++) diff |= x[i] ^ y[i];
   return diff === 0;
 }
+// Keys the function knows from its own environment are checked first. A key
+// it does not hold (for example a second secret key made for the web app) is
+// accepted only if the API gateway lets it read a table that only the
+// service role can read. Successful checks are cached as hashes for 10 minutes.
+const verified = new Map<string, number>();
+const kind = (value: string) =>
+  !value
+    ? "none"
+    : value.startsWith("sb_secret_")
+      ? "secret"
+      : value.startsWith("sb_publishable_")
+        ? "publishable"
+        : value.startsWith("eyJ")
+          ? "jwt"
+          : "other";
+async function serviceRoleProbe(apikey: string, authorization: string) {
+  const hash = Array.from(await digest(`${apikey}|${authorization}`))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  const until = verified.get(hash);
+  if (until && until > Date.now()) return true;
+  const headers: Record<string, string> = {
+    apikey: apikey || (Deno.env.get("SUPABASE_ANON_KEY") ?? ""),
+  };
+  if (authorization) headers.authorization = authorization;
+  const response = await fetch(
+    new URL(
+      "/rest/v1/asha_knowledge_index_runs?select=id&limit=1",
+      Deno.env.get("SUPABASE_URL")!,
+    ),
+    { headers },
+  ).catch(() => null);
+  await response?.body?.cancel();
+  if (response?.status !== 200) return false;
+  if (verified.size > 20) verified.clear();
+  verified.set(hash, Date.now() + 10 * 60_000);
+  return true;
+}
 async function authorized(req: Request) {
-  const presented =
-    req.headers.get("apikey") ??
-    (req.headers.get("authorization") ?? "").replace(/^Bearer\s+/i, "");
-  if (presented)
-    for (const key of projectKeys())
-      if (await same(presented, key)) return true;
+  const apikey = req.headers.get("apikey") ?? "";
+  const authorization = req.headers.get("authorization") ?? "";
+  const bearer = authorization.replace(/^Bearer\s+/i, "");
+  for (const presented of [apikey, bearer])
+    if (presented)
+      for (const key of projectKeys())
+        if (await same(presented, key)) return true;
   const token = req.headers.get("x-asha-index-token");
-  if (!token || token.length < 32 || token.length > 200) return false;
-  const { data } = await db.rpc("asha_index_token_ok", { token });
-  return data === true;
+  if (token && token.length >= 32 && token.length <= 200) {
+    const { data } = await db.rpc("asha_index_token_ok", { token });
+    if (data === true) return true;
+  }
+  if ((apikey || bearer) && (await serviceRoleProbe(apikey, authorization)))
+    return true;
+  // Only the kind of credential is logged, never its value.
+  console.warn("asha-knowledge refused", {
+    apikey: kind(apikey),
+    bearer: kind(bearer),
+    known: projectKeys().map(kind),
+  });
+  return false;
 }
 
 async function embed(text: string): Promise<number[]> {
@@ -80,7 +134,12 @@ async function indexConcept(conceptId: string, from?: number, to?: number) {
     Number.isFinite(from) && Number.isFinite(to)
       ? { from: from!, to: to! }
       : undefined;
-  const { chunks, sentences } = await semanticChunks(concept, embed, window);
+  const { chunks, sentences } = await semanticChunks(
+    concept,
+    embed,
+    window,
+    CHUNK_CONTEXTS,
+  );
   const { kept, removed } = dedupChunks(chunks);
   const rows = kept.map((chunk) => ({
     ...chunk,
@@ -200,45 +259,29 @@ async function search(input: SearchInput) {
   // colloquial words, so an English-only embedder and index can match them.
   const embedding =
     input.embedding ?? (await embed(`${query} ${terms.join(" ")}`.trim()));
-  const { data, error } = await db.rpc("asha_hybrid_search", {
+  // One database round trip: the hybrid passages, then the best passage of up
+  // to two knowledge-graph neighbours of the top guide.
+  const { data, error } = await db.rpc("asha_hybrid_graph_search", {
     query_tsquery: toTsquery(terms),
     query_embedding: JSON.stringify(embedding),
     match_count: limit,
     full_text_weight: input.fullTextWeight ?? 1,
     semantic_weight: input.semanticWeight ?? 1,
+    with_graph: input.graph !== false,
   });
   if (error) throw new Error("search failed");
-  const passages = (data ?? []).map((row: Record<string, unknown>) => ({
-    ...row,
-    via: "hybrid",
-  }));
+  const passages = [];
   const related = [];
-  if (input.graph !== false && passages.length) {
-    const seen = new Set(
-      passages.map((p: { concept_id: string }) => p.concept_id),
-    );
-    const { data: edges } = await db
-      .from("asha_knowledge_edges")
-      .select("target_concept, relation, weight")
-      .eq("source_concept", passages[0].concept_id)
-      .order("weight", { ascending: false })
-      .limit(4);
-    for (const edge of edges ?? []) {
-      if (seen.has(edge.target_concept) || related.length >= 2) continue;
-      seen.add(edge.target_concept);
-      const { data: best } = await db.rpc("asha_hybrid_search", {
-        query_tsquery: toTsquery(terms),
-        query_embedding: JSON.stringify(embedding),
-        match_count: 1,
-        concept_filter: edge.target_concept,
+  for (const { edge_weight, ...row } of (data ?? []) as Record<
+    string,
+    unknown
+  >[]) {
+    if (row.via === "hybrid") passages.push(row);
+    else
+      related.push({
+        ...row,
+        edgeWeight: Number(Number(edge_weight).toFixed(4)),
       });
-      if (best?.[0])
-        related.push({
-          ...best[0],
-          via: `graph:${edge.relation}`,
-          edgeWeight: edge.weight,
-        });
-    }
   }
   return { version: VERSION, passages, related, embedding };
 }

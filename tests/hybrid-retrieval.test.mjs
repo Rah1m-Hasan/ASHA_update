@@ -50,6 +50,8 @@ test("Bangla questions are rewritten to the lexicon's English terms before hybri
   );
   assert.equal(sent.options.headers.apikey, env.SUPABASE_SECRET_KEY);
   assert.equal(sent.options.headers.authorization, undefined);
+  // Runs next to the Tokyo database unless ASHA_KNOWLEDGE_REGION says otherwise.
+  assert.equal(sent.options.headers["x-region"], "ap-northeast-1");
   assert.ok(sent.body.terms.includes("blink"));
   assert.equal(out[0].id, "guide:companion#7-9");
   assert.equal(out[0].retrieval, "hybrid");
@@ -189,4 +191,21 @@ test("Repeated questions reuse the cached hybrid result", async () => {
   await retriever.retrieve({ query: "How does my daughter see requests?" });
   await retriever.retrieve({ query: "How does my daughter see requests?" });
   assert.equal(calls, 1);
+});
+
+test("An empty ASHA_KNOWLEDGE_REGION lets Supabase pick the region", async () => {
+  let headers;
+  const retriever = createHybridRetriever({
+    env: {
+      SUPABASE_URL: "https://example.supabase.co",
+      SUPABASE_SECRET_KEY: "sb_secret_" + "x".repeat(40),
+      ASHA_KNOWLEDGE_REGION: "",
+    },
+    fetchImpl: async (_url, options) => {
+      headers = options.headers;
+      return Response.json({ passages: [], related: [] });
+    },
+  });
+  await retriever.retrieve({ query: "How do caregivers acknowledge?" });
+  assert.equal(headers["x-region"], undefined);
 });

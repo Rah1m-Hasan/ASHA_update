@@ -1,6 +1,12 @@
 import { retrieveKnowledge, rewriteQuery } from "./retrieval.js";
 
-const TIMEOUT_MS = 1500;
+// The edge function is pinned to the database's region (see below), so a cold
+// start (model load plus one query) fits; a warm search takes well under 1 s.
+const TIMEOUT_MS = 2500;
+// Supabase runs an edge function near the caller unless told otherwise. ASHA's
+// database is in Tokyo and Vercel runs in the US, so running the search next
+// to the database saves a cross-Pacific round trip per query.
+const DEFAULT_FUNCTION_REGION = "ap-northeast-1";
 const CACHE_MS = 10 * 60 * 1000;
 const CACHE_SIZE = 200;
 const MAX_EXCERPT = 560;
@@ -21,6 +27,8 @@ export function createHybridRetriever({
   const url = env.SUPABASE_URL;
   const secret = env.SUPABASE_SECRET_KEY || env.SUPABASE_SERVICE_ROLE_KEY;
   const enabled = Boolean(url && secret && env.ASHA_HYBRID_RETRIEVAL !== "0");
+  // An empty ASHA_KNOWLEDGE_REGION lets Supabase choose the nearest region.
+  const region = env.ASHA_KNOWLEDGE_REGION ?? DEFAULT_FUNCTION_REGION;
   const cache = new Map();
 
   async function remote(query, limit) {
@@ -32,6 +40,7 @@ export function createHybridRetriever({
     // Legacy service_role keys are JWTs; new sb_secret keys go in apikey only.
     if (!secret.startsWith("sb_secret_"))
       headers.authorization = `Bearer ${secret}`;
+    if (/^[a-z]{2}-[a-z]+-\d$/.test(region)) headers["x-region"] = region;
     const response = await fetchImpl(
       new URL("/functions/v1/asha-knowledge", url),
       {

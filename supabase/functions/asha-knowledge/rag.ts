@@ -16,6 +16,8 @@ export type Chunk = {
   module: string;
   title: string;
   header: string;
+  /** LLM-written context for this chunk (contextual retrieval), or "". */
+  context: string;
   body: string;
   sentence_from: number;
   sentence_to: number;
@@ -30,7 +32,7 @@ export type Edge = {
   weight: number;
 };
 
-export const CHUNKER_VERSION = "semantic-v1";
+export const CHUNKER_VERSION = "semantic-v1-contextual";
 const MAX_CHARS = 480;
 const MIN_CHARS = 120;
 const BREAK_PERCENTILE = 0.3;
@@ -67,6 +69,7 @@ export async function semanticChunks(
   concept: Concept,
   embed: Embed,
   window?: { from: number; to: number },
+  contexts: Record<string, string> = {},
 ): Promise<{ chunks: Chunk[]; sentences: number }> {
   const header = contextHeader(concept);
   const all = splitSentences(concept.text);
@@ -100,18 +103,23 @@ export async function semanticChunks(
   const chunks: Chunk[] = [];
   for (const [from, to] of spans) {
     const body = parts.slice(from, to + 1).join(" ");
+    const id = `${concept.id}#${offset + from + 1}-${offset + to + 1}`;
+    // Contextual retrieval: the chunk's own context goes between the guide
+    // header and the text, for both the embedding and full-text search.
+    const context = String(contexts[id] ?? "").slice(0, 400);
     chunks.push({
-      id: `${concept.id}#${offset + from + 1}-${offset + to + 1}`,
+      id,
       concept_id: concept.id,
       module: concept.module,
       title: concept.title,
       header,
+      context,
       body,
       sentence_from: offset + from + 1,
       sentence_to: offset + to + 1,
       provenance: concept.provenance ?? null,
       verification: concept.verification ?? null,
-      embedding: await embed(`${header} ${body}`),
+      embedding: await embed([header, context, body].filter(Boolean).join(" ")),
     });
   }
   return { chunks, sentences: parts.length };

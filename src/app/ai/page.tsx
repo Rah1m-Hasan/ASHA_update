@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BarChart, type Bar } from "@/components/ai/BarChart";
 import report from "../../../docs/retrieval-eval.json";
+import withoutContext from "../../../docs/retrieval-eval-no-context.json";
 import { MCP_SERVERS } from "@/server/mcp/servers.js";
 import { MAIRA_ROUTES } from "@/server/lib/maira-provider.js";
 import { OLLAMA_MODELS } from "@/server/lib/ollama-provider.js";
@@ -18,6 +19,7 @@ const summary = report.summary as Record<
   Record<string, Score>
 >;
 const total = report.cases;
+const before = withoutContext.summary as typeof summary;
 
 const METHODS: { key: string; label: string; emphasis?: string }[] = [
   {
@@ -170,9 +172,31 @@ export default function AiPage() {
               label="Mean reciprocal rank by search method, all questions"
             />
             <p className="mt-4 text-sm text-muted">
-              Every Supabase method with query rewriting found the right guide
-              in the top three for all {total} questions. Keyword search in the
-              app found it for {answered(summary.all["bm25.local"], total)}.
+              With query rewriting, hybrid search found the right guide in the
+              top three for {answered(summary.all["hybrid.rewritten"], total)}{" "}
+              of {total} questions, and the order the app serves did for{" "}
+              {answered(summary.all["hybridGraph.rewritten"], total)}. Keyword
+              search in the app found it for{" "}
+              {answered(summary.all["bm25.local"], total)}.
+            </p>
+          </div>
+
+          <div className="mt-4 rounded-2xl border border-line bg-canvas px-5 py-5">
+            <p className="text-sm font-medium text-ink">
+              A context sentence for every passage
+            </p>
+            <p className="mt-2 text-sm text-muted">
+              Each passage carries one sentence that says where it sits in its
+              guide, written by Claude from the whole guide. With these
+              sentences, the order the app serves ranked the right guide first
+              for every English question (English MRR{" "}
+              {before.en["hybridGraph.rewritten"].mrr.toFixed(3)} before,{" "}
+              {summary.en["hybridGraph.rewritten"].mrr.toFixed(3)} after).
+              Bangla questions answered in the top three went from{" "}
+              {answered(before.bn["hybridGraph.rewritten"], bn)} to{" "}
+              {answered(summary.bn["hybridGraph.rewritten"], bn)} of {bn}. The
+              sentences were written after the test questions, so treat the gain
+              as indicative.
             </p>
           </div>
 
@@ -232,10 +256,10 @@ export default function AiPage() {
               Measured on {ran} against index {report.hybridIndex}. The
               questions were written by the Asha team, not by patients, so treat
               this as a check that the pipeline works rather than a benchmark.
-              Method: semantic chunks with gte-small embeddings in pgvector,
-              Postgres full text, reciprocal rank fusion, and a 28-edge
-              knowledge graph between guides. Confirmed patient speech never
-              leaves Asha&apos;s server.
+              Method: semantic chunks with a context sentence each, gte-small
+              embeddings in pgvector, Postgres full text, reciprocal rank
+              fusion, and a 28-edge knowledge graph between guides. Confirmed
+              patient speech never leaves Asha&apos;s server.
             </p>
           </details>
         </Section>
