@@ -1,0 +1,99 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { createAshaOrchestrator } from "../src/server/lib/asha-orchestrator.js";
+import { MairaProviderError } from "../src/server/lib/maira-provider.js";
+import { guideAnswer } from "../src/lib/guide-answer.js";
+
+const profile = { assessment: {}, supportContext: {} };
+const ok = (text, task) => ({ text, model: "m-" + task, task, profileName: "test", elapsedMs: 1, fallback: false });
+
+function scripted(steps) {
+  const calls = [];
+  return {
+    calls,
+    ask: async (input) => {
+      calls.push(input);
+      const step = steps[calls.length - 1];
+      if (step instanceof Error) throw step;
+      return ok(step, input.task);
+    },
+  };
+}
+
+test("a failed route moves to the other route once and the reply is valid", async () => {
+  const provider = scripted([
+    new MairaProviderError("timeout", "slow", 504),
+    '{"reply":"Hello, I am Asha.","source_ids":[],"tool_calls":[]}',
+  ]);
+  const result = await createAshaOrchestrator({ provider, retrieve: () => [] }).run({ patientId: "p", profile, text: "Hello" });
+  assert.equal(result.reply, "Hello, I am Asha.");
+  assert.deepEqual(provider.calls.map((c) => c.task), ["conversation", "bilingual"]);
+  assert.equal(result.orchestration.rerouted, true);
+  assert.ok(provider.calls[0].timeoutMs <= 24000);
+});
+
+test("when every route fails, Asha answers from its guide instead of an error", async () => {
+  const provider = scripted([
+    new MairaProviderError("provider_unavailable", "down"),
+    new MairaProviderError("model_unavailable", "gone", 503),
+  ]);
+  const result = await createAshaOrchestrator({ provider, retrieve: () => [] }).run({ patientId: "p", profile, text: "What can you help me with?" });
+  assert.equal(result.answeredBy, "guide");
+  assert.match(result.reply, /FaceSpeak|EyeSpeak/);
+  assert.match(result.notice, /guide/);
+  assert.equal(result.orchestration.model, "asha-guide");
+});
+
+test("an explicit need still opens a confirmation when the AI is down", async () => {
+  const provider = scripted([new MairaProviderError("connection_failed", "x"), new MairaProviderError("connection_failed", "x")]);
+  const result = await createAshaOrchestrator({ provider, retrieve: () => [] }).run({ patientId: "p", profile, text: "I need water" });
+  assert.equal(result.proposal.kind, "water");
+});
+
+test("missing configuration is not retried and still answers", async () => {
+  const provider = scripted([new MairaProviderError("not_configured", "no", 503)]);
+  const result = await createAshaOrchestrator({ provider, retrieve: () => [] }).run({ patientId: "p", profile, text: "how does VitalSense work" });
+  assert.equal(provider.calls.length, 1);
+  assert.match(result.reply, /VitalSense/);
+});
+
+test("JSON wrapped in prose or fences is parsed, and raw JSON is never shown", async () => {
+  const wrapped = scripted(['Sure! Here it is:\n```json\n{"reply":"Drink some water now.","source_ids":[]}\n```']);
+  const a = await createAshaOrchestrator({ provider: wrapped, retrieve: () => [] }).run({ patientId: "p", profile, text: "Hi" });
+  assert.equal(a.reply, "Drink some water now.");
+  assert.equal(a.orchestration.verified, true);
+
+  const broken = scripted(['{"reply": "Half an answer", "source_ids": [', '{"reply": "Half an answer", "source_ids": [']);
+  const b = await createAshaOrchestrator({ provider: broken, retrieve: () => [] }).run({ patientId: "p", profile, text: "Hi" });
+  assert.equal(b.reply, "Half an answer");
+  assert.doesNotMatch(b.reply, /source_ids|\{/);
+});
+
+test("an unusable answer is retried on the other route", async () => {
+  const provider = scripted(['{"tool_calls":[]}', '{"reply":"Second route answer.","source_ids":[]}']);
+  const result = await createAshaOrchestrator({ provider, retrieve: () => [] }).run({ patientId: "p", profile, text: "Hi" });
+  assert.equal(result.reply, "Second route answer.");
+});
+
+test("an invented citation drops the citation but keeps the reply text", async () => {
+  const provider = scripted(['{"reply":"FaceSpeak reads blinks.","source_ids":["made:up"]}']);
+  const result = await createAshaOrchestrator({ provider, retrieve: () => [] }).run({ patientId: "p", profile, text: "what is facespeak" });
+  assert.equal(result.reply, "FaceSpeak reads blinks.");
+  assert.deepEqual(result.sources, []);
+  assert.equal(result.orchestration.verified, false);
+});
+
+test("speech clarification keeps the heard words when the AI is down", async () => {
+  const provider = scripted([new MairaProviderError("timeout", "x", 504), new MairaProviderError("timeout", "x", 504)]);
+  const result = await createAshaOrchestrator({ provider, retrieve: () => [] }).run({ patientId: "p", profile, text: "wed wabbit", mode: "interpret" });
+  assert.equal(result.candidate, "wed wabbit");
+  assert.match(result.question, /Is this what you said/);
+});
+
+test("guide answers never come back empty, in English or Bangla", () => {
+  for (const q of ["", "hello", "what is eyespeak", "how do I ask for water", "zzzz", "আপনি কে", "হাত দিয়ে কীভাবে বলব"]) {
+    const g = guideAnswer({ query: q });
+    assert.ok(g.reply.length > 20, q);
+  }
+  assert.match(guideAnswer({ query: "আপনি কে" }).reply, /[ঀ-৿]/u);
+});

@@ -42,7 +42,10 @@ export default function AssistantPage() {
 
   async function send(e: React.FormEvent) {
     e.preventDefault();
-    const text = input.trim();
+    await ask(input.trim());
+  }
+
+  async function ask(text: string, cloud = settings.cloud) {
     if (!text || busy) return;
     setInput("");
     const history = messages.slice(-6).map(({ role, text }) => ({ role, text }));
@@ -51,13 +54,13 @@ export default function AssistantPage() {
     try {
       const reply = await askAsha(cred, {
         text,
-        cloud: settings.cloud,
+        cloud,
         history,
         language: settings.language,
         context: `Camera ${state === "on" ? "on" : "off"}; posture ${snapshot.posture?.label ?? "unavailable"}`,
       });
       setMessages((m) => [...m, { role: "assistant", text: reply.reply, reply }]);
-      speak(reply.reply);
+      if (reply.reply) speak(reply.reply);
     } catch (err) {
       setMessages((m) => [...m, { role: "assistant", text: (err as Error).message }]);
     } finally {
@@ -85,6 +88,19 @@ export default function AssistantPage() {
                     <Link href={`/dashboard/patient/${m.reply.suggestedModule}`} className="mt-2 block text-sm font-medium text-brand">
                       Open {m.reply.suggestedModule}
                     </Link>
+                  )}
+                  {m.reply?.notice && <p className="mt-2 text-xs text-muted" data-testid="reply-notice">{m.reply.notice}</p>}
+                  {m.reply?.offerCloud && !settings.cloud && (
+                    <button
+                      onClick={() => {
+                        sessionStore.updateSettings({ cloud: true });
+                        const asked = messages[i - 1];
+                        if (asked?.role === "user") void ask(asked.text, true);
+                      }}
+                      className="mt-1 block text-sm font-medium text-brand hover:underline"
+                    >
+                      Turn on cloud assistance and ask again
+                    </button>
                   )}
                   {m.role === "assistant" && i > 0 && (
                     <button onClick={() => speak(m.text)} className="mt-2 flex items-center gap-1 text-xs text-muted hover:text-ink" aria-label="Speak this reply">

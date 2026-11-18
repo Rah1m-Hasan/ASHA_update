@@ -1,5 +1,6 @@
-import { api, type Credential } from "@/lib/api";
+import { api, ApiError, type Credential } from "@/lib/api";
 import { readLocal } from "@/lib/storage";
+import { guideAnswer } from "@/lib/guide-answer.js";
 import { urgentCompanionResponse } from "../../../public/app/everyday/companion-safety.js";
 
 export type ChatTurn = { role: "user" | "assistant"; text: string };
@@ -10,6 +11,12 @@ export type ChatReply = {
   proposal?: { kind: string; text: string };
   suggestedModule?: string;
   safety?: { level: string };
+  /** "guide" when the answer came from Asha's own guide instead of an AI model. */
+  answeredBy?: "guide" | "model";
+  /** One quiet line explaining a guide answer. */
+  notice?: string;
+  /** Offer to turn on cloud assistance (shown only when it is off). */
+  offerCloud?: boolean;
 };
 
 export type InterpretReply = {
@@ -18,6 +25,9 @@ export type InterpretReply = {
   question: string;
   language?: string;
   safety?: { level: string };
+  answeredBy?: "guide" | "model";
+  notice?: string;
+  offerCloud?: boolean;
 };
 
 type SpeechPair = { heard: string; confirmedText: string; confirmed: boolean };
@@ -57,24 +67,46 @@ export async function askAsha(
       question: "",
       ...urgent,
     } as ChatReply & InterpretReply;
-  if (!cred)
-    throw new Error(
-      "Link a caregiver first — Asha’s cloud replies use your private care circle.",
-    );
+  const local = (notice: string, offerCloud = false) => {
+    const guide = guideAnswer({ query: body.text, module: body.module, language: body.language });
+    return {
+      reply: guide.reply,
+      candidate: body.text.slice(0, 250),
+      alternatives: [],
+      question:
+        body.mode === "interpret"
+          ? offerCloud
+            ? "Cloud assistance is off, so Asha kept your words as heard. Is this what you said?"
+            : "Asha's AI could not be reached, so your words are kept as heard. Is this what you said?"
+          : "",
+      answeredBy: "guide" as const,
+      notice,
+      offerCloud,
+    } as ChatReply & InterpretReply;
+  };
+  // Without consent nothing leaves the device: Asha answers from its own guide.
   if (!body.cloud)
-    throw new Error("Turn on cloud assistance in Settings so I can reply.");
-  return api<ChatReply & InterpretReply>("asha", {
-    cred,
-    body: {
-      consent: true,
-      mode: body.mode ?? "chat",
-      module: body.module ?? "companion",
-      context: body.context ?? "",
-      history: body.history?.slice(-6) ?? [],
-      language: body.language ?? "auto",
-      text: body.text,
-      confirmedMemories:
-        body.mode === "interpret" ? confirmedSpeechPairs(cred.patientId) : [],
-    },
-  });
+    return local("Answered on this device from Asha's guide. Turn on cloud assistance for AI replies.", true);
+  try {
+    return await api<ChatReply & InterpretReply>("asha", {
+      cred,
+      body: {
+        consent: true,
+        // The on-device demo has no care circle: ask as a guest, with no stored profile.
+        ...(cred ? {} : { guest: true }),
+        mode: body.mode ?? "chat",
+        module: body.module ?? "companion",
+        context: body.context ?? "",
+        history: body.history?.slice(-6) ?? [],
+        language: body.language ?? "auto",
+        text: body.text,
+        confirmedMemories:
+          cred && body.mode === "interpret" ? confirmedSpeechPairs(cred.patientId) : [],
+      },
+    });
+  } catch (error) {
+    // Rate limits and rejected sign-ins are worth saying as they are.
+    if (error instanceof ApiError && (error.status === 429 || error.status === 401 || error.status === 403)) throw error;
+    return local("Asha's AI could not be reached, so this answer is from Asha's guide on this device.");
+  }
 }
