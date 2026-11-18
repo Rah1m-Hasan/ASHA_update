@@ -1,7 +1,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { z } from "zod";
-import { retrieveKnowledge } from "../lib/retrieval.js";
+import { createHybridRetriever } from "../lib/hybrid-retrieval.js";
 import { guides } from "../lib/knowledge.js";
 import { authenticate, events, path, store } from "../lib/common.js";
 import { MAIRA_ROUTES } from "../lib/maira-provider.js";
@@ -24,6 +24,7 @@ import {
 import manifest from "../../../public/models/manifest.json" with { type: "json" };
 
 const VERSION = "1.0.0";
+const retriever = createHybridRetriever();
 const MAX_BODY = 64 * 1024;
 const MODULES = Object.keys(guides);
 const ALLOWED_ORIGINS = [
@@ -56,7 +57,7 @@ function knowledgeServer() {
     {
       title: "Search ASHA app guides",
       description:
-        "Ranked passages from ASHA's OKF app guides (English and Bangla queries). Uses the same retrieval as the in-app assistant, without any patient memories.",
+        "Ranked passages from ASHA's OKF app guides (English and Bangla queries). Uses the same hybrid retrieval as the in-app assistant (falling back to BM25), without any patient memories.",
       inputSchema: {
         query: z.string().min(1).max(1200),
         module: z.enum(MODULES).optional(),
@@ -64,11 +65,19 @@ function knowledgeServer() {
       },
       annotations: readOnly,
     },
-    async ({ query, module = "companion", limit = 3 }) =>
-      result({
+    async ({ query, module = "companion", limit = 3 }) => {
+      const passages = await retriever.retrieve({
         query,
-        passages: retrieveKnowledge({ query, module, memories: [], limit }),
-      }),
+        module,
+        memories: [],
+        limit,
+      });
+      return result({
+        query,
+        retrieval: passages.some((p) => p.retrieval) ? "hybrid" : "bm25",
+        passages,
+      });
+    },
   );
   server.registerTool(
     "get_module_guide",
@@ -90,7 +99,9 @@ function knowledgeServer() {
         mimeType: "text/plain",
       },
       async (uri) => ({
-        contents: [{ uri: uri.href, mimeType: "text/plain", text: concept.text }],
+        contents: [
+          { uri: uri.href, mimeType: "text/plain", text: concept.text },
+        ],
       }),
     );
   return server;
@@ -158,7 +169,9 @@ function nutritionServer() {
       try {
         return result(calculateMeal(meal));
       } catch (error) {
-        return refusal(String(error?.message || "Meal could not be calculated."));
+        return refusal(
+          String(error?.message || "Meal could not be calculated."),
+        );
       }
     },
   );
@@ -198,7 +211,9 @@ function safetyServer() {
         region: z.enum(["BD", "GB", "US", "CA", "EU", "IN"]).optional(),
         language: z.enum(["en", "bn"]).optional(),
         redFlags: z
-          .array(z.enum(["breathlessness", "fainting", "sweating", "radiating"]))
+          .array(
+            z.enum(["breathlessness", "fainting", "sweating", "radiating"]),
+          )
           .max(4)
           .optional(),
       },
@@ -206,7 +221,10 @@ function safetyServer() {
     },
     async ({ text, region = "BD", language = "en", redFlags = [] }) => {
       const decision = evaluateSafety(text, { region, redFlags });
-      return result({ ...decision, message: safetyMessage(decision, language) });
+      return result({
+        ...decision,
+        message: safetyMessage(decision, language),
+      });
     },
   );
   server.registerTool(
@@ -234,13 +252,17 @@ function caregiverServer(request) {
   );
   const caregiver = async (patientId) => {
     const auth = await authenticate(
-      { headers: { authorization: request.headers.get("authorization") || "" } },
+      {
+        headers: { authorization: request.headers.get("authorization") || "" },
+      },
       patientId,
     );
     return auth?.role === "caregiver" ? auth : null;
   };
   const denied = () =>
-    refusal("Use the caregiver link's token for this patient. Access was refused.");
+    refusal(
+      "Use the caregiver link's token for this patient. Access was refused.",
+    );
   const patientId = z.string().regex(/^[a-f0-9]{24}$/);
   const requestId = z.string().regex(/^[a-f0-9-]{36}$/);
   server.registerTool(
@@ -249,7 +271,10 @@ function caregiverServer(request) {
       title: "List patient requests",
       description:
         "Recent confirmed requests (water, food, toilet, help...) with their delivery receipts, newest first.",
-      inputSchema: { patientId, limit: z.number().int().min(1).max(60).optional() },
+      inputSchema: {
+        patientId,
+        limit: z.number().int().min(1).max(60).optional(),
+      },
       annotations: readOnly,
     },
     async ({ patientId: id, limit = 20 }) => {
@@ -277,7 +302,11 @@ function caregiverServer(request) {
       description:
         "Mark one request as acknowledged so the patient's screen shows that the caregiver has seen it.",
       inputSchema: { patientId, requestId },
-      annotations: { readOnlyHint: false, idempotentHint: true, openWorldHint: false },
+      annotations: {
+        readOnlyHint: false,
+        idempotentHint: true,
+        openWorldHint: false,
+      },
     },
     async ({ patientId: id, requestId: rid }) => {
       if (!(await caregiver(id))) return denied();
@@ -359,7 +388,8 @@ export const MCP_SERVERS = Object.freeze({
   knowledge: {
     name: "asha-knowledge",
     build: knowledgeServer,
-    summary: "Search ASHA's app guides (BM25, English and Bangla).",
+    summary:
+      "Search ASHA's app guides (hybrid pgvector + full text, BM25 fallback; English and Bangla).",
     tools: ["search_app_guide", "get_module_guide"],
   },
   nutrition: {
@@ -417,7 +447,11 @@ export async function handleMcp(request, key) {
     parsedBody = JSON.parse(text);
   } catch {
     return json(
-      { jsonrpc: "2.0", error: { code: -32700, message: "Parse error" }, id: null },
+      {
+        jsonrpc: "2.0",
+        error: { code: -32700, message: "Parse error" },
+        id: null,
+      },
       400,
     );
   }
@@ -444,13 +478,17 @@ export async function handleMcp(request, key) {
 
 export function mcpIndex(origin = "") {
   return {
-    protocol: "Model Context Protocol, Streamable HTTP (stateless, JSON responses)",
+    protocol:
+      "Model Context Protocol, Streamable HTTP (stateless, JSON responses)",
     servers: Object.entries(MCP_SERVERS).map(([key, s]) => ({
       name: s.name,
       url: `${origin}/api/mcp/${key}`,
       summary: s.summary,
       tools: s.tools,
-      auth: key === "caregiver" ? "Bearer caregiver token" : "none (public reference data)",
+      auth:
+        key === "caregiver"
+          ? "Bearer caregiver token"
+          : "none (public reference data)",
     })),
   };
 }

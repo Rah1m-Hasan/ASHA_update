@@ -10,10 +10,15 @@ import { clean } from "../lib/logic.js";
 import { MairaProviderError } from "../lib/maira-provider.js";
 import { createLlmProvider } from "../lib/llm-provider.js";
 import { createAshaOrchestrator } from "../lib/asha-orchestrator.js";
+import { createHybridRetriever } from "../lib/hybrid-retrieval.js";
 import { urgentCompanionResponse } from "../../../public/app/everyday/companion-safety.js";
 
 const provider = createLlmProvider();
-const orchestrator = createAshaOrchestrator({ provider });
+const retriever = createHybridRetriever();
+const orchestrator = createAshaOrchestrator({
+  provider,
+  retrieve: retriever.retrieve,
+});
 const quiet = (promise) => {
   // Prevent an unhandled rejection if another step fails first; callers still
   // await the original promise and receive its error.

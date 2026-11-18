@@ -11,7 +11,10 @@
     "test:browser": "node tests/browser.mjs",
     "test:everyday": "node tests/everyday-browser.mjs && node tests/everyday-offline.mjs",
     "benchmark:everyday": "node scripts/everyday-benchmark.mjs --browser",
-    "okf": "node okf/compile.mjs"
+    "okf": "node okf/compile.mjs",
+    "eval:retrieval": "node scripts/retrieval-eval.mjs",
+    "eval:local-llm": "node scripts/local-llm-eval.mjs",
+    "e2e:n8n": "node scripts/n8n-e2e.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.2",

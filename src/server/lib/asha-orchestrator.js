@@ -216,7 +216,10 @@ function orchestration(
         status: "completed",
         resultCount: sourceCount,
       },
-      { tool: local ? "local_generate" : "maira_generate", status: "completed" },
+      {
+        tool: local ? "local_generate" : "maira_generate",
+        status: "completed",
+      },
       {
         tool: "verify_tool_calls",
         status: verified ? "completed" : "limited",
@@ -227,7 +230,10 @@ function orchestration(
   };
 }
 
-export function createAshaOrchestrator({ provider }) {
+export function createAshaOrchestrator({
+  provider,
+  retrieve = (request) => retrieveKnowledge(request),
+}) {
   if (!provider || typeof provider.ask !== "function")
     throw new TypeError("A Maira provider is required");
 
@@ -259,12 +265,24 @@ export function createAshaOrchestrator({ provider }) {
     const resolvedLanguage = resolveLanguage(safeText, language);
     const task = selectAshaTask({ mode, language: resolvedLanguage });
     const safeHistory = recentHistory(history);
-    const sources = retrieveKnowledge({
-      query: safeText,
-      module: safeModule,
-      memories: confirmedMemories,
-      limit: 3,
-    });
+    let sources;
+    try {
+      sources = await retrieve({
+        query: safeText,
+        module: safeModule,
+        memories: confirmedMemories,
+        limit: 3,
+      });
+    } catch {
+      sources = null;
+    }
+    if (!Array.isArray(sources))
+      sources = retrieveKnowledge({
+        query: safeText,
+        module: safeModule,
+        memories: confirmedMemories,
+        limit: 3,
+      });
     const abilities = JSON.stringify(profile?.assessment || {});
     const preferences = JSON.stringify(profile?.supportContext || {});
     const target =
@@ -307,12 +325,7 @@ export function createAshaOrchestrator({ provider }) {
         question,
         language: resolvedLanguage,
         sources,
-        orchestration: orchestration(
-          task,
-          generated,
-          sources.length,
-          valid,
-        ),
+        orchestration: orchestration(task, generated, sources.length, valid),
       };
     }
 
