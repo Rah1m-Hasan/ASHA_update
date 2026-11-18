@@ -180,6 +180,9 @@ function requestIntent(message, history) {
     );
   if (!asks && !bareNeed) return null;
   const matches = candidates.filter(([, pattern]) => pattern.test(text));
+  // "Help me go to the toilet": help plus exactly one specific need is that need.
+  const specific = matches.filter(([kind]) => kind !== "help");
+  if (specific.length === 1) return specific[0][0];
   return matches.length === 1 ? matches[0][0] : null;
 }
 

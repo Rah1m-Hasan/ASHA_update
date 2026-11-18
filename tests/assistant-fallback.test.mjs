@@ -115,3 +115,18 @@ test("with an AI Gateway key, a rejected MAIRA key falls back to the gateway", a
   // Without the key nothing changes: MAIRA only.
   assert.equal(createLlmProvider({ env: { MAIRA_API_KEY: "k", MAIRA_PROJECT_KEY: "p" }, fetchImpl }).kind, "maira");
 });
+
+test("help with one specific need proposes that need, in English and Bangla", async () => {
+  const provider = scripted(Array(6).fill('{"reply":"Okay.","source_ids":[],"tool_calls":[]}'));
+  const o = createAshaOrchestrator({ provider, retrieve: () => [] });
+  for (const [text, kind] of [
+    ["Please help me go to the toilet", "toilet"],
+    ["I need help getting water", "water"],
+    ["আমার টয়লেটে যেতে সাহায্য দরকার", "toilet"],
+  ]) {
+    const r = await o.run({ patientId: "p", profile, text });
+    assert.equal(r.proposal?.kind, kind, text);
+  }
+  const both = await o.run({ patientId: "p", profile, text: "Please help me with water and food" });
+  assert.equal(both.proposal, undefined);
+});
