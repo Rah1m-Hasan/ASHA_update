@@ -13,7 +13,9 @@ export const OLLAMA_MODELS = Object.freeze([
   }),
   Object.freeze({
     task: "bilingual",
-    model: "gemma2:2b",
+    // qwen2.5 kept 4 of 4 Bangla replies in Bangla and valid JSON; gemma2:2b
+    // kept 3 of 4 at about twice the time (docs/LOCAL_LLM_EVAL.md).
+    model: "qwen2.5:1.5b",
     envKey: "OLLAMA_BILINGUAL_MODEL",
     use: "Bangla and mixed Bangla-English chat",
   }),

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { BarChart, type Bar } from "@/components/ai/BarChart";
 import report from "../../../docs/retrieval-eval.json";
 import withoutContext from "../../../docs/retrieval-eval-no-context.json";
+import localEval from "../../../docs/local-llm-eval-summary.json";
 import { MCP_SERVERS } from "@/server/mcp/servers.js";
 import { MAIRA_ROUTES } from "@/server/lib/maira-provider.js";
 import { OLLAMA_MODELS } from "@/server/lib/ollama-provider.js";
@@ -84,6 +85,29 @@ const ON_DEVICE = [
     "EfficientNet-Lite0 (int8)",
     "Experimental food suggestions. It is not trained on food.",
   ],
+];
+
+type Pair = [number, number];
+const LOCAL_ORDER = [
+  "qwen2.5:1.5b",
+  "gemma2:2b",
+  "llama3.2:1b",
+  "deepseek-r1:1.5b",
+];
+const localModels = [...localEval.models].sort(
+  (a, b) => LOCAL_ORDER.indexOf(a.model) - LOCAL_ORDER.indexOf(b.model),
+);
+const of = ([n, d]: Pair | number[]) => `${n} of ${d}`;
+const seconds = (ms: number) => `${(ms / 1000).toFixed(1)} s`;
+const LOCAL_COLUMNS: {
+  label: string;
+  cell: (m: (typeof localModels)[number]) => string;
+}[] = [
+  { label: "Valid JSON", cell: (m) => of(m.validJson) },
+  { label: "Right request or none", cell: (m) => of(m.rightRequest) },
+  { label: "Bangla answered in Bangla", cell: (m) => of(m.banglaReplies) },
+  { label: "Unclear speech", cell: (m) => of(m.speechCorrect) },
+  { label: "Typical reply", cell: (m) => seconds(m.medianMs) },
 ];
 
 const ROUTE_LABELS: Record<string, string> = {
@@ -283,7 +307,14 @@ export default function AiPage() {
             >
               <p className="mt-1 text-sm text-muted">
                 It can take over when MAIRA is unreachable, or run everything
-                without the cloud. Its accuracy has not been measured yet.
+                without the cloud. We tested four small models on an ordinary
+                laptop CPU (
+                {localEval.machine.cpu
+                  .replace(/^12th Gen |\((?:R|TM)\)/g, "")
+                  .replace(/\s+/g, " ")
+                  .trim()}
+                , {localEval.machine.memoryGb} GB), with {localEval.cases} fixed
+                cases each.
               </p>
             </Row>
           </Card>
@@ -291,6 +322,65 @@ export default function AiPage() {
             Every model reply must be valid JSON with an allowed tool call, and
             Asha checks it before using it. Urgent symptoms get a fixed safety
             reply without any model.
+          </p>
+
+          <h3 className="mt-8 text-sm font-semibold text-heading">
+            Local models on a laptop
+          </h3>
+          <div className="mt-3 overflow-x-auto rounded-2xl border border-line bg-canvas">
+            <table className="w-full min-w-[36rem] text-left text-sm">
+              <caption className="sr-only">
+                Local model results, {localEval.cases} cases per model
+              </caption>
+              <thead className="text-xs text-muted">
+                <tr className="border-b border-line">
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    Model
+                  </th>
+                  {LOCAL_COLUMNS.map((c) => (
+                    <th
+                      key={c.label}
+                      scope="col"
+                      className="px-3 py-3 font-medium"
+                    >
+                      {c.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {localModels.map((m) => (
+                  <tr key={m.model}>
+                    <th scope="row" className="px-4 py-3 font-medium text-ink">
+                      <span className="font-mono text-xs whitespace-nowrap">
+                        {m.model}
+                      </span>
+                      <span className="block text-xs font-normal text-muted">
+                        {m.quantization}
+                        {m.model === OLLAMA_MODELS[0].model ? " · default" : ""}
+                      </span>
+                    </th>
+                    {LOCAL_COLUMNS.map((c) => (
+                      <td
+                        key={c.label}
+                        className="px-3 py-3 whitespace-nowrap tabular-nums text-ink"
+                      >
+                        {c.cell(m)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-3 text-sm text-muted">
+            None of the models created a request the person had not asked for,
+            and none claimed to have called an ambulance. The small models
+            rarely make the request themselves, so Asha&apos;s own rules decide
+            it and the person confirms it. DeepSeek-R1, a reasoning model,
+            mostly returned nothing usable within the reply limit. One run on
+            one laptop with little free memory; details in
+            docs/LOCAL_LLM_EVAL.md.
           </p>
         </Section>
 
@@ -342,7 +432,10 @@ export default function AiPage() {
 
         <Section title="Not proven yet">
           <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-muted">
-            <li>Accuracy of the local models.</li>
+            <li>
+              Local models on real messages and on other computers. The local
+              test has {localEval.cases} cases and ran once.
+            </li>
             <li>
               Retrieval on real caregiver and patient questions. The current set
               is small and written by the team.
