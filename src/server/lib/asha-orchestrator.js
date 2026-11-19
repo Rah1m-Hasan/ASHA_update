@@ -413,11 +413,10 @@ export function createAshaOrchestrator({
         memories: confirmedMemories,
         limit: 3,
       });
-    // Nothing retrieved but the message names an app feature: give the model the guide's line on it.
-    if (!sources.length) {
-      const topic = guideTopic(safeText);
-      if (topic) sources = [topic];
-    }
+    // The message names an app feature: put the guide's line on it first, so the
+    // model answers about that feature even when retrieval found something else.
+    const topic = guideTopic(safeText);
+    if (topic) sources = [topic, ...sources].slice(0, 3);
     const abilities = JSON.stringify(profile?.assessment || {});
     const preferences = JSON.stringify(profile?.supportContext || {});
     const target =
