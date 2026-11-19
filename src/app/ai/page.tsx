@@ -382,6 +382,30 @@ export default function AiPage() {
             one laptop with little free memory; details in
             docs/LOCAL_LLM_EVAL.md.
           </p>
+          <figure className="mt-6">
+            <figcaption className="text-sm font-medium text-ink">
+              Reply time per model
+            </figcaption>
+            <div className="mt-2 overflow-x-auto rounded-2xl border border-line bg-canvas p-3">
+              <img
+                src="/charts/local-llm-reply-times.svg"
+                width={696}
+                height={177}
+                className="h-auto w-full min-w-[30rem]"
+                alt={localModels
+                  .map(
+                    (m) =>
+                      `${m.model}: typical ${seconds(m.medianMs)}, 95th percentile ${seconds(m.p95Ms)}`,
+                  )
+                  .join("; ")}
+              />
+            </div>
+            <p className="mt-2 text-xs text-muted">
+              Dot: typical reply (median). Line end: the 95th percentile, so 1
+              reply in 20 was slower. Loading the model is not included. Drawn
+              with Vega-Lite from the eval summary.
+            </p>
+          </figure>
         </Section>
 
         <Section title="On the device">

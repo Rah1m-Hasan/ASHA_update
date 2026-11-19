@@ -51,3 +51,29 @@ These are additive. Each one is off or falls back safely when its settings are m
 | `ASHA_WORKFLOW_WEBHOOK_URL` + `ASHA_WORKFLOW_SECRET` (32+ characters)                   | Confirmed requests notify the n8n caregiver escalation workflow ([WORKFLOWS.md](WORKFLOWS.md))             | No workflow calls; `/api/workflow` rejects every callback        |
 
 The hybrid retrieval release added three `asha_knowledge_*` tables, the `vector` and `pg_net` extensions, one Vault secret (`asha_index_token`) and the `asha-knowledge` edge function to the Supabase project (migration `supabase/migrations/20261118120000_asha_knowledge_rag.sql`). Two later migrations only add to ASHA's own objects: `asha_hybrid_graph_search` (search and graph expansion in one call) and the chunk `context` and `fts_context` columns for contextual retrieval. Existing tables were not changed. The edge function holds only the public app guides.
+
+## Sharing a local build through a tunnel
+
+To try the offline mode (Ollama on the same computer) from a phone, run the development server in memory-only mode and put a [Cloudflare quick tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/do-more-with-tunnels/trycloudflare/) in front of it. The quick tunnel needs no account and prints a random `*.trycloudflare.com` address. Anyone with that address can use the server while it runs, so keep it short and stop both processes afterwards. No real patient data belongs on it: the memory store is empty at start and cleared on exit.
+
+```powershell
+cloudflared tunnel --url http://127.0.0.1:4190      # prints https://<random>.trycloudflare.com
+$env:LOCAL_DEV = "1"
+$env:ASHA_MEMORY_STORE = "1"
+$env:ASHA_LLM_PROVIDER = "ollama"
+$env:ASHA_DEV_ORIGINS = "<random>.trycloudflare.com"   # the printed host, without https://
+npm run dev -- --hostname 127.0.0.1 --port 4190
+```
+
+`ASHA_DEV_ORIGINS` lets that host call ASHA's API and load Next's development resources. It is honoured only with `LOCAL_DEV=1` outside production, and Ollama itself stays bound to `127.0.0.1`.
+
+**Tested on 19 Nov 2026.** A team laptop (Windows 11, Core i5-1235U, 16 GB RAM, CPU only) served commit `6d0fd27` this way with `cloudflared` 2026.11.1 and Ollama, with `ASHA_HYBRID_RETRIEVAL=0` so retrieval also stayed on the laptop. Through the public `trycloudflare.com` address, from the laptop and from a browser on the same machine:
+
+| Check | Result |
+| --- | --- |
+| `GET /ai` | 200 |
+| `POST /api/session` (create) | 200, a patient session with an expiring token |
+| `POST /api/asha` "I need water please" | 200, proposal `water`, model `qwen2.5:1.5b` on `ollama-local`, 2 tool calls accepted, 0 rejected |
+| `POST /api/asha` "আমি একটু খাবার চাই" (Bangla) | 200 in 8.8 s, reply in Bangla, proposal `food`, same model |
+
+The first start of the development server exited right after "Ready" while Next.js printed its upgrade notice, so the first request through the tunnel got 502. A second start stayed up. The water reply from that run said the assistant would "provide" the water itself; Asha now replaces the model's wording with a fixed confirmation whenever it proposes a request (see `proposalReply` in `src/server/lib/asha-orchestrator.js`). Both ran without a drop from 07:18 to 07:38 UTC and were then stopped; afterwards the address returned Cloudflare error 530.
