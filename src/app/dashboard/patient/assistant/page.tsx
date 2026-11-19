@@ -9,6 +9,7 @@ import { Switch } from "@/components/dashboard/Switch";
 import { Button } from "@/components/ui/Button";
 import { SendIcon, VolumeIcon } from "@/components/ui/icons";
 import { askAsha, type ChatReply, type ChatTurn } from "@/features/assistant/askAsha";
+import { loadLocalModel, LOCAL_MODEL_LABEL, useLocalModel } from "@/features/assistant/localModel";
 import { usePerception } from "@/features/perception/PerceptionProvider";
 import { useRequests } from "@/features/requests/RequestProvider";
 import { sessionStore, useSession } from "@/features/session/store";
@@ -22,6 +23,11 @@ export default function AssistantPage() {
   const settings = useSession((s) => s.settings);
   const { snapshot, state } = usePerception();
   const { propose } = useRequests();
+  const local = useLocalModel();
+  // Restart the on-device model after a reload when it was switched on before (cached download).
+  useEffect(() => {
+    if (settings.deviceAI) loadLocalModel().catch(() => {});
+  }, [settings.deviceAI]);
   const [messages, setMessages] = useState<Message[]>([
     { role: "assistant", text: "Hi, I’m Asha. Ask me anything about the app, or tell me what you need." },
   ]);
@@ -55,6 +61,7 @@ export default function AssistantPage() {
       const reply = await askAsha(cred, {
         text,
         cloud,
+        deviceAI: settings.deviceAI,
         history,
         language: settings.language,
         context: `Camera ${state === "on" ? "on" : "off"}; posture ${snapshot.posture?.label ?? "unavailable"}`,
@@ -137,6 +144,27 @@ export default function AssistantPage() {
             label="Cloud assistance"
             description="Your words and capability assessment are sent to Asha’s AI service. Camera video never is."
           />
+          <div className="mt-5 border-t border-line pt-5">
+            <Switch
+              checked={!!settings.deviceAI}
+              onChange={(deviceAI) => {
+                sessionStore.updateSettings({ deviceAI });
+                if (deviceAI) loadLocalModel().catch(() => {});
+              }}
+              label="On-device AI (experimental)"
+              description={`${LOCAL_MODEL_LABEL}. Downloads about 400 MB once, then runs in this browser; your words never leave the device. Needs desktop Chrome or Edge.`}
+            />
+            {settings.deviceAI && local.state !== "off" && (
+              <div className="mt-3 text-xs text-muted" role="status" data-testid="device-ai-status">
+                {local.state === "loading" && (
+                  <div className="mb-1.5 h-1.5 overflow-hidden rounded-full bg-wash">
+                    <div className="h-full bg-brand" style={{ width: `${Math.round(local.progress * 100)}%` }} />
+                  </div>
+                )}
+                {local.text}
+              </div>
+            )}
+          </div>
         </Panel>
       </div>
     </>

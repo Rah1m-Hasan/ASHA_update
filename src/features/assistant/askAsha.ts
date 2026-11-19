@@ -11,8 +11,8 @@ export type ChatReply = {
   proposal?: { kind: string; text: string };
   suggestedModule?: string;
   safety?: { level: string };
-  /** "guide" when the answer came from Asha's own guide instead of an AI model. */
-  answeredBy?: "guide" | "model";
+  /** "guide" when the answer came from Asha's own guide, "device" from the on-device model. */
+  answeredBy?: "guide" | "model" | "device";
   /** One quiet line explaining a guide answer. */
   notice?: string;
   /** Offer to turn on cloud assistance (shown only when it is off). */
@@ -25,7 +25,7 @@ export type InterpretReply = {
   question: string;
   language?: string;
   safety?: { level: string };
-  answeredBy?: "guide" | "model";
+  answeredBy?: "guide" | "model" | "device";
   notice?: string;
   offerCloud?: boolean;
 };
@@ -52,6 +52,7 @@ export async function askAsha(
     context?: string;
     history?: ChatTurn[];
     language?: string;
+    deviceAI?: boolean;
   },
 ) {
   // The existing precautionary response runs locally, including before linking or cloud consent.
@@ -84,6 +85,25 @@ export async function askAsha(
       offerCloud,
     } as ChatReply & InterpretReply;
   };
+  // On-device AI (chat only): a small model in this browser, grounded in the guide.
+  if (body.deviceAI && (body.mode ?? "chat") === "chat") {
+    try {
+      const { localReply } = await import("./localModel");
+      const lang = body.language === "bn" || /[\u0980-\u09ff]/u.test(body.text) ? "bn" : "en";
+      const guide = guideAnswer({ query: body.text, module: body.module, language: lang });
+      const reply = await localReply({ text: body.text, language: lang, evidence: guide.reply, history: body.history ?? [] });
+      return {
+        reply,
+        candidate: "",
+        alternatives: [],
+        question: "",
+        answeredBy: "device" as const,
+        notice: "Answered by the on-device model. Nothing left this device. To ask your caregiver for something, use Ask for help.",
+      } as ChatReply & InterpretReply;
+    } catch {
+      // Fall through to the cloud (if allowed) or the guide.
+    }
+  }
   // Without consent nothing leaves the device: Asha answers from its own guide.
   if (!body.cloud)
     return local("Answered on this device from Asha's guide. Turn on cloud assistance for AI replies.", true);

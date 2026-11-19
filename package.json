@@ -17,6 +17,7 @@
     "e2e:n8n": "node scripts/n8n-e2e.mjs"
   },
   "dependencies": {
+    "@mlc-ai/web-llm": "0.2.86",
     "@modelcontextprotocol/sdk": "1.32.2",
     "@vercel/blob": "2.8.0",
     "d3-shape": "3.2.0",
