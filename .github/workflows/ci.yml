@@ -1,10 +1,11 @@
-# Runs the unit tests and the type check on every push and pull request.
+# Runs the unit tests and the type check on pull requests and on main.
 # The tests need no secrets and no network services: the store, the model
 # providers and the retrieval index are faked or run in memory.
 name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
 
 permissions:
