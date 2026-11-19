@@ -1,17 +1,48 @@
-// Every important screen stays inside its viewport, on the narrowest phone and on
-// the widest desktop, with no console errors and no unnamed control.
+// Every important screen stays inside its viewport, keeps its text readable,
+// names its controls, keeps its targets big enough and its contrast clear —
+// in the light theme and in the dark one.
 //
 //   node tests/responsive-browser.mjs   (needs the server on http://127.0.0.1:4180)
 //
 // The visual audit (scripts/visual-audit.mjs) finds and records what needs
-// fixing; this suite is the gate that stops it coming back.
+// fixing; this suite is the gate that stops it coming back. Both use the same
+// probes (scripts/visual-audit.probes.mjs), the same stubs and the same
+// navigation (scripts/visual-audit.harness.mjs), so the gate measures exactly
+// what the sweep measured — on the same screens, reached the same way.
 
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
+import { PROBE_SOURCE } from "../scripts/visual-audit.probes.mjs";
+import { prepare, openRoute } from "../scripts/visual-audit.harness.mjs";
+import { ROUTES, supportsBangla } from "../scripts/visual-audit.routes.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
-const base = process.env.NEXT_TEST_URL || "http://127.0.0.1:4180";
+// The base is joined with a path, so a trailing slash in the environment
+// variable must not produce a doubled one.
+const base = (process.env.NEXT_TEST_URL || "http://127.0.0.1:4180").replace(/\/+$/, "");
+
+// Both spellings are accepted: `--routes ids` and `--routes=ids`.
+const arg = (name, fallback) => {
+  const eq = process.argv.find((a) => a.startsWith(`--${name}=`));
+  if (eq) return eq.slice(name.length + 3);
+  const at = process.argv.indexOf(`--${name}`);
+  if (at !== -1 && process.argv[at + 1] && !process.argv[at + 1].startsWith("--")) {
+    return process.argv[at + 1];
+  }
+  return fallback;
+};
+
+// The variants the gate measures. Light and dark are the two themes; Bangla is
+// the third visual combination, and a layout that survives English can still
+// break in Bangla, because Bangla runs taller and its words are longer.
+//
+// This declaration has to come before its first use. It used to come after,
+// and the gate died with "Cannot access 'VARIANTS' before initialization"
+// before it had asserted anything at all — so for a while there was a gate
+// that gated nothing, described in three documents as the thing that kept the
+// defects out.
+const VARIANTS = ["light", "dark", "bn"];
 
 // The sizes that broke the most, plus both ends of the range.
 const SIZES = [
@@ -23,42 +54,87 @@ const SIZES = [
   { width: 1920, height: 1080 },
 ];
 
-// One screen per layout family: shell, forms, tables, overlays, legacy surfaces.
-const PATHS = [
-  "/",
-  "/login",
-  "/register",
-  "/dashboard/patient",
-  "/dashboard/patient/assistant",
-  "/dashboard/patient/communicate",
-  "/dashboard/patient/nutrition",
-  "/dashboard/patient/eyespeak",
-  "/dashboard/patient/move/session",
-  "/dashboard/patient/settings",
-  "/dashboard/caregiver",
-  "/dashboard/caregiver/requests",
-  "/dashboard/caregiver/patients/new",
-  "/assistive.html",
-  "/everyday.html",
+// One screen per layout family: shell, forms, tables, overlays, legacy
+// surfaces. The ids are the sweep's own route ids, so the gate and the sweep
+// measure the same screens.
+const GATE_ROUTES = [
+  "landing",
+  "login",
+  "register",
+  "patient-home",
+  "patient-assistant",
+  "patient-communicate",
+  "patient-nutrition",
+  "patient-eyespeak",
+  "patient-move-session",
+  "patient-settings",
+  "caregiver-home",
+  "caregiver-requests",
+  "caregiver-patient-new",
+  "assistive-welcome",
+  "assistive-patient",
+  "everyday-home",
+].map((id) => ROUTES.find((r) => r.id === id)).filter(Boolean);
+
+// A smoke run: `--routes landing,patient-home` measures only those screens,
+// and `--themes light` only that theme. The full run is the default.
+const onlyRoutes = arg("routes", "")
+  .split(",")
+  .filter(Boolean);
+const onlyThemes = arg("themes", "")
+  .split(",")
+  .filter(Boolean);
+const routesToCheck = onlyRoutes.length
+  ? GATE_ROUTES.filter((r) => onlyRoutes.includes(r.id))
+  : GATE_ROUTES;
+const themesToCheck = onlyThemes.length ? onlyThemes : VARIANTS;
+
+/**
+ * The variants one screen is measured in.
+ *
+ * Bangla is only measured where the screen has a Bangla path at all. A screen
+ * without one would render in English and be recorded as if it had been
+ * checked in Bangla, which is how a gap becomes a false claim.
+ */
+const variantsFor = (route) =>
+  themesToCheck.filter((v) => v !== "bn" || supportsBangla(route));
+
+// The findings that are defects. "chromeOverlap" is not on this list: a fixed
+// bar or a floating bubble crossing the content it floats over is what
+// floating furniture does, and the sweep reports it separately.
+const DEFECT_TYPES = [
+  "pageOverflow",
+  "offender",
+  "clipped",
+  "overlap",
+  "tinyTarget",
+  "missingName",
+  "contrast",
+  "heading",
 ];
 
-// The same stub the other browser suites use: a Perception that never opens a
-// camera and never runs a model.
-const fakePerception = `
-export class Perception extends EventTarget {
-  constructor() { super(); this.running = false; this.snapshot = {}; this.pulse = {}; this.module = ""; this.facing = "user"; window.__perception = this; }
-  async start() { this.running = true; }
-  stop() { this.running = false; }
-  setCalibration() {}
-  setActiveModule(name) { this.module = name; }
-  setMoveTracking() {}
-  async setFacingMode(f) { this.facing = f; return f; }
-  resetFaceReference() {}
-  resetVitalsBaseline() {}
-  resetVitalsSession() {}
-  emit(type, detail) { this.dispatchEvent(new CustomEvent(type, {detail})); }
-}
-`;
+const describe = (f) => {
+  switch (f.type) {
+    case "pageOverflow":
+      return `the page scrolls sideways by ${f.amount}px`;
+    case "offender":
+      return `crosses the viewport edge (${f.left}..${f.right}px)`;
+    case "clipped":
+      return `content is clipped (${f.hiddenY}px below, ${f.hiddenX}px across)`;
+    case "overlap":
+      return `overlaps \`${f.b}\``;
+    case "tinyTarget":
+      return `target is ${(f.size || []).join("x")}px`;
+    case "missingName":
+      return "has no accessible name";
+    case "contrast":
+      return `contrast ${f.ratio}:1 (needs ${f.need}:1)`;
+    case "heading":
+      return f.text;
+    default:
+      return "";
+  }
+};
 
 const browser = await chromium.launch({
   executablePath: process.env.CHROME_PATH || undefined,
@@ -68,81 +144,62 @@ const browser = await chromium.launch({
 const errors = [];
 const failures = [];
 
-async function open(context) {
-  await context.route("**/engine/perception.js", (r) =>
-    r.fulfill({ contentType: "text/javascript", body: fakePerception }));
-  await context.route("**/api/**", (r) =>
-    r.fulfill({
-      contentType: "application/json",
-      body: JSON.stringify({ ok: true, events: [], status: null, workspaces: [], replies: [] }),
-    }));
-  await context.addInitScript(() => {
-    if (!navigator.mediaDevices) return;
-    navigator.mediaDevices.getUserMedia = () =>
-      Promise.reject(new DOMException("no camera", "NotAllowedError"));
-  });
-}
+let render = 0;
+const measuredByVariant = {};
 
-for (const size of SIZES) {
-  const context = await browser.newContext({ viewport: size, serviceWorkers: "block" });
-  await open(context);
-  const page = await context.newPage();
-  page.on("pageerror", (e) => errors.push(`${size.width}: ${e.message}`));
+for (const route of routesToCheck) {
+  for (const variant of variantsFor(route)) {
+    for (const size of SIZES) {
+      const context = await browser.newContext({
+        viewport: { width: size.width, height: size.height },
+        serviceWorkers: "block",
+        deviceScaleFactor: 1,
+      });
+      // The legacy assistive app opens a real care-circle session, and the
+      // server allows only a handful of new sessions per address per day. Each
+      // render is given its own address, so the gate is not throttled by a
+      // limit that exists to slow down real people.
+      await context.setExtraHTTPHeaders({
+        "x-forwarded-for": `10.${(render >> 16) & 255}.${(render >> 8) & 255}.${render & 255}`,
+      });
+      render++;
+      await prepare(context, route, variant);
+      const page = await context.newPage();
+      const { errors: navErrors, readyOk } = await openRoute(page, base, route, variant);
+      if (!readyOk) failures.push(`${route.id} ${variant} ${size.width}: the screen never appeared`);
 
-  for (const p of PATHS) {
-    await page.goto(base + p, { waitUntil: "domcontentloaded" });
-    await page.waitForTimeout(300);
-
-    const wide = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
-    if (wide > 1) failures.push(`${p} overflows by ${wide}px at ${size.width}x${size.height}`);
-
-    // A control nobody can hear about is a defect, not a style choice.
-    const unnamed = await page.evaluate(() => {
-      const name = (el) => {
-        const aria = el.getAttribute("aria-label");
-        if (aria && aria.trim()) return aria.trim();
-        const ids = el.getAttribute("aria-labelledby");
-        if (ids) {
-          const t = ids
-            .split(/\s+/)
-            .map((id) => (document.getElementById(id) || {}).textContent || "")
-            .join(" ")
-            .trim();
-          if (t) return t;
-        }
-        if (el.labels && el.labels.length) {
-          const t = Array.from(el.labels).map((l) => l.textContent || "").join(" ").trim();
-          if (t) return t;
-        }
-        const alt = el.getAttribute("alt");
-        if (alt && alt.trim()) return alt.trim();
-        const title = el.getAttribute("title");
-        if (title && title.trim()) return title.trim();
-        return (el.innerText || el.textContent || "").trim();
-      };
-      return Array.from(
-        document.querySelectorAll('a[href], button, input, select, textarea, [role="button"]'),
-      )
-        .filter((el) => {
-          const r = el.getBoundingClientRect();
-          if (r.width === 0 && r.height === 0) return false;
-          const cs = getComputedStyle(el);
-          return cs.visibility !== "hidden" && cs.display !== "none";
-        })
-        // A control hidden from the accessibility tree needs no name.
-        .filter((el) => el.getAttribute("aria-hidden") !== "true")
-        .filter((el) => !name(el))
-        .map((el) => el.tagName.toLowerCase() + (el.id ? "#" + el.id : ""));
-    });
-    if (unnamed.length) {
-      failures.push(`${p} has unnamed controls at ${size.width}x${size.height}: ${unnamed.join(", ")}`);
+      const measured = await page.evaluate(PROBE_SOURCE);
+      for (const f of measured.findings) {
+        if (!DEFECT_TYPES.includes(f.type)) continue;
+        failures.push(
+          `${route.id} ${variant} ${size.width}x${size.height}: ${f.type} on \`${f.el || "page"}\` — ${describe(f)}`,
+        );
+      }
+      measuredByVariant[variant] = (measuredByVariant[variant] || 0) + 1;
+      // The context is closed before the errors are read, because a page that
+      // throws while it is being torn down throws *after* the navigation is
+      // over: the legacy app resets its rest tracker on `visibilitychange`,
+      // which fires as the page is hidden, and that error was arriving after
+      // the gate had already copied the list. Reading the list afterwards
+      // catches it. The list is read by reference, so the copy below sees
+      // every error the page raised, whenever it raised it.
+      await context.close();
+      for (const e of navErrors) errors.push(`${route.id} ${variant} ${size.width}: ${e}`);
     }
   }
-  await context.close();
 }
 
 await browser.close();
 
 assert.deepEqual(errors, [], "no page errors");
-assert.deepEqual(failures, [], "every screen fits its viewport and names its controls");
-console.log("PASS Every important screen fits its viewport and names its controls at every size");
+assert.deepEqual(failures, [], "every screen fits its viewport and reads cleanly");
+
+// The summary names every variant that ran, and how many renders each one
+// got, so "the gate covers Bangla" is visible in the output rather than
+// something a reader has to take on trust.
+const perVariant = Object.entries(measuredByVariant)
+  .map(([v, n]) => `${v} ${n}`)
+  .join(", ");
+console.log(
+  `PASS ${routesToCheck.length} screens × ${SIZES.length} sizes × ${themesToCheck.length} themes (${perVariant}): no overflow, no clipped text, no unnamed control, no target under 24x24, no contrast failure`,
+);

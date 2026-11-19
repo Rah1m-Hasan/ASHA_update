@@ -12,15 +12,24 @@
 import { createRequire } from "node:module";
 import { mkdir, writeFile, readFile } from "node:fs/promises";
 import path from "node:path";
-import { ROUTES, VIEWPORTS } from "./visual-audit.routes.mjs";
+import { ROUTES, VIEWPORTS, routesForVariant } from "./visual-audit.routes.mjs";
 import { PROBE_SOURCE } from "./visual-audit.probes.mjs";
+import { prepare, openRoute } from "./visual-audit.harness.mjs";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 
+// Both spellings are accepted: `--variant=dark` and `--variant dark`. A
+// space-separated flag that is silently ignored is worse than one that
+// errors, because the sweep then measures the wrong thing and says nothing.
 const arg = (name, fallback) => {
-  const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
-  return hit ? hit.slice(name.length + 3) : fallback;
+  const eq = process.argv.find((a) => a.startsWith(`--${name}=`));
+  if (eq) return eq.slice(name.length + 3);
+  const at = process.argv.indexOf(`--${name}`);
+  if (at !== -1 && process.argv[at + 1] && !process.argv[at + 1].startsWith("--")) {
+    return process.argv[at + 1];
+  }
+  return fallback;
 };
 
 const BASE = arg("base", process.env.NEXT_TEST_URL || "http://127.0.0.1:4180");
@@ -31,95 +40,74 @@ const VARIANT = arg("variant", "light");
 const onlyRoutes = arg("routes", "").split(",").filter(Boolean);
 const onlySets = arg("viewports", "desktop,mobile,tablet,zoom").split(",").filter(Boolean);
 
-const ROUTES_TO_RUN = onlyRoutes.length ? ROUTES.filter((r) => onlyRoutes.includes(r.id)) : ROUTES;
+// The variant decides which screens the sweep covers: the light sweep is the
+// whole app, and the dark and Bangla sweeps cover the screens those two
+// changes actually put at risk. The split lives in the manifest, next to the
+// routes it describes, so the report's coverage claim can be checked.
+const VARIANT_ROUTES = routesForVariant(VARIANT);
+const ROUTES_TO_RUN = onlyRoutes.length
+  ? VARIANT_ROUTES.filter((r) => onlyRoutes.includes(r.id))
+  : VARIANT_ROUTES;
 const SIZES = onlySets.flatMap((s) => VIEWPORTS[s] || []);
 
-// The same stubs the existing browser suites use: no camera, no real inference,
-// no writes to the store. See tests/home-browser.mjs and tests/studio-browser.mjs.
-//
-// The stub must export the same names the real module exports, because both the
-// React app and the legacy engine import { Perception } from it.
-const fakePerception = `
-export function medianHeadY() { return 0; }
-const VITALS = {
-  bpm: null, quality: 0, confidence: 0, status: "collecting",
-  reason: "The camera is off in the visual audit.", signal: [], windowSeconds: 0,
-  requiredSeconds: 12, breathingBpm: null, breathingReason: "", sampleFps: 0, roiCount: 0,
-  snr: null, snrNull: null,
-  hrv: { rmssd: null, meanIbi: null, beats: 0, provisional: true, reason: "" },
-  baseline: { bpm: null, low: null, high: null, progress: 0, calibrating: true },
-  trend: [], readings: [], at: null,
-};
-export class Perception extends EventTarget {
-  constructor() {
-    super();
-    this.running = false;
-    this.stream = null;
-    this.analysis = null;
-    this.rest = null;
-    this.pulse = { ...VITALS };
-    this.snapshot = { raw: {}, hands: [], posture: null, pulse: { ...VITALS }, ears: [] };
-    this.neuralHandActive = false;
-    this.yoloEnabled = false;
-  }
-  setActiveModule() {}
-  setCalibration() {}
-  enableYolo() {}
-  invalidateVitals() {}
-  resetFaceReference() {}
-  resetVitalsBaseline() {}
-  resetVitalsSession() {}
-  async start() { this.running = true; }
-  stop() { this.running = false; }
-  destroy() { this.stop(); }
-}`;
-const API_FIXTURES = [
-  { pattern: "**/api/session**", body: { ok: true, events: [], status: null, profile: { id: "demo" } } },
-  { pattern: "**/api/care**", body: { ok: true, events: [], status: null } },
-  { pattern: "**/api/asha**", body: { ok: true, reply: "", sources: [] } },
-  { pattern: "**/api/nutrition**", body: { ok: true } },
-  { pattern: "**/api/clinic**", body: { ok: true, workspaces: [], invitations: [], plans: [] } },
-];
+/**
+ * A bound on a step that could otherwise wait for ever.
+ *
+ * Playwright's own default is thirty seconds for an action, which is far too
+ * long when the step is one of a thousand: a select that is hidden costs half
+ * a minute per render and the sweep crawls. Every step that touches the page
+ * is bounded here, so one slow screen costs one lost render and not the run.
+ */
+const STEP_TIMEOUT_MS = 8000;
 
-async function prepare(context, route) {
-  await context.route("**/engine/perception.js", (r) =>
-    r.fulfill({ contentType: "text/javascript", body: fakePerception }));
-  // The legacy assistive app creates a real care-circle session to open its
-  // demo, so its session calls are left alone; everything else is stubbed.
-  const skip = route.surface === "assistive" ? "**/api/session**" : null;
-  for (const f of API_FIXTURES) {
-    if (f.pattern === skip) continue;
-    await context.route(f.pattern, (r) =>
-      r.fulfill({ contentType: "application/json", body: JSON.stringify(f.body) }));
-  }
-  await context.addInitScript(() => {
-    if (!navigator.mediaDevices) return;
-    navigator.mediaDevices.getUserMedia = () =>
-      Promise.reject(new DOMException("Camera unavailable", "NotAllowedError"));
-  });
-  // Dark theme is the app's own persisted choice, applied before first paint.
-  if (VARIANT === "dark") {
-    await context.addInitScript(() => {
-      try { localStorage.setItem("asha_theme", "dark"); } catch (e) {}
-    });
-  }
-  // Bangla on the React screens lives in the feature's own persisted store,
-  // so it is seeded before the page loads.
-  if (VARIANT === "bn" && route.bnSeed) {
-    await context.addInitScript((seed) => {
-      try {
-        const raw = localStorage.getItem(seed.key);
-        const value = raw ? JSON.parse(raw) : {};
-        value.language = "bn";
-        localStorage.setItem(seed.key, JSON.stringify(value));
-      } catch (e) {}
-    }, route.bnSeed);
+/**
+ * Runs a step, and gives up on it after `ms`.
+ *
+ * A step that times out returns `undefined` rather than throwing, so the
+ * caller can record what did not happen instead of losing the whole sweep.
+ */
+async function bounded(fn, ms = STEP_TIMEOUT_MS) {
+  let timer;
+  try {
+    return await Promise.race([
+      Promise.resolve().then(fn),
+      new Promise((resolve) => {
+        timer = setTimeout(() => resolve(undefined), ms);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }
 
 /** Runs the probe in a frame when the screen is an embedded one. */
 async function measure(page, route) {
-  const probe = () => page.evaluate(PROBE_SOURCE);
+  const timedOut = () => ({
+    findings: [
+      {
+        type: "probeTimeout",
+        text: "the probe did not finish; the page did not answer",
+      },
+    ],
+    pageOverflow: 0,
+    width: 0,
+    height: 0,
+  });
+  const probe = async () => {
+    const measured = await bounded(async () => {
+      try {
+        return await page.evaluate(PROBE_SOURCE);
+      } catch (e) {
+        return {
+          findings: [{ type: "probeError", text: String(e) }],
+          pageOverflow: 0,
+          width: 0,
+          height: 0,
+        };
+      }
+    }, 15000);
+    return measured === undefined ? timedOut() : measured;
+  };
   if (!route.frameSrc) return probe();
   const frame = await page
     .waitForFunction(
@@ -137,117 +125,229 @@ async function measure(page, route) {
       height: 0,
     };
   }
-  return frame
-    .evaluate(PROBE_SOURCE)
-    .catch((e) => ({ findings: [{ type: "probeError", text: String(e) }], pageOverflow: 0, width: 0, height: 0 }));
+  const measured = await bounded(async () => {
+    try {
+      return await frame.evaluate(PROBE_SOURCE);
+    } catch (e) {
+      return {
+        findings: [{ type: "probeError", text: String(e) }],
+        pageOverflow: 0,
+        width: 0,
+        height: 0,
+      };
+    }
+  }, 15000);
+  return measured === undefined ? timedOut() : measured;
 }
 
-async function open(page, route) {
+/**
+ * Clicks a control inside an embedded frame.
+ *
+ * A module that lives in an iframe can only be reached from inside that
+ * frame: the tab strip of the FingerSpeak studio is in the studio's own
+ * document, not in the page that hosts it. `frameAct` names the frame and
+ * the controls to press, in the order a person would press them.
+ */
+async function actInFrame(page, route) {
+  const plan = route.frameAct;
+  if (!plan || !plan.steps || !plan.steps.length) return [];
   const errors = [];
-  page.on("pageerror", (e) => errors.push("pageerror: " + e.message));
-  page.on("console", (m) => { if (m.type() === "error") errors.push("console: " + m.text()); });
-  await page.goto(BASE + route.path, { waitUntil: "domcontentloaded" });
-
-  // `act` is a list of the app's own controls, clicked in order, so the legacy
-  // surfaces are navigated the way a person navigates them.
-  for (const step of route.act || []) {
-    const target = page.locator(step).first();
-    const attached = await target
-      .waitFor({ state: "attached", timeout: 8000 })
-      .then(() => true)
-      .catch(() => false);
-    if (!attached) {
-      errors.push(`navigation: "${step}" was never present`);
-      continue;
-    }
-    await target.click({ timeout: 5000 }).catch(() => {
-      errors.push(`navigation: "${step}" could not be clicked`);
-    });
-    await page.waitForTimeout(150);
+  const frame = await page
+    .waitForFunction(
+      (src) => [...document.querySelectorAll("iframe")].some((f) => f.src.includes(src)),
+      plan.frameSrc,
+      { timeout: 10000 },
+    )
+    .then(() => page.frames().find((f) => f.url().includes(plan.frameSrc)))
+    .catch(() => null);
+  if (!frame) {
+    errors.push(`navigation: no frame matching ${plan.frameSrc}`);
+    return errors;
   }
-
-  // `ready` must become visible, not merely attached: the legacy views are
-  // hidden sections, so "attached" would happily match the wrong screen.
-  let readyOk = true;
-  if (route.ready) {
-    readyOk = await page
-      .locator(route.ready)
+  for (const step of plan.steps) {
+    const pressed = await frame
+      .locator(step)
       .first()
-      .waitFor({ state: "visible", timeout: 8000 })
+      .click({ timeout: 5000 })
       .then(() => true)
       .catch(() => false);
-    if (!readyOk) errors.push(`navigation: "${route.ready}" never became visible`);
-  }
-
-  // Bangla: the legacy apps own a language select.
-  if (VARIANT === "bn") {
-    const select =
-      route.surface === "everyday" ? "#language"
-      : route.surface === "assistive" ? "#ashaLanguage"
-      : route.bnSelect;
-    if (select) {
-      await page.locator(select).first().selectOption({ value: "bn" }).catch(() => {});
-    }
+    if (!pressed) errors.push(`navigation: "${step}" could not be clicked in the frame`);
     await page.waitForTimeout(200);
   }
-  await page.waitForTimeout(250); // let fonts and the last layout settle
-  return { errors, readyOk };
+  return errors;
 }
 
-const browser = await chromium.launch({
-  executablePath: process.env.CHROME_PATH || undefined,
-  headless: true,
-  args: ["--no-sandbox", "--no-proxy-server"],
-});
+const LAUNCH = () =>
+  chromium.launch({
+    executablePath: process.env.CHROME_PATH || undefined,
+    headless: true,
+    args: ["--no-sandbox", "--no-proxy-server"],
+  });
+
 await mkdir(OUT, { recursive: true });
 const records = [];
+
+// The browser dies. It has died in every previous sweep, partway through,
+// with "Target page, context or browser has been closed" — and the whole
+// sweep's report was lost with it, because the report was written once, at
+// the end. A measurement that a crash can erase is not a measurement.
+//
+// So the report is written after every route, and a dead browser is relaunched
+// rather than ending the run. The machine this runs on has 7.6 GB of RAM and
+// about 1.5 GB free, and a thousand Chromium contexts will eventually exhaust
+// it; a sweep that survives that is worth more than a sweep that dies at
+// render 400 and reports nothing.
+let browser = await LAUNCH();
+
+/** True when the error is the browser going away rather than the page's fault. */
+const browserDied = (e) =>
+  /Target page, context or browser has been closed|browser has been closed|has been closed/i.test(
+    String(e?.message || e),
+  );
+
+const reportPath = path.join(OUT, "report.json");
+
+/**
+ * Writes the merged report.
+ *
+ * A screen measured again replaces its earlier record: the newest measurement
+ * of a route at a viewport is the one that describes the code as it is now.
+ * The light, dark and Bangla sweeps share one report, so the merge is with
+ * whatever the file already holds.
+ */
+async function writeReport() {
+  const previous = await readFile(reportPath, "utf8")
+    .then((t) => JSON.parse(t))
+    .catch(() => ({ records: [], findings: [] }));
+  const key = (r) => `${r.route}|${r.variant}|${r.viewport}`;
+  const merged = new Map(previous.records.map((r) => [key(r), r]));
+  for (const r of records) merged.set(key(r), r);
+  const mergedRecords = [...merged.values()];
+  const mergedFindings = mergedRecords.flatMap((r) =>
+    r.findings.map((f) => ({ route: r.route, variant: r.variant, viewport: r.viewport, ...f })),
+  );
+  await writeFile(reportPath, JSON.stringify({ records: mergedRecords, findings: mergedFindings }, null, 2));
+  return { mergedRecords, mergedFindings };
+}
+
+const started = Date.now();
+let render = 0;
+// Relaunching on a schedule as well as on a crash: a browser that is
+// degrading usually dies outright, but not always, and a fresh browser every
+// hundred and fifty renders is cheap against a sweep of a thousand.
+const RELAUNCH_EVERY = 150;
+let sinceLaunch = 0;
 
 for (const route of ROUTES_TO_RUN) {
   for (const size of SIZES) {
     const label = size.label || `${size.width}x${size.height}`;
-    const context = await browser.newContext({
-      viewport: { width: size.width, height: size.height },
-      serviceWorkers: "block",
-      deviceScaleFactor: 1,
-    });
-    await prepare(context, route);
-    const page = await context.newPage();
-    const { errors, readyOk } = await open(page, route);
-    const measured = await measure(page, route);
-    await page
-      .screenshot({ path: path.join(OUT, `${route.id}__${VARIANT}__${label}.png`), fullPage: true })
-      .catch(() => {});
-    records.push({
-      route: route.id,
-      label: route.label,
-      surface: route.surface,
-      variant: VARIANT,
-      viewport: label,
-      readyOk,
-      ...measured,
-      errors,
-    });
-    await context.close();
+    let context = null;
+    let page = null;
+    try {
+      if (sinceLaunch >= RELAUNCH_EVERY) {
+        await browser.close().catch(() => {});
+        browser = await LAUNCH();
+        sinceLaunch = 0;
+      }
+      context = await browser.newContext({
+        viewport: { width: size.width, height: size.height },
+        serviceWorkers: "block",
+        deviceScaleFactor: 1,
+      });
+      // The legacy assistive app opens a real care-circle session, and the
+      // server allows only a handful of new sessions per address per day. Each
+      // render is given its own address so a sweep of hundreds of screens is
+      // not throttled by a limit that exists to slow down real people.
+      await context.setExtraHTTPHeaders({
+        "x-forwarded-for": `10.${(render >> 16) & 255}.${(render >> 8) & 255}.${render & 255}`,
+      });
+      render++;
+      await prepare(context, route, VARIANT);
+      page = await context.newPage();
+      const { errors, readyOk } = await openRoute(page, BASE, route, VARIANT);
+      errors.push(...(await actInFrame(page, route)));
+      const measured = await measure(page, route);
+      await bounded(
+        () =>
+          page.screenshot({
+            path: path.join(OUT, `${route.id}__${VARIANT}__${label}.png`),
+            fullPage: true,
+          }),
+        15000,
+      ).catch(() => {});
+      records.push({
+        route: route.id,
+        label: route.label,
+        surface: route.surface,
+        variant: VARIANT,
+        viewport: label,
+        readyOk,
+        ...measured,
+        errors,
+      });
+    } catch (e) {
+      if (browserDied(e)) {
+        // The browser went away. Record the render as failed, relaunch, and
+        // carry on — one lost render is a measurement; a lost sweep is not.
+        records.push({
+          route: route.id,
+          label: route.label,
+          surface: route.surface,
+          variant: VARIANT,
+          viewport: label,
+          readyOk: false,
+          findings: [{ type: "browserDied", text: String(e?.message || e) }],
+          pageOverflow: 0,
+          width: size.width,
+          height: size.height,
+          errors: [`browser died during the render: ${String(e?.message || e)}`],
+        });
+        await browser.close().catch(() => {});
+        browser = await LAUNCH();
+        sinceLaunch = 0;
+        console.error(
+          `  the browser died on ${route.id} ${label}; relaunched and continuing`,
+        );
+      } else {
+        records.push({
+          route: route.id,
+          label: route.label,
+          surface: route.surface,
+          variant: VARIANT,
+          viewport: label,
+          readyOk: false,
+          findings: [{ type: "renderError", text: String(e?.message || e) }],
+          pageOverflow: 0,
+          width: size.width,
+          height: size.height,
+          errors: [`render failed: ${String(e?.message || e)}`],
+        });
+        console.error(`  render failed on ${route.id} ${label}: ${e?.message || e}`);
+      }
+    } finally {
+      await context?.close().catch(() => {});
+      sinceLaunch++;
+      if (render % 25 === 0 || render === ROUTES_TO_RUN.length * SIZES.length) {
+        const secs = Math.round((Date.now() - started) / 1000);
+        console.error(
+          `  ${render}/${ROUTES_TO_RUN.length * SIZES.length} renders · ${route.id} ${label} · ${secs}s`,
+        );
+      }
+    }
   }
+  // The report is written after every route, so a crash at render 900 cannot
+  // take the first 899 with it.
+  await writeReport();
 }
 
-await browser.close();
+await browser.close().catch(() => {});
 
 const findings = records.flatMap((r) =>
   r.findings.map((f) => ({ route: r.route, variant: r.variant, viewport: r.viewport, ...f })));
 const byType = {};
 for (const f of findings) byType[f.type] = (byType[f.type] || 0) + 1;
 
-// Merge with any earlier run so the light, dark and Bangla sweeps share one report.
-const reportPath = path.join(OUT, "report.json");
-const previous = await readFile(reportPath, "utf8")
-  .then((t) => JSON.parse(t))
-  .catch(() => ({ records: [], findings: [] }));
-const merged = {
-  records: [...previous.records, ...records],
-  findings: [...previous.findings, ...findings],
-};
-await writeFile(reportPath, JSON.stringify(merged, null, 2));
+const { mergedRecords, mergedFindings } = await writeReport();
 
 const lines = [
   "# Visual audit sweep",
@@ -257,6 +357,8 @@ const lines = [
   `- Variant: ${VARIANT}`,
   `- Screens rendered: ${records.length}`,
   `- Findings: ${findings.length}`,
+  `- Report records (all variants): ${mergedRecords.length}`,
+  `- Report findings (all variants): ${mergedFindings.length}`,
   "",
   "| Finding type | Count |",
   "| --- | --- |",

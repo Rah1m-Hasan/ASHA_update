@@ -30,7 +30,11 @@ export const VIEWPORTS = {
     { width: 768, height: 1024 },
     { width: 834, height: 1112 },
     { width: 1024, height: 1366 },
-    { width: 1024, height: 768 },
+    // The same physical size as the smallest desktop viewport, but in the
+    // tablet set it is a tablet. Without a distinct label the two renders
+    // share a filename and a report key, so one silently overwrites the
+    // other and the sweep measures nineteen sizes, not twenty.
+    { width: 1024, height: 768, label: "1024x768-tablet" },
     { width: 844, height: 390 },
   ],
   // Browser zoom, emulated as the CSS viewport the page gets at that zoom.
@@ -54,6 +58,15 @@ export const ROUTES = [
   { id: "register", label: "Register", surface: "next", path: "/register", ready: "form", highRisk: true },
   { id: "dashboard-role", label: "Dashboard role router", surface: "next", path: "/dashboard" },
   { id: "dashboard-link", label: "Connect a care circle", surface: "next", path: "/dashboard/link", ready: "main", highRisk: true },
+  // The not-found page. A screen that only appears when something has already
+  // gone wrong is still a screen a person has to read, so it is measured like
+  // any other.
+  //
+  // The dashboard's error boundary is deliberately *not* here: it renders only
+  // when a child route throws, and the app has no route that throws on
+  // purpose. Pointing a sweep entry at an ordinary patient page and calling it
+  // the error boundary would measure the wrong screen.
+  { id: "not-found", label: "Page not found", surface: "next", path: "/dashboard/this-route-does-not-exist", ready: "main", expectStatus: 404 },
 
   // ---- Next.js: patient workspace ----
   { id: "patient-home", label: "Patient home", surface: "next", path: P, ready: "main h1", highRisk: true },
@@ -69,8 +82,8 @@ export const ROUTES = [
   // to the FingerSpeak page, so the frame is measured on its own.
   { id: "fingerspeak-studio", label: "FingerSpeak studio (embedded)", surface: "next", path: `${P}/fingerspeak`, ready: "main", frameSrc: "fingerspeak.html" },
   { id: "patient-move", label: "Move · Explore", surface: "next", path: `${P}/move`, ready: "main", bnSeed: { key: "asha_live_move_v2" } },
-  { id: "patient-move-start", label: "Move · Build a plan", surface: "next", path: `${P}/move/start`, ready: "main", highRisk: true, bnSeed: { key: "asha_live_move_v2" } },
-  { id: "patient-move-plan", label: "Move · My plan", surface: "next", path: `${P}/move/plan`, ready: "main", bnSeed: { key: "asha_live_move_v2" } },
+  { id: "patient-move-start", label: "Move · My plan", surface: "next", path: `${P}/move/start`, ready: "main", highRisk: true, bnSeed: { key: "asha_live_move_v2" } },
+  { id: "patient-move-plan", label: "Move · Build a plan", surface: "next", path: `${P}/move/plan`, ready: "main", bnSeed: { key: "asha_live_move_v2" } },
   { id: "patient-move-session", label: "Move · Live workout", surface: "next", path: `${P}/move/session`, ready: "main", highRisk: true, bnSeed: { key: "asha_live_move_v2" } },
   { id: "patient-move-progress", label: "Move · Progress", surface: "next", path: `${P}/move/progress`, ready: "main", bnSeed: { key: "asha_live_move_v2" } },
   { id: "patient-move-safety", label: "Move · Safety", surface: "next", path: `${P}/move/safety`, ready: "main", bnSeed: { key: "asha_live_move_v2" } },
@@ -107,6 +120,17 @@ export const ROUTES = [
   { id: "assistive-vitalsense", label: "Assistive · VitalSense", surface: "assistive", path: "/assistive.html", ready: "#details", act: [...ASSIST, '#moduleTabs [data-module="vitalsense"]'] },
   { id: "assistive-fingerspeak-studio", label: "Assistive · FingerSpeak studio (embedded)", surface: "assistive", path: "/assistive.html", ready: "#details", act: [...ASSIST, '#moduleTabs [data-module="fingerspeak"]'], frameSrc: "fingerspeak.html" },
 
+  // ---- The standalone FingerSpeak studio ----
+  // The studio is also embedded in two places, but standalone it is its own
+  // page with its own four tabs, so each tab is measured on its own.
+  // The studio's own page sends a reader to the React screen when it is not
+  // embedded, so the studio is measured inside the frame that hosts it: the
+  // FingerSpeak screen, with the tab pressed in the frame's own document.
+  { id: "studio-calibrate", label: "Studio · Calibrate", surface: "studio", path: `${P}/fingerspeak`, ready: "main", frameSrc: "fingerspeak.html", frameAct: { frameSrc: "fingerspeak.html", steps: ['.tab[data-tab="calibrate"]'] } },
+  { id: "studio-speak", label: "Studio · Speak mode", surface: "studio", path: `${P}/fingerspeak`, ready: "main", frameSrc: "fingerspeak.html", frameAct: { frameSrc: "fingerspeak.html", steps: ['.tab[data-tab="speak"]'] } },
+  { id: "studio-evaluate", label: "Studio · Evaluate", surface: "studio", path: `${P}/fingerspeak`, ready: "main", frameSrc: "fingerspeak.html", frameAct: { frameSrc: "fingerspeak.html", steps: ['.tab[data-tab="evaluate"]'] } },
+  { id: "studio-log", label: "Studio · Log", surface: "studio", path: `${P}/fingerspeak`, ready: "main", frameSrc: "fingerspeak.html", frameAct: { frameSrc: "fingerspeak.html", steps: ['.tab[data-tab="log"]'] } },
+
   // ---- Legacy Everyday companion: /everyday.html ----
   // The Everyday companion is a hash router; `act` clicks its own nav links.
   { id: "everyday-home", label: "Everyday · overview", surface: "everyday", path: "/everyday.html", ready: '[data-route="home"]', act: ['[data-route="home"]'] },
@@ -123,3 +147,64 @@ export const ROUTES = [
 
 /** Screenshot sizes inspected by hand for every route. */
 export const INSPECT_SIZES = ["320x640", "390x844", "768x1024", "1440x900"];
+
+/**
+ * The screens a variant sweep covers.
+ *
+ * The light sweep is the whole app: every screen, at every size. The dark and
+ * Bangla sweeps cover the screens that carry the most risk in a theme or a
+ * language change — the ones whose layout moves when a font changes, whose
+ * colours are theme-specific, or whose text is longest in Bangla.
+ *
+ * This used to live in whoever's shell history, so the report's coverage
+ * sentence could not be checked against anything. It lives here now, next to
+ * the manifest it describes.
+ *
+ * - `dark`: the screens marked `highRisk`, plus every legacy surface (they
+ *   carry their own stylesheets and their own theme handling) and the studio.
+ * - `bn`: the screens that have a Bangla path at all — the ones with a
+ *   `bnSeed` store or a language control of their own.
+ */
+const LEGACY_SURFACES = new Set(["assistive", "everyday", "studio"]);
+// The legacy surfaces that have a Bangla *interface*.
+//
+// The Everyday companion has one: `asha_everyday_language` switches every
+// heading, button and sentence on the page between English and Bangla, and
+// the document's own `lang` follows.
+//
+// The legacy assistive app does **not**. Its `#ashaLanguage` control is the
+// *conversation* language — the language Asha replies in — and its
+// `#speechLanguage` is the *listening* language for the microphone. Neither
+// translates the interface, which is English throughout. Sweeping those
+// screens in the Bangla variant and recording them as Bangla would have been
+// a false claim: the sweep would have measured an English screen and called it
+// a Bangla one. They are swept in English and are not counted as Bangla
+// coverage.
+//
+// The standalone studio has no language control at all, so it is swept in dark
+// (it carries its own theme) but not in Bangla.
+const LEGACY_WITH_LANGUAGE = new Set(["everyday"]);
+
+/** The screens the dark sweep renders. */
+export function routesForVariant(variant) {
+  if (variant === "light") return ROUTES;
+  if (variant === "dark")
+    return ROUTES.filter((r) => r.highRisk || LEGACY_SURFACES.has(r.surface));
+  if (variant === "bn")
+    return ROUTES.filter(
+      (r) => r.bnSeed || r.bnSelect || LEGACY_WITH_LANGUAGE.has(r.surface),
+    );
+  return ROUTES;
+}
+
+/**
+ * Whether a route can be rendered in Bangla at all.
+ *
+ * A screen with no Bangla path would render in English and be recorded as if
+ * it had been checked in Bangla, which is how a gap becomes a false claim.
+ */
+export function supportsBangla(route) {
+  return Boolean(
+    route.bnSeed || route.bnSelect || LEGACY_WITH_LANGUAGE.has(route.surface),
+  );
+}

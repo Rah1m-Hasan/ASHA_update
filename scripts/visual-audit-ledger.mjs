@@ -59,6 +59,14 @@ const rows = [...groups.values()].sort((a, b) => {
   return a.route.localeCompare(b.route);
 });
 
+// Floating chrome crossing the content it floats over is furniture, not a
+// defect: a fixed bar or a companion bubble will always cross something at
+// some scroll position. It is counted apart from the defects so the headline
+// number means what it says.
+const defects = rows.filter((g) => g.type !== "chromeOverlap");
+const chrome = rows.filter((g) => g.type === "chromeOverlap");
+
+
 const describe = (g) => {
   const d = g.detail;
   switch (g.type) {
@@ -70,6 +78,8 @@ const describe = (g) => {
       return `content is clipped (${d.hiddenY}px below, ${d.hiddenX}px across)`;
     case "overlap":
       return `overlaps \`${d.b}\` by ${(d.overlap || []).join("x")}px`;
+    case "chromeOverlap":
+      return `floating chrome crosses \`${d.b}\` by ${(d.overlap || []).join("x")}px`;
     case "tinyTarget":
       return `target is ${(d.size || []).join("x")}px`;
     case "missingName":
@@ -89,12 +99,12 @@ const lines = [
   `Generated from \`${path.relative(process.cwd(), REPORT)}\` by \`scripts/visual-audit-ledger.mjs\`.`,
   `Every row is a distinct defect; the viewports column lists every size it was seen at.`,
   "",
-  `**${rows.length} distinct defects** from ${findings.length} raw findings across ${report.records?.length ?? 0} renders.`,
+  `**${defects.length} distinct defects** from ${findings.length} raw findings across ${report.records?.length ?? 0} renders.`,
   "",
   "| # | Route | Type | Element | What the measurement says | Viewports | Variants |",
   "| --- | --- | --- | --- | --- | --- | --- |",
 ];
-rows.forEach((g, i) => {
+defects.forEach((g, i) => {
   lines.push(
     `| ${i + 1} | \`${g.route}\` | ${g.type} | \`${g.el.replace(/\|/g, "\\|")}\` | ${describe(g).replace(/\|/g, "\\|")} | ${g.viewports.size} | ${[...g.variants].join(", ")} |`,
   );
@@ -102,13 +112,34 @@ rows.forEach((g, i) => {
 
 lines.push("", "## Counts by type", "", "| Type | Distinct defects |", "| --- | --- |");
 for (const t of ORDER) {
-  const n = rows.filter((r) => r.type === t).length;
+  const n = defects.filter((r) => r.type === t).length;
   if (n) lines.push(`| ${t} | ${n} |`);
 }
 
+if (chrome.length) {
+  lines.push(
+    "",
+    "## Floating chrome (not defects)",
+    "",
+    "A fixed bar, a sticky header or the companion bubble crossing the content it floats over.",
+    "That is what floating furniture does, so these are counted apart from the defects.",
+    "",
+    "| # | Route | Element | What the measurement says | Viewports | Variants |",
+    "| --- | --- | --- | --- | --- | --- |",
+  );
+  chrome.forEach((g, i) => {
+    lines.push(
+      `| ${i + 1} | \`${g.route}\` | \`${g.el.replace(/\|/g, "\\|")}\` | ${describe(g).replace(/\|/g, "\\|")} | ${g.viewports.size} | ${[...g.variants].join(", ")} |`,
+    );
+  });
+  lines.push("", `**${chrome.length}** floating-chrome overlaps.`);
+}
+
 await writeFile(OUT, lines.join("\n"));
-console.log(`${rows.length} distinct defects -> ${OUT}`);
+console.log(`${defects.length} distinct defects -> ${OUT}`);
 for (const t of ORDER) {
-  const n = rows.filter((r) => r.type === t).length;
+  const n = defects.filter((r) => r.type === t).length;
   if (n) console.log(`  ${t}: ${n}`);
 }
+if (chrome.length) console.log(`  chromeOverlap (furniture, not a defect): ${chrome.length}`);
+

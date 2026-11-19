@@ -110,24 +110,78 @@ export const PROBE_SOURCE = `(() => {
   }
 
   // 4. Two interactive controls sit on top of each other.
+  //
+  // Chrome that floats over the page — the fixed bottom bar, the companion
+  // bubble — will always cross whatever the reader is looking at, at some
+  // scroll position. That is the nature of a floating control, not a
+  // collision, so a fixed element over an in-flow one is reported separately
+  // as chromeOverlap. Two in-flow controls on top of each other are a real
+  // defect: neither can be reached.
   const controls = Array.from(document.querySelectorAll(
     'a[href], button, input, select, textarea, [role="button"], [role="tab"], [role="menuitem"], [onclick]'
   )).filter(visible);
+  // Chrome is the furniture that stays put: the fixed bottom bar, the
+  // floating bubble, and a sticky header that content scrolls under.
+  const isChrome = (el) => {
+    const pos = getComputedStyle(el).position;
+    return pos === "fixed" || pos === "sticky";
+  };
+  // A control inside a fixed bar is chrome too, even though the control
+  // itself is laid out normally inside it.
+  const inChrome = (el) => {
+    for (let n = el; n && n !== document.body; n = n.parentElement) {
+      if (isChrome(n)) return true;
+    }
+    return false;
+  };
+  // A control scrolled out of its own scroll container is clipped away: the
+  // box it reports is where it would sit if the container had not scrolled,
+  // and the reader cannot see or reach it there. The visible part of a
+  // control is what it shows and what can be clicked, so that is the box
+  // compared here.
+  const visibleRect = (el) => {
+    let box = el.getBoundingClientRect();
+    // A fixed element is not clipped by the scrolling boxes around it, so it
+    // keeps its own box.
+    if (getComputedStyle(el).position === "fixed") return box;
+    for (let p = el.parentElement; p && p !== doc; p = p.parentElement) {
+      const cs = getComputedStyle(p);
+      if (cs.overflowX === "visible" && cs.overflowY === "visible") continue;
+      const pr = p.getBoundingClientRect();
+      box = {
+        left: Math.max(box.left, pr.left),
+        top: Math.max(box.top, pr.top),
+        right: Math.min(box.right, pr.right),
+        bottom: Math.min(box.bottom, pr.bottom),
+      };
+      if (box.right <= box.left || box.bottom <= box.top) return null;
+    }
+    return box;
+  };
   for (let i = 0; i < controls.length; i++) {
     for (let j = i + 1; j < controls.length; j++) {
       const a = controls[i];
       const b = controls[j];
       if (a.contains(b) || b.contains(a)) continue;
-      const ra = a.getBoundingClientRect();
-      const rb = b.getBoundingClientRect();
+      const ra = visibleRect(a);
+      const rb = visibleRect(b);
+      if (!ra || !rb) continue;
       const ox = Math.min(ra.right, rb.right) - Math.max(ra.left, rb.left);
       const oy = Math.min(ra.bottom, rb.bottom) - Math.max(ra.top, rb.top);
       if (ox > 4 && oy > 4) {
-        push("overlap", {
+        // Two in-flow controls on top of each other is a real defect. If
+        // either of them is chrome, the furniture is over the content or over
+        // itself, which is the nature of a floating control.
+        const chrome = inChrome(a) || inChrome(b);
+        push(chrome ? "chromeOverlap" : "overlap", {
           a: describe(a),
           b: describe(b),
           overlap: [Math.round(ox), Math.round(oy)],
           text: label(a),
+          rectA: [Math.round(ra.left), Math.round(ra.top), Math.round(ra.width), Math.round(ra.height)],
+          rectB: [Math.round(rb.left), Math.round(rb.top), Math.round(rb.width), Math.round(rb.height)],
+          inA: describe(a.parentElement || a),
+          inB: describe(b.parentElement || b),
         });
       }
     }
@@ -136,10 +190,31 @@ export const PROBE_SOURCE = `(() => {
   // 5. A control smaller than 24x24 (WCAG 2.5.8 AA).
   // An element with no rendered size is not a target at all, and a
   // screen-reader-only control is never pointed at.
+  //
+  // Two exemptions apply. A control wrapped in a label is reached through
+  // that label: clicking the label text toggles it, so a label of at least
+  // 24x24 makes the target large enough (Equivalent). A link that sits in a
+  // sentence takes its size from the line it is written on (Inline).
+  const labelTarget = (el) => {
+    const l = el.closest("label");
+    if (!l) return null;
+    const r = l.getBoundingClientRect();
+    return r.width >= 24 && r.height >= 24 ? r : null;
+  };
+  const inlineInSentence = (el) => {
+    if (getComputedStyle(el).display !== "inline") return false;
+    const p = el.parentElement;
+    if (!p) return false;
+    const own = (el.textContent || "").trim();
+    const around = (p.textContent || "").trim();
+    return around.length > own.length + 2;
+  };
   for (const el of controls) {
     const r = el.getBoundingClientRect();
     if (r.width < 1 || r.height < 1) continue;
     if (srOnly(el)) continue;
+    if (labelTarget(el)) continue;
+    if (inlineInSentence(el)) continue;
     if (r.width < 24 || r.height < 24) {
       push("tinyTarget", {
         el: describe(el),

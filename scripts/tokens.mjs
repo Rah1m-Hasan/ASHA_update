@@ -53,7 +53,7 @@ const LIGHT = {
   wash: "#f2f5f9", // a quiet band of page background
   heading: "#0b1728", // headings: near-black with a blue cast
   ink: "#0e1c2f", // body text
-  muted: "#5a6b80", // secondary text
+  muted: "#57687d", // secondary text: dark enough to read on the accent wash too
   subtle: "#8494a6", // captions and decorative marks, never body copy
   line: "#dde4ed", // hairlines
   "line-strong": "#c3cedd", // emphasised borders
@@ -222,6 +222,8 @@ const READS = [
   ["secondary text on a card", "muted", "surface", 4.5],
   ["secondary text on the page", "muted", "canvas", 4.5],
   ["secondary text on a quiet band", "muted", "wash", 4.5],
+  ["secondary text on the accent wash", "muted", "brand-mint", 4.5],
+  ["secondary text on the sunken band", "muted", "sunken", 4.5],
   ["the accent on a card", "brand", "surface", 4.5],
   ["the accent on the page", "brand", "canvas", 4.5],
   ["the accent on its own pale wash", "brand", "brand-soft", 4.5],
