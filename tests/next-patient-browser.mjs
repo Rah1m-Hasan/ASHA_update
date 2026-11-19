@@ -3,7 +3,9 @@ import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
-const base = process.env.NEXT_TEST_URL || "http://127.0.0.1:4180";
+// The base is joined with a path, so a trailing slash in the environment
+// variable must not produce a doubled one.
+const base = (process.env.NEXT_TEST_URL || "http://127.0.0.1:4180").replace(/\/+$/, "");
 console.log("Next patient browser: launching");
 const browser = await chromium.launch({
   executablePath: process.env.CHROME_PATH || undefined,

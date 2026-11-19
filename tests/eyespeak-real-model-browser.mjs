@@ -9,7 +9,9 @@ import { createRequire } from "node:module";
 
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
-const base = process.env.NEXT_TEST_URL || "http://127.0.0.1:4180";
+// The base is joined with a path, so a trailing slash in the environment
+// variable must not produce a doubled one.
+const base = (process.env.NEXT_TEST_URL || "http://127.0.0.1:4180").replace(/\/+$/, "");
 const fixture = new URL("../artifacts/portrait-test.jpg", import.meta.url);
 const image = await fs.readFile(fixture).catch(() => null);
 if (!image) {

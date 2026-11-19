@@ -5,7 +5,10 @@ import { fileURLToPath } from "node:url";
 import { existsSync } from "node:fs";
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
-const base = process.env.ASHA_TEST_BASE || "http://127.0.0.1:4180/";
+// The base is joined with a path, so it has to end in a slash whatever the
+// operator wrote in the environment variable.
+const base =
+  (process.env.ASHA_TEST_BASE || "http://127.0.0.1:4180").replace(/\/+$/, "") + "/";
 // The fixture photographs are not in the repository. This suite needs a real
 // face picture to run, so it says what is missing and stops, rather than
 // failing on a file that was never there.

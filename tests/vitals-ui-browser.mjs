@@ -3,7 +3,10 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
-const base = process.env.ASHA_TEST_BASE || "http://127.0.0.1:4180/";
+// The base is joined with a path, so it has to end in a slash whatever the
+// operator wrote in the environment variable.
+const base =
+  (process.env.ASHA_TEST_BASE || "http://127.0.0.1:4180").replace(/\/+$/, "") + "/";
 const browser = await chromium.launch({headless:true, executablePath: process.env.CHROME_PATH || undefined});
 const page = await browser.newPage({viewport:{width:390,height:844}, reducedMotion:"reduce"});
 const errors = [];

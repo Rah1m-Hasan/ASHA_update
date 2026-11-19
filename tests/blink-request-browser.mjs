@@ -6,7 +6,10 @@ const require = createRequire(import.meta.url);
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || "playwright");
 const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROME_PATH || undefined });
 const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
-const base = process.env.ASHA_TEST_BASE || "http://127.0.0.1:4180/";
+// The base is joined with a path, so it has to end in a slash whatever the
+// operator wrote in the environment variable.
+const base =
+  (process.env.ASHA_TEST_BASE || "http://127.0.0.1:4180").replace(/\/+$/, "") + "/";
 const errors = [], sent = [];
 page.on("pageerror", (e) => errors.push(e.message));
 const profile = { patientId: "blink-test", label: "Eye-only test", assessment: { eyes: "reliable", lips: "none", head: "none", canHear: true }, recommendation: { primary: "facespeak" } };
