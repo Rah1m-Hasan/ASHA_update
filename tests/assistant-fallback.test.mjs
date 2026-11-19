@@ -116,6 +116,38 @@ test("with an AI Gateway key, a rejected MAIRA key falls back to the gateway", a
   assert.equal(createLlmProvider({ env: { MAIRA_API_KEY: "k", MAIRA_PROJECT_KEY: "p" }, fetchImpl }).kind, "maira");
 });
 
+test("on Vercel the gateway needs no key: it uses the deployment's OIDC token, and skips a rejected MAIRA key", async () => {
+  const { createLlmProvider } = await import("../src/server/lib/llm-provider.js");
+  const seen = [];
+  const fetchImpl = async (url, init) => {
+    seen.push(String(url));
+    if (String(url).includes("gigalogy")) return new Response("{}", { status: 403 });
+    assert.match(init.headers.authorization, /^Bearer oidc-test$/);
+    return Response.json({ choices: [{ message: { content: '{"reply":"Hi without a key.","source_ids":[]}' } }] });
+  };
+  const env = { MAIRA_API_KEY: "k", MAIRA_PROJECT_KEY: "p", VERCEL: "1", VERCEL_OIDC_TOKEN: "oidc-test" };
+  const provider = createLlmProvider({ env, fetchImpl });
+  const o = createAshaOrchestrator({ provider, retrieve: () => [] });
+  assert.equal((await o.run({ patientId: "p", profile, text: "Hello" })).reply, "Hi without a key.");
+  const mairaCalls = seen.filter((u) => u.includes("gigalogy")).length;
+  assert.equal((await o.run({ patientId: "p", profile, text: "Hello again" })).reply, "Hi without a key.");
+  assert.equal(seen.filter((u) => u.includes("gigalogy")).length, mairaCalls, "rejected MAIRA key is not retried at once");
+  // Off switch, and outside Vercel with no key: no gateway.
+  const { createGatewayProvider } = await import("../src/server/lib/gateway-provider.js");
+  assert.equal(createGatewayProvider({ env: { ...env, ASHA_GATEWAY: "off" } }).configured(), false);
+  assert.equal(createGatewayProvider({ env: {} }).configured(), false);
+});
+
+test("an exhausted gateway allowance still ends in a guide answer", async () => {
+  const { createLlmProvider } = await import("../src/server/lib/llm-provider.js");
+  const fetchImpl = async (url) =>
+    String(url).includes("gigalogy") ? new Response("{}", { status: 401 }) : new Response("{}", { status: 402 });
+  const provider = createLlmProvider({ env: { MAIRA_API_KEY: "k", MAIRA_PROJECT_KEY: "p", VERCEL_OIDC_TOKEN: "t" }, fetchImpl });
+  const result = await createAshaOrchestrator({ provider, retrieve: () => [] }).run({ patientId: "p", profile, text: "What can you do?" });
+  assert.equal(result.orchestration.model, "asha-guide");
+  assert.ok(result.reply.length > 20);
+});
+
 test("help with one specific need proposes that need, in English and Bangla", async () => {
   const provider = scripted(Array(6).fill('{"reply":"Okay.","source_ids":[],"tool_calls":[]}'));
   const o = createAshaOrchestrator({ provider, retrieve: () => [] });

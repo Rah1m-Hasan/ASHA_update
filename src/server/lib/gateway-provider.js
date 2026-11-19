@@ -1,17 +1,33 @@
+import { getVercelOidcToken } from "@vercel/oidc";
 import { MairaProviderError } from "./maira-provider.js";
 
 // Backup cloud route through Vercel AI Gateway (OpenAI-compatible endpoint).
-// Used only when AI_GATEWAY_API_KEY is set and MAIRA could not answer. Same
+// Used when MAIRA could not answer. It needs no key of its own on Vercel: the
+// deployment's OIDC token authenticates it (AI_GATEWAY_API_KEY wins if set).
+// ASHA_GATEWAY=off turns it off. Same
 // ask() contract and error type as the MAIRA provider; the prompt is the same
 // app-built prompt, so retrieval, tool verification and safety are unchanged.
 const ENDPOINT = "https://ai-gateway.vercel.sh/v1/chat/completions";
 const DEFAULT_MODEL = "google/gemini-2.5-flash";
 const MAX_MS = 15000;
 
-export function createGatewayProvider({ env = process.env, fetchImpl = fetch, now = Date.now } = {}) {
+async function defaultToken(env) {
+  if (env.AI_GATEWAY_API_KEY) return env.AI_GATEWAY_API_KEY;
+  try {
+    return await getVercelOidcToken();
+  } catch {
+    return env.VERCEL_OIDC_TOKEN || "";
+  }
+}
+
+export function createGatewayProvider({ env = process.env, fetchImpl = fetch, now = Date.now, token = defaultToken } = {}) {
   const model = env.AI_GATEWAY_MODEL || DEFAULT_MODEL;
+  const configured = () =>
+    String(env.ASHA_GATEWAY || "").toLowerCase() !== "off" &&
+    Boolean(env.AI_GATEWAY_API_KEY || env.VERCEL_OIDC_TOKEN || env.VERCEL === "1");
   async function ask({ task = "conversation", query, signal, timeoutMs = MAX_MS } = {}) {
-    if (!env.AI_GATEWAY_API_KEY)
+    const bearer = configured() ? await token(env) : "";
+    if (!bearer)
       throw new MairaProviderError("not_configured", "The backup AI route is not configured.", 503);
     if (typeof query !== "string" || !query.trim() || query.length > 20000)
       throw new MairaProviderError("invalid_request", "Asha needs a valid task, message, and session.", 400);
@@ -23,7 +39,7 @@ export function createGatewayProvider({ env = process.env, fetchImpl = fetch, no
     try {
       const response = await fetchImpl(ENDPOINT, {
         method: "POST",
-        headers: { "content-type": "application/json", authorization: `Bearer ${env.AI_GATEWAY_API_KEY}` },
+        headers: { "content-type": "application/json", authorization: `Bearer ${bearer}` },
         body: JSON.stringify({
           model,
           messages: [{ role: "user", content: query }],
@@ -34,6 +50,8 @@ export function createGatewayProvider({ env = process.env, fetchImpl = fetch, no
       });
       if (response.status === 401 || response.status === 403)
         throw new MairaProviderError("credentials_rejected", "Asha's AI connection needs its server credentials checked.", 503);
+      if (response.status === 402)
+        throw new MairaProviderError("provider_busy", "Asha's backup AI has used its free allowance for now.", 429);
       if (response.status === 429)
         throw new MairaProviderError("provider_busy", "Asha's AI service is busy. Please try again shortly.", 429);
       if (!response.ok)
@@ -54,5 +72,5 @@ export function createGatewayProvider({ env = process.env, fetchImpl = fetch, no
       signal?.removeEventListener("abort", stop);
     }
   }
-  return { ask, warm() {}, configured: () => Boolean(env.AI_GATEWAY_API_KEY), kind: "ai-gateway" };
+  return { ask, warm() {}, configured, kind: "ai-gateway" };
 }

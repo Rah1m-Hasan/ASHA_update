@@ -17,19 +17,25 @@ const RETRY_LOCALLY = new Set([
 // missing MAIRA key included, since the backup has its own key).
 const RETRY_ON_GATEWAY = new Set([...RETRY_LOCALLY, "credentials_rejected", "model_unavailable", "invalid_response"]);
 
-/** MAIRA first; Vercel AI Gateway only when AI_GATEWAY_API_KEY is set and MAIRA could not answer. */
-function withGatewayBackup(maira, gateway) {
+// After MAIRA rejects its key, skip it for a while so each reply does not
+// wait on a call that is known to fail.
+const SKIP_REJECTED_MS = 10 * 60 * 1000;
+
+/** MAIRA first; Vercel AI Gateway (no key needed on Vercel) when MAIRA could not answer. */
+function withGatewayBackup(maira, gateway, now = Date.now) {
   if (!gateway.configured()) return maira;
+  let rejectedAt = -Infinity;
   return {
     kind: "maira",
     configured: () => true,
     warm: () => maira.warm(),
     async ask(request) {
-      if (!maira.configured()) return gateway.ask(request);
+      if (!maira.configured() || now() - rejectedAt < SKIP_REJECTED_MS) return gateway.ask(request);
       try {
         return await maira.ask(request);
       } catch (error) {
         if (!RETRY_ON_GATEWAY.has(error?.code) || request?.signal?.aborted) throw error;
+        if (error?.code === "credentials_rejected") rejectedAt = now();
         return gateway.ask(request);
       }
     },
@@ -49,7 +55,7 @@ export function createLlmProvider({
 } = {}) {
   const mode = String(env.ASHA_LLM_PROVIDER || "maira").toLowerCase();
   const maira = createMairaProvider({ env, fetchImpl, now });
-  const cloud = withGatewayBackup(maira, createGatewayProvider({ env, fetchImpl, now }));
+  const cloud = withGatewayBackup(maira, createGatewayProvider({ env, fetchImpl, now }), now);
   if (mode === "maira") return cloud;
   const local = createOllamaProvider({ env, fetchImpl, now });
   if (mode === "ollama") return local;
