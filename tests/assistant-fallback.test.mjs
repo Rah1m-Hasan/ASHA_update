@@ -148,6 +148,40 @@ test("an exhausted gateway allowance still ends in a guide answer", async () => 
   assert.ok(result.reply.length > 20);
 });
 
+test("a free Gemini key alone answers through Google's OpenAI-compatible endpoint", async () => {
+  const { createLlmProvider } = await import("../src/server/lib/llm-provider.js");
+  let body;
+  const fetchImpl = async (url, init) => {
+    if (String(url).includes("gigalogy")) return new Response("{}", { status: 401 });
+    assert.match(String(url), /generativelanguage\.googleapis\.com\/v1beta\/openai\/chat\/completions$/);
+    assert.match(init.headers.authorization, /^Bearer gm-test$/);
+    body = JSON.parse(init.body);
+    return Response.json({ choices: [{ message: { content: '{"reply":"Hi from Gemini.","source_ids":[]}' } }] });
+  };
+  const provider = createLlmProvider({ env: { MAIRA_API_KEY: "k", MAIRA_PROJECT_KEY: "p", GEMINI_API_KEY: "gm-test" }, fetchImpl });
+  const result = await createAshaOrchestrator({ provider, retrieve: () => [] }).run({ patientId: "p", profile, text: "Hello" });
+  assert.equal(result.reply, "Hi from Gemini.");
+  assert.equal(body.model, "gemini-2.5-flash");
+  assert.equal(body.reasoning_effort, "none");
+});
+
+test("the guide answers everyday wellbeing safely and sends emergencies to a real number", () => {
+  const cases = [
+    ["Tell me a short tip for staying cool", /water/],
+    ["I feel a bit dizzy and the room is hot", /sit or lie down/],
+    ["My back hurts", /can't advise on medicines/],
+    ["I feel lonely today", /don't have to carry/],
+    ["I have chest pain", /emergency number/],
+    ["How does Health outlook use heat?", /Health outlook combines/],
+  ];
+  for (const [query, pattern] of cases) assert.match(guideAnswer({ query }).reply, pattern, query);
+  assert.equal(guideAnswer({ query: "I can't breathe" }).urgent, true);
+  assert.match(guideAnswer({ query: "আজ আমার খুব ক্লান্ত লাগছে" }).reply, /ক্লান্ত/u);
+  assert.match(guideAnswer({ query: "বুকে ব্যথা করছে" }).reply, /৯৯৯/u);
+  for (const query of ["I feel dizzy", "My back hurts", "I am tired"])
+    assert.doesNotMatch(guideAnswer({ query }).reply, /diagnos|you have|take \d|mg\b/i, query);
+});
+
 test("help with one specific need proposes that need, in English and Bangla", async () => {
   const provider = scripted(Array(6).fill('{"reply":"Okay.","source_ids":[],"tool_calls":[]}'));
   const o = createAshaOrchestrator({ provider, retrieve: () => [] });

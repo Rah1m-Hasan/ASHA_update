@@ -1,7 +1,8 @@
 import { getVercelOidcToken } from "@vercel/oidc";
 import { MairaProviderError } from "./maira-provider.js";
 
-// Backup cloud route through Vercel AI Gateway (OpenAI-compatible endpoint).
+// Backup cloud route, OpenAI-compatible: Vercel AI Gateway, or Google Gemini
+// directly when only GEMINI_API_KEY is set (a free Google AI Studio key, no card).
 // Used when MAIRA could not answer. It needs no key of its own on Vercel: the
 // deployment's OIDC token authenticates it (AI_GATEWAY_API_KEY wins if set).
 // ASHA_GATEWAY=off turns it off. Same
@@ -9,6 +10,8 @@ import { MairaProviderError } from "./maira-provider.js";
 // app-built prompt, so retrieval, tool verification and safety are unchanged.
 const ENDPOINT = "https://ai-gateway.vercel.sh/v1/chat/completions";
 const DEFAULT_MODEL = "google/gemini-2.5-flash";
+const GEMINI_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions";
+const GEMINI_MODEL = "gemini-2.5-flash";
 const MAX_MS = 15000;
 
 async function defaultToken(env) {
@@ -21,12 +24,14 @@ async function defaultToken(env) {
 }
 
 export function createGatewayProvider({ env = process.env, fetchImpl = fetch, now = Date.now, token = defaultToken } = {}) {
-  const model = env.AI_GATEWAY_MODEL || DEFAULT_MODEL;
+  const gemini = Boolean(env.GEMINI_API_KEY) && !env.AI_GATEWAY_API_KEY;
+  const model = gemini ? env.GEMINI_MODEL || GEMINI_MODEL : env.AI_GATEWAY_MODEL || DEFAULT_MODEL;
+  const endpoint = gemini ? GEMINI_ENDPOINT : ENDPOINT;
   const configured = () =>
     String(env.ASHA_GATEWAY || "").toLowerCase() !== "off" &&
-    Boolean(env.AI_GATEWAY_API_KEY || env.VERCEL_OIDC_TOKEN || env.VERCEL === "1");
+    Boolean(env.AI_GATEWAY_API_KEY || env.GEMINI_API_KEY || env.VERCEL_OIDC_TOKEN || env.VERCEL === "1");
   async function ask({ task = "conversation", query, signal, timeoutMs = MAX_MS } = {}) {
-    const bearer = configured() ? await token(env) : "";
+    const bearer = !configured() ? "" : gemini ? env.GEMINI_API_KEY : await token(env);
     if (!bearer)
       throw new MairaProviderError("not_configured", "The backup AI route is not configured.", 503);
     if (typeof query !== "string" || !query.trim() || query.length > 20000)
@@ -37,7 +42,7 @@ export function createGatewayProvider({ env = process.env, fetchImpl = fetch, no
     signal?.addEventListener("abort", stop, { once: true });
     const timer = setTimeout(stop, Math.max(1000, Math.min(MAX_MS, Number(timeoutMs) || MAX_MS)));
     try {
-      const response = await fetchImpl(ENDPOINT, {
+      const response = await fetchImpl(endpoint, {
         method: "POST",
         headers: { "content-type": "application/json", authorization: `Bearer ${bearer}` },
         body: JSON.stringify({
@@ -45,13 +50,16 @@ export function createGatewayProvider({ env = process.env, fetchImpl = fetch, no
           messages: [{ role: "user", content: query }],
           max_tokens: 400,
           temperature: 0.3,
+          // Gemini 2.5 Flash thinks by default, which would use up the reply's tokens.
+          ...(gemini ? { reasoning_effort: "none" } : {}),
         }),
         signal: controller.signal,
       });
       if (!response.ok) {
         // The gateway's own reason (no prompt, no token) so a refusal can be fixed.
-        const body = await response.clone().json().catch(() => null);
-        console.warn("ai-gateway refused", response.status, String(body?.error?.type || body?.error?.code || ""), String(body?.error?.message || "").slice(0, 200));
+        const raw = await response.clone().json().catch(() => null);
+        const body = Array.isArray(raw) ? raw[0] : raw;
+        console.warn(gemini ? "gemini refused" : "ai-gateway refused", response.status, String(body?.error?.type || body?.error?.code || ""), String(body?.error?.message || "").slice(0, 200));
       }
       if (response.status === 401 || response.status === 403)
         throw new MairaProviderError("credentials_rejected", "Asha's AI connection needs its server credentials checked.", 503);
@@ -65,7 +73,7 @@ export function createGatewayProvider({ env = process.env, fetchImpl = fetch, no
       const text = data?.choices?.[0]?.message?.content;
       if (typeof text !== "string" || !text.trim())
         throw new MairaProviderError("invalid_response", "Asha returned no usable reply. Please try again.");
-      return { text: text.trim(), model, profileName: "ai-gateway", task, elapsedMs: Math.max(0, now() - started), fallback: true };
+      return { text: text.trim(), model, profileName: gemini ? "gemini" : "ai-gateway", task, elapsedMs: Math.max(0, now() - started), fallback: true };
     } catch (error) {
       if (error instanceof MairaProviderError) throw error;
       if (signal?.aborted) throw new MairaProviderError("cancelled", "The Asha request was cancelled.", 499);
