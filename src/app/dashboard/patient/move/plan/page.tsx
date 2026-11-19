@@ -166,7 +166,7 @@ export default function MyPlan() {
                     </div>
                   </div>
                 ) : (
-                  <button type="button" className="mt-2 font-medium text-brand hover:underline" onClick={() => setConfirmStep(true)}>
+                  <button type="button" className="mt-2 min-h-6 font-medium text-brand hover:underline" onClick={() => setConfirmStep(true)}>
                     Consider a small step up
                   </button>
                 )}
@@ -174,7 +174,7 @@ export default function MyPlan() {
             )}
 
             {!editing && (
-              <Link href={`${BASE}/start`} className="mt-3 inline-block text-sm font-medium text-brand hover:underline">
+              <Link href={`${BASE}/start`} className="mt-3 inline-block py-0.5 text-sm font-medium text-brand hover:underline">
                 {tx(lang, "Choose a different plan", "অন্য প্ল্যান বেছে নিন")}
               </Link>
             )}

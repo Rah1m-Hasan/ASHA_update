@@ -70,7 +70,7 @@ export default function MoveExplore() {
         <ShieldIcon size={16} className="mt-0.5 shrink-0 text-brand" />
         <span>
           {tx(lang, "Stop right away and call 999 if you feel chest pain, faintness or severe breathlessness.", "বুকে ব্যথা, মাথা ঘোরা বা খুব শ্বাসকষ্ট হলে সঙ্গে সঙ্গে থামুন এবং ৯৯৯ নম্বরে কল করুন।")}{" "}
-          <Link href={`${BASE}/safety`} className="font-medium text-brand hover:underline">
+          <Link href={`${BASE}/safety`} className="inline-block py-1 font-medium text-brand hover:underline">
             {tx(lang, "Safety settings", "নিরাপত্তা সেটিংস")}
           </Link>
         </span>

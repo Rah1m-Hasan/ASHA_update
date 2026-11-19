@@ -80,6 +80,13 @@ small,
 .small {
   font-size: 0.82rem;
 }
+/* A link on its own is a target, not a line of text: 24px is the smallest
+   WCAG 2.5.8 accepts. */
+a.small {
+  display: inline-block;
+  min-height: 24px;
+  padding: 4px 0;
+}
 label {
   display: block;
   margin: 10px 0;
@@ -88,7 +95,7 @@ label {
   color: var(--muted);
 }
 .eyebrow {
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   letter-spacing: 0.15em;
   font-weight: 750;
   color: var(--muted);
@@ -127,8 +134,9 @@ label {
 }
 .brand small {
   display: block;
-  font-size: 0.55rem;
-  letter-spacing: 0.16em;
+  /* 11px is the floor for anything a person has to read. */
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
   margin-top: 9px;
 }
 .brand-logo {
@@ -320,9 +328,11 @@ textarea {
 }
 input[type="checkbox"],
 input[type="radio"] {
-  /* 24px is the smallest target WCAG 2.5.8 accepts. */
+  /* 24px is the smallest target WCAG 2.5.8 accepts. It must not shrink
+     further: a flex row would otherwise squeeze the box. */
   width: 24px;
   height: 24px;
+  flex-shrink: 0;
   vertical-align: middle;
   accent-color: var(--accent);
   margin-right: 7px;
@@ -594,6 +604,9 @@ footer {
 footer > a {
   display: block;
   margin-bottom: 12px;
+  /* A link on its own is a target, not a line of text: 24px is the smallest
+     WCAG 2.5.8 accepts. */
+  min-height: 24px;
 }
 .companion {
   position: fixed;
@@ -702,7 +715,10 @@ footer > a {
   overflow: hidden;
 }
 .danger {
-  color: #c03737;
+  /* The palette's danger colour, which is a dark red on the light surface and
+     a light red on the dark one. It used to be a fixed hex, which read well on
+     the light surface and fell to 2.79:1 on the dark one. */
+  color: var(--danger);
 }
 .record-row {
   padding: 12px 0;
@@ -714,6 +730,14 @@ footer > a {
 progress {
   width: 100%;
   accent-color: var(--accent);
+}
+/* Between the wide layout and the phone chip strip the rail takes a share of
+   the width rather than a fixed 180px, so the content column keeps its room
+   on a tablet. */
+@media (min-width: 701px) and (max-width: 1000px) {
+  .app-layout {
+    grid-template-columns: clamp(150px, 20%, 210px) minmax(0, 1fr);
+  }
 }
 @media (max-width: 1000px) {
   .app-layout {
@@ -745,20 +769,6 @@ progress {
   }
 }
 @media (max-width: 700px) {
-  /* The companion bubble floats over the bottom-right corner. On a phone it
-     takes a smaller footprint and sits tighter to the corner, so it covers
-     less of whatever is under it. */
-  .companion {
-    bottom: 14px;
-    right: 14px;
-  }
-  .asha-bubble {
-    width: 56px;
-    height: 56px;
-  }
-  .bubble-letter {
-    font-size: 2.1rem;
-  }
   .topbar {
     height: 78px;
     padding: 12px 18px;
@@ -773,7 +783,8 @@ progress {
     font-size: 2rem;
   }
   .brand small {
-    font-size: 0.44rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
   }
   .top-actions {
     gap: 7px;
@@ -831,12 +842,12 @@ progress {
     margin-bottom: 24px;
   }
   .pill {
-    font-size: 0.65rem;
+    font-size: 0.75rem;
     padding: 5px 8px;
   }
   .page-top .eyebrow {
-    font-size: 0.57rem;
-    letter-spacing: 0.12em;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
   }
   .card {
     padding: 20px;
@@ -883,13 +894,19 @@ progress {
     font-size: 0.83rem;
     padding: 10px 13px;
   }
+  /* The companion bubble floats over the bottom-right corner. On a phone it
+     takes a smaller footprint and sits tighter to the corner, so it covers
+     less of whatever is under it. */
   .companion {
     right: 14px;
-    bottom: 16px;
+    bottom: 14px;
   }
   .asha-bubble {
-    width: 60px;
-    height: 60px;
+    width: 56px;
+    height: 56px;
+  }
+  .bubble-letter {
+    font-size: 2.1rem;
   }
   .companion-panel {
     padding: 20px;
@@ -910,7 +927,7 @@ progress {
     padding-bottom: 60px;
   }
   .model-table {
-    font-size: 0.7rem;
+    font-size: 0.75rem;
   }
 }
 @media (prefers-reduced-motion: reduce) {

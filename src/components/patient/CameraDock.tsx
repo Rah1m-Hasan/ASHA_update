@@ -30,7 +30,7 @@ export function CameraDock() {
           {on ? "Sensing live" : state === "starting" ? "Starting" : state === "error" ? "Camera problem" : "Camera off"}
         </StatusPill>
         {on && (
-          <button onClick={stop} className="text-sm font-medium text-muted hover:text-ink">
+          <button onClick={stop} className="min-h-6 text-sm font-medium text-muted hover:text-ink">
             Stop
           </button>
         )}

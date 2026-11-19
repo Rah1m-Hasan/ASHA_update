@@ -38,7 +38,7 @@ export function Modules() {
                   </p>
                   <h3 className="mt-1 text-2xl leading-[1.25] font-medium text-ink">{m.title}</h3>
                   <p className="mt-2 text-lg leading-7 text-muted">{m.text}</p>
-                  <a href={`/dashboard/patient/${m.key}`} className="mt-3 inline-block text-sm font-medium text-brand hover:underline">
+                  <a href={`/dashboard/patient/${m.key}`} className="mt-3 inline-block py-0.5 text-sm font-medium text-brand hover:underline">
                     Explore {m.name} →
                   </a>
                 </div>

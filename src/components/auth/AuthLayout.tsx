@@ -22,7 +22,7 @@ export function AuthLayout({
           <Link href="/" aria-label="Asha home" className="lg:invisible">
             <Wordmark height={24} />
           </Link>
-          <Link href="/" className="text-sm font-medium text-muted hover:text-ink">
+          <Link href="/" className="inline-block py-0.5 text-sm font-medium text-muted hover:text-ink">
             ← Back to home
           </Link>
         </div>

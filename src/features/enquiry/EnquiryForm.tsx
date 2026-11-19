@@ -86,8 +86,10 @@ export function EnquiryForm() {
           <textarea name="message" required rows={4} maxLength={1000} className={field} />
         </label>
       </div>
-      <label className="mt-5 flex items-start gap-3 text-sm text-ink">
-        <input name="consent" type="checkbox" className="mt-0.5 size-4 accent-brand" />
+      {/* Clicking the words toggles the box, so the row is the target: it
+          must be at least 24px tall for a finger to reach it. */}
+      <label className="mt-5 flex min-h-6 items-center gap-3 text-sm text-ink">
+        <input name="consent" type="checkbox" className="size-5 accent-brand" />
         I agree to be contacted about this enquiry.
       </label>
       {error && (

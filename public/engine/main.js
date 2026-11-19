@@ -1585,6 +1585,9 @@ window.addEventListener("pagehide", () => {
 function addChat(text, user = false) {
   const p = document.createElement("p");
   p.className = user ? "chat-user" : "chat-asha";
+  // An answer can be in Bangla inside an English chat, so the line says which
+  // language it is in and a screen reader pronounces it correctly.
+  p.lang = /[ঀ-৿]/.test(text) ? "bn" : "en";
   p.textContent = text;
   $("chatMessages").append(p);
   p.scrollIntoView({ block: "nearest" });

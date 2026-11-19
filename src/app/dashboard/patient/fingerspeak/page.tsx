@@ -25,6 +25,20 @@ type StudioWindow = Window & {
   ashaSetTheme?: (t: string) => void;
 };
 
+/**
+ * The theme the app is currently in.
+ *
+ * The document element carries it: the root layout writes it before the first
+ * paint, and the theme toggle writes it again on every change. Reading it
+ * from there means the studio always matches the screen around it.
+ */
+const currentTheme = () =>
+  typeof document === "undefined"
+    ? "light"
+    : document.documentElement.dataset.theme === "dark"
+      ? "dark"
+      : "light";
+
 export default function FingerSpeakPage() {
   useActiveModule("fingerspeak");
   const router = useRouter();
@@ -53,7 +67,7 @@ export default function FingerSpeakPage() {
         return;
       const d = e.data || {};
       if (d.type === "asha-hand-ready") {
-        (e.source as StudioWindow).ashaSetTheme?.("light");
+        (e.source as StudioWindow).ashaSetTheme?.(currentTheme());
         setReady(true);
       }
       if (d.type === "asha-hand-height" && Number.isFinite(d.height))
@@ -83,6 +97,21 @@ export default function FingerSpeakPage() {
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
   }, [cancel, confirm, instance, pending, propose, router, start, state]);
+
+  // The studio keeps its own theme, so it has to be told when the person
+  // changes theirs. The theme lives on the document element, so a mutation
+  // observer on that attribute is the honest signal — it fires for the switch
+  // in this tab as well as for a change made in another one.
+  useEffect(() => {
+    const root = document.documentElement;
+    const observer = new MutationObserver(() => {
+      (frame.current?.contentWindow as StudioWindow | null)?.ashaSetTheme?.(
+        currentTheme(),
+      );
+    });
+    observer.observe(root, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => observer.disconnect();
+  }, []);
 
   const hands = snapshot.hands ?? [];
 

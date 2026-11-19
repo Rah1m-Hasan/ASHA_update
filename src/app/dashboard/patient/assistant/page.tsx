@@ -14,6 +14,7 @@ import { useRequests } from "@/features/requests/RequestProvider";
 import { sessionStore, useSession } from "@/features/session/store";
 import { speak } from "@/features/speech/speak";
 import { cn } from "@/lib/cn";
+import { textLanguage } from "@/lib/document-lang";
 
 type Message = ChatTurn & { reply?: ChatReply };
 
@@ -75,7 +76,9 @@ export default function AssistantPage() {
               <div key={i} className={cn("flex gap-3", m.role === "user" && "justify-end")}>
                 {m.role === "assistant" && <Image src="/assets/assets/images/asha-avatar.png" alt="" width={32} height={32} className="size-8 shrink-0 rounded-full" />}
                 <div className={cn("max-w-[80%] rounded-2xl px-4 py-3", m.role === "user" ? "rounded-br-md bg-brand text-on-brand" : "rounded-bl-md bg-wash text-ink")}>
-                  <p>{m.text}</p>
+                  {/* An answer can be in Bangla inside an English chat: it says so
+                      itself, so a screen reader pronounces it correctly. */}
+                  <p lang={textLanguage(m.text)}>{m.text}</p>
                   {m.reply?.proposal && (
                     <Button size="sm" className="mt-3" onClick={() => propose(m.reply!.proposal!.kind, m.reply!.proposal!.text, "asha")}>
                       Ask caregiver: {m.reply.proposal.text}

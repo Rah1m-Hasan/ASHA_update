@@ -19,7 +19,7 @@ export function Footer() {
                   <li key={l.label}>
                     <a
                       href={l.href}
-                      className="text-muted hover:text-ink"
+                      className="inline-block py-1 text-muted hover:text-ink"
                       {...(l.href.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                     >
                       {l.label}

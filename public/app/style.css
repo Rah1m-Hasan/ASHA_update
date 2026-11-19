@@ -77,7 +77,7 @@
 .face-module-grid h3 small {
   display: block;
   margin: 6px 0 0;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 400;
   color: var(--muted);
   letter-spacing: 0.02em;
@@ -233,7 +233,7 @@
   border: 1px solid var(--line);
   border-radius: 999px;
   color: var(--muted);
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -290,7 +290,7 @@
   border-radius: 50%;
   background: var(--mint);
   color: var(--accent);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
 }
 .facespeak-reference {
   margin: 0;
@@ -501,6 +501,11 @@ html {
   font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
+  /* A link on its own is a target, not a line of text: 24px is the
+     smallest WCAG 2.5.8 accepts. */
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
 }
 .landing-nav a:hover {
   color: var(--accent);
@@ -545,7 +550,7 @@ html {
 .section-heading .eyebrow,
 .closing-cta .eyebrow {
   color: var(--accent);
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   letter-spacing: 0.15em;
   margin-bottom: 19px;
 }
@@ -628,7 +633,7 @@ html {
   top: 1%;
   left: 10%;
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   letter-spacing: 0.09em;
   text-transform: uppercase;
 }
@@ -688,7 +693,7 @@ html {
   background: var(--good-soft);
   border-radius: 999px;
   padding: 4px 8px;
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   font-weight: 700;
 }
 .preview-welcome {
@@ -709,7 +714,8 @@ html {
 .preview-request small {
   display: block;
   color: var(--muted);
-  font-size: 0.55rem;
+  /* 11px is the floor for anything a person has to read. */
+  font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 0.09em;
   margin-bottom: 4px;
@@ -744,7 +750,7 @@ html {
 }
 .preview-request p {
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   line-height: 1.4;
   margin: 5px 0 0;
 }
@@ -757,7 +763,7 @@ html {
   border: 1px solid var(--line);
   border-radius: 10px;
   color: var(--muted);
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 600;
 }
 .preview-confirm span {
@@ -775,7 +781,7 @@ html {
   border: 1px solid var(--line);
   border-radius: 9px;
   padding: 9px 4px;
-  font-size: 0.64rem;
+  font-size: 0.75rem;
   font-weight: 700;
   text-align: center;
 }
@@ -805,11 +811,11 @@ html {
 .connection-note strong,
 .connection-note small {
   display: block;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
 }
 .connection-note small {
   color: var(--muted);
-  font-size: 0.62rem;
+  font-size: 0.75rem;
   margin-top: 2px;
 }
 .value-strip {
@@ -988,7 +994,7 @@ html {
 }
 .feature-primary .feature-number {
   color: var(--deep-accent);
-  font-size: 0.73rem;
+  font-size: 0.75rem;
   letter-spacing: 0.1em;
   font-weight: 800;
 }
@@ -1010,7 +1016,7 @@ html {
   border: 1px solid #ffffff33;
   padding: 7px 10px;
   border-radius: 8px;
-  font-size: 0.68rem;
+  font-size: 0.75rem;
 }
 .audience-section {
   max-width: 1240px;
@@ -1034,7 +1040,7 @@ html {
   display: block;
   margin-bottom: 38px;
   color: var(--accent);
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   font-weight: 800;
   letter-spacing: 0.13em;
 }
@@ -1238,7 +1244,7 @@ html {
   padding-top: 21px;
   border-top: 1px solid var(--line);
   color: var(--muted);
-  font-size: 0.68rem;
+  font-size: 0.75rem;
 }
 .footer-bottom a {
   color: var(--accent);
@@ -1712,9 +1718,11 @@ textarea {
 }
 input[type="checkbox"],
 input[type="radio"] {
-  /* 24px is the smallest target WCAG 2.5.8 accepts. */
+  /* 24px is the smallest target WCAG 2.5.8 accepts. It must not shrink
+     further: a flex row would otherwise squeeze the box. */
   width: 24px;
   height: 24px;
+  flex-shrink: 0;
   accent-color: var(--accent);
 }
 button {
@@ -1786,7 +1794,7 @@ em {
   color: var(--muted);
 }
 .eyebrow {
-  font-size: 0.68rem;
+  font-size: 0.75rem;
   letter-spacing: 0.16em;
   font-weight: 700;
   display: block;
@@ -1805,6 +1813,9 @@ em {
   display: flex;
   align-items: center;
   gap: 12px;
+  /* The wordmark scales with the window, and its link has to stay a target
+     of at least 24x24 (WCAG 2.5.8) even when the picture is short. */
+  min-height: 24px;
   font-family: var(--asha-font-sans);
   font-weight: 800;
   font-size: 1.9rem;
@@ -1822,8 +1833,9 @@ em {
 }
 .brand small {
   display: block;
-  font-size: 0.49rem;
-  letter-spacing: 0.2em;
+  /* 11px is the floor for anything a person has to read. */
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
   margin-top: 8px;
   color: var(--muted);
 }
@@ -1839,7 +1851,7 @@ em {
   border: 1px solid var(--line);
   border-radius: 99px;
   padding: 7px 12px;
-  font-size: 0.73rem;
+  font-size: 0.75rem;
   color: var(--muted);
   white-space: nowrap;
 }
@@ -1898,6 +1910,20 @@ em {
   max-width: 1320px;
   margin: auto;
   padding: 42px 5vw 110px;
+}
+/* The floating Asha bubble sits over the bottom-right corner. The welcome
+   view has no bottom bar to clear it, so the view keeps the bubble's whole
+   footprint clear at the end and the last line is never hidden behind it.
+   The id makes this beat the narrow-screen rule for .view further down. */
+#welcome.app-welcome {
+  padding-bottom: 150px;
+}
+/* The bubble's default corner would still sit over the last link on a phone,
+   so that link keeps the corner clear and wraps instead. */
+@media (max-width: 460px) {
+  #welcome .app-entry p:has(a.secondary) {
+    padding-right: 84px;
+  }
 }
 .welcome {
   display: grid;
@@ -2013,8 +2039,8 @@ em {
   justify-content: space-between;
   padding-top: 30px;
   color: var(--muted);
-  font-size: 0.62rem;
-  letter-spacing: 0.14em;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
   margin-top: 28px;
 }
 .narrow {
@@ -2024,7 +2050,7 @@ em {
   display: flex;
   justify-content: space-between;
   color: var(--muted);
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   letter-spacing: 0.13em;
   margin: 20px 0;
 }
@@ -2063,8 +2089,9 @@ em {
   margin: 20px 0;
 }
 .check input {
-  width: 21px;
-  height: 21px;
+  /* 24px is the smallest target WCAG 2.5.8 accepts. */
+  width: 24px;
+  height: 24px;
   flex-shrink: 0;
   accent-color: var(--accent);
 }
@@ -2254,7 +2281,13 @@ em {
   height: 43px;
   border-radius: 14px;
   font-size: 1.5rem;
-  color: #15345b;
+  color: var(--deep);
+}
+/* The mint chip follows the theme: pale in the light one, deep in the dark
+   one, so its glyph has to follow the chip rather than stay a fixed navy. */
+html[data-theme="dark"] .need-icon.water,
+html[data-theme="dark"] .need-icon.green {
+  color: var(--on-deep);
 }
 .water {
   background: var(--mint);
@@ -2446,7 +2479,7 @@ em {
   color: currentColor;
 }
 .tabs button small {
-  font-size: 0.64rem;
+  font-size: 0.75rem;
   font-weight: 500;
   color: currentColor;
   opacity: 0.8;
@@ -2474,7 +2507,7 @@ em {
 }
 .metric small {
   display: block;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   color: var(--muted);
 }
 .metric strong {
@@ -2572,7 +2605,7 @@ em {
 }
 .patient-entry small {
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   margin-top: 4px;
 }
 .divider {
@@ -2841,7 +2874,7 @@ audio {
     font-size: 2.8rem;
   }
   .welcome .eyebrow {
-    font-size: 0.61rem;
+    font-size: 0.75rem;
   }
   .lead {
     font-size: 0.98rem;
@@ -2869,7 +2902,7 @@ audio {
     height: 274px;
   }
   .floating-label {
-    font-size: 0.65rem;
+    font-size: 0.75rem;
     padding: 10px 12px;
   }
   .label-one {
@@ -2884,12 +2917,12 @@ audio {
     order: 2;
     flex-wrap: wrap;
     gap: 20px;
-    font-size: 0.52rem;
+    font-size: 0.75rem;
     margin-top: 12px;
   }
   .welcome-note {
     margin-top: 18px;
-    font-size: 0.69rem;
+    font-size: 0.75rem;
   }
   .welcome .actions {
     margin: 22px 0 2px;
@@ -2944,13 +2977,13 @@ audio {
     font-size: 1.16rem;
   }
   .need > span:last-child {
-    font-size: 0.73rem;
+    font-size: 0.75rem;
   }
   .section-heading {
     gap: 8px;
   }
   .section-heading > .small {
-    font-size: 0.65rem;
+    font-size: 0.75rem;
   }
   .bottom-nav {
     bottom: max(12px, env(safe-area-inset-bottom));
@@ -2961,7 +2994,7 @@ audio {
     min-width: 0;
     flex: 1;
     gap: 7px;
-    font-size: 0.72rem;
+    font-size: 0.75rem;
   }
   .card {
     padding: 21px;
@@ -2982,7 +3015,7 @@ audio {
     gap: 6px;
   }
   .tabs button {
-    font-size: 0.71rem;
+    font-size: 0.75rem;
     padding: 10px 12px;
   }
   .assessment-grid {
@@ -3036,7 +3069,7 @@ audio {
     padding: 25px;
   }
   .eyebrow {
-    font-size: 0.64rem;
+    font-size: 0.75rem;
   }
   .need-icon {
     width: 38px;
@@ -3085,7 +3118,7 @@ main:focus {
     font-size: 1.7rem;
   }
   #patient .page-heading .pill {
-    font-size: 0.64rem;
+    font-size: 0.75rem;
     padding: 6px 9px;
   }
   #patient .companion-card {
@@ -3120,7 +3153,7 @@ main:focus {
     margin-bottom: 5px;
   }
   #patient .companion-message p {
-    font-size: 0.74rem;
+    font-size: 0.75rem;
     line-height: 1.5;
     margin: 7px 0 0;
   }
@@ -3129,7 +3162,7 @@ main:focus {
     grid-column: 1/-1;
   }
   #patient .companion-card > .small {
-    font-size: 0.66rem;
+    font-size: 0.75rem;
     margin: 4px 0;
   }
   #patient .need {
@@ -3343,7 +3376,7 @@ body.app-active h3 {
 }
 body.app-active .eyebrow {
   margin-bottom: var(--space-1);
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.09em;
   line-height: 1.35;
@@ -3597,7 +3630,7 @@ body.app-active .chat-panel {
 }
 @media (max-width: 390px) {
   body.app-active .bottom-nav button {
-    font-size: 0.72rem;
+    font-size: 0.75rem;
   }
   body.app-active .tabs button {
     flex: 1 1 calc(50% - var(--space-1));

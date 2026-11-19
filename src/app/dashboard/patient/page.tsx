@@ -86,7 +86,7 @@ export default function PatientHome() {
           <h2 id="areas-title" className="text-base font-semibold text-ink">
             {home.recent.length ? "Your areas" : "What Asha can help with"}
           </h2>
-          <button type="button" onClick={() => setCustomising((v) => !v)} aria-expanded={customising} className="text-sm font-medium text-brand hover:underline">
+          <button type="button" onClick={() => setCustomising((v) => !v)} aria-expanded={customising} className="min-h-6 text-sm font-medium text-brand hover:underline">
             {customising ? "Done" : "Personalise"}
           </button>
         </div>
@@ -106,7 +106,7 @@ export default function PatientHome() {
               ))}
             </ul>
             {(home.recent.length > 0 || home.hidden.length > 0) && (
-              <button type="button" onClick={() => homeStore.reset()} className="mt-3 text-sm font-medium text-muted hover:text-ink">
+              <button type="button" onClick={() => homeStore.reset()} className="mt-3 min-h-6 text-sm font-medium text-muted hover:text-ink">
                 Reset order and choices
               </button>
             )}

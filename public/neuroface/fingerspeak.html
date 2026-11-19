@@ -11,13 +11,15 @@
     --text:#EAF2F3; --text-dim:#8CA0A8;
     --mono:'IBM Plex Mono', monospace; --display:'Space Grotesk', sans-serif; --body:'Inter', sans-serif;
   }
-  :root[data-theme="light"] { color-scheme:light; --bg:#f8fafc; --surface:#fff; --surface-2:#eff6ff; --line:#dbe5f0; --teal:#2563eb; --teal-dim:#dbeafe; --amber:#945416; --red:#a63c32; --violet:#6b5693; --text:#172b4d; --text-dim:#64748b; }
+  :root[data-theme="light"] { color-scheme:light; --bg:#f8fafc; --surface:#fff; --surface-2:#eff6ff; --line:#dbe5f0; --teal:#2563eb; --teal-dim:#dbeafe; --amber:#945416; --red:#a63c32; --violet:#6b5693; --text:#172b4d; --text-dim:#57687d; }
   :root[data-theme="light"] .btn.primary { color:#fff; }
   :root[data-theme="light"] .overlay-msg { background:rgba(245,244,239,.95); }
   :root[data-theme="light"] .video-wrap { background:#dce1d9; }
   body { min-height:0 !important; }
   @media(max-width:600px) { header { padding:14px !important; flex-wrap:wrap; gap:12px; } .panel { padding:16px 12px !important; min-width:0; } main { min-width:0; } .tabs { flex-wrap:wrap; } .tab { padding:12px 10px !important; } .btn { min-height:44px; } .gesture-row { flex-wrap:wrap; } .overlay-msg { padding:14px !important; } }
   *{box-sizing:border-box;}
+  /* The keyboard must be able to see where it is. */
+  :focus-visible{ outline:2px solid var(--teal); outline-offset:2px; }
   body{ margin:0; background:var(--bg); color:var(--text); font-family:var(--body); min-height:100vh; }
   header{ display:flex; align-items:center; justify-content:space-between; padding:20px 28px; border-bottom:1px solid var(--line); }
   .brand{display:flex; align-items:center; gap:12px;}
@@ -25,7 +27,7 @@
     display:flex;align-items:center;justify-content:center; font-family:var(--display); font-weight:700; color:#08201D; font-size:15px; }
   h1{font-family:var(--display); font-size:19px; margin:0; font-weight:600; letter-spacing:0.2px;}
   .subtitle{font-size:12px; color:var(--text-dim); margin-top:2px;}
-  .status-pill{ font-family:var(--mono); font-size:11px; padding:6px 12px; border-radius:20px;
+  .status-pill{ font-family:var(--mono); font-size:12px; padding:6px 12px; border-radius:20px;
     border:1px solid var(--line); color:var(--text-dim); display:flex; align-items:center; gap:7px; }
   .dot{width:7px;height:7px;border-radius:50%; background:var(--text-dim);}
   .dot.live{background:var(--teal); box-shadow:0 0 8px var(--teal);}
@@ -51,6 +53,10 @@
   .btn.primary{background:var(--teal); color:#08201D; border-color:var(--teal);}
   .btn.primary:hover{background:#63DAD0;}
   .btn.warm{background:var(--amber); color:#2B1904; border-color:var(--amber);}
+  /* The light theme's amber is a dark colour, so the dark label the dark
+     theme needs would sit at 2.85:1 on it. White clears 4.5:1 on the light
+     amber and is what the primary button already does in this theme. */
+  :root[data-theme="light"] .btn.warm{color:#fff;}
   .btn.ghost{background:transparent;}
   .btn[href]{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;}
   .btn:disabled{opacity:.35; cursor:not-allowed;}
@@ -59,7 +65,7 @@
 
   .vitals{ margin-top:16px; border:1px solid var(--line); border-radius:12px; background:var(--surface); padding:14px 16px; }
   .vitals-head{display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;}
-  .vitals-head .label{font-family:var(--mono); font-size:11px; color:var(--text-dim); letter-spacing:0.5px;}
+  .vitals-head .label{font-family:var(--mono); font-size:12px; color:var(--text-dim); letter-spacing:0.5px;}
   .vitals-head .value{font-family:var(--mono); font-size:13px; color:var(--teal);}
   #vitalsCanvas{width:100%; height:56px; display:block;}
   .gesture-readout{ display:flex; justify-content:space-between; align-items:center; margin-top:10px;
@@ -70,7 +76,7 @@
   .auto-hand-head{display:flex;justify-content:space-between;gap:12px;font-size:13px;}
   .auto-hand-head strong{color:var(--teal);}
   .auto-fingers{font:11px var(--mono);color:var(--text-dim);line-height:1.5;}
-  .intent-badge{ font-family:var(--mono); font-size:10px; padding:3px 9px; border-radius:12px; border:1px solid var(--line); }
+  .intent-badge{ font-family:var(--mono); font-size:12px; padding:3px 9px; border-radius:12px; border:1px solid var(--line); }
   .intent-badge.REST{color:var(--text-dim);}
   .intent-badge.UNTRAINED{color:var(--amber);border-color:var(--amber);}
   .intent-badge.CANDIDATE{color:var(--amber); border-color:var(--amber);}
@@ -80,8 +86,10 @@
   section .desc{font-size:12.5px; color:var(--text-dim); margin:0 0 14px 0; line-height:1.5;}
 
   .tabs{display:flex; gap:4px; margin-bottom:18px; border-bottom:1px solid var(--line);}
+  /* A tab is a button, so it is reachable by keyboard and named for a screen
+     reader. The button's own chrome is removed; the tab keeps its underline. */
   .tab{ padding:9px 14px; font-size:12.5px; font-weight:600; color:var(--text-dim);
-    cursor:pointer; border-bottom:2px solid transparent; font-family:var(--body); }
+    cursor:pointer; background:none; border:0; border-bottom:2px solid transparent; font-family:var(--body); }
   .tab.active{color:var(--teal); border-bottom-color:var(--teal);}
   .tabpage{display:none;}
   .tabpage.active{display:block;}
@@ -93,30 +101,30 @@
   .gesture-row .col{display:flex; flex-direction:column; gap:4px;}
   .gesture-row .col.name{flex:1;}
   .gesture-row .col.phrase{flex:1.3;}
-  .gesture-row label{font-size:10px; color:var(--text-dim); font-family:var(--mono); letter-spacing:0.4px;}
-  .sample-count{ font-family:var(--mono); font-size:11px; color:var(--text-dim); min-width:52px; text-align:center; }
+  .gesture-row label{font-size:12px; color:var(--text-dim); font-family:var(--mono); letter-spacing:0.4px;}
+  .sample-count{ font-family:var(--mono); font-size:12px; color:var(--text-dim); min-width:52px; text-align:center; }
   .sample-count.ready{color:var(--teal);}
   .remove-x{ background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:15px;
     padding:2px 6px; min-width:24px; min-height:24px; display:inline-grid; place-items:center; }
   .remove-x:hover{color:var(--red);}
   .remove-x:disabled{opacity:.25; cursor:not-allowed;}
-  .protected-tag{ font-size:9px; font-family:var(--mono); color:var(--teal); border:1px solid var(--teal-dim);
+  .protected-tag{ font-size:12px; font-family:var(--mono); color:var(--teal); border:1px solid var(--teal-dim);
     border-radius:8px; padding:2px 6px; white-space:nowrap; }
   .add-row-btn{width:100%; margin-top:2px;}
 
   .train-block{ margin-top:16px; padding:16px; border:1px solid var(--line); border-radius:10px; background:var(--surface); }
   .train-status{font-family:var(--mono); font-size:12px; color:var(--text-dim); margin-top:10px; white-space:pre-wrap;}
-  .capture-quality{font-family:var(--mono); font-size:11px; margin-top:10px; min-height:14px;}
+  .capture-quality{font-family:var(--mono); font-size:12px; margin-top:10px; min-height:14px;}
   .capture-quality.ok{color:var(--teal);}
   .capture-quality.bad{color:var(--red);}
 
-  .session-note{font-size:11px; color:var(--text-dim); font-family:var(--mono);}
+  .session-note{font-size:12px; color:var(--text-dim); font-family:var(--mono);}
 
   .quality-panel{margin-top:14px; display:none;}
   .quality-panel.show{display:block;}
   .quality-head{display:flex; align-items:baseline; gap:14px; margin-bottom:12px;}
   .quality-acc{font-family:var(--display); font-size:32px; font-weight:700; color:var(--teal);}
-  .quality-acc-label{font-family:var(--mono); font-size:10px; color:var(--text-dim); max-width:160px; line-height:1.4;}
+  .quality-acc-label{font-family:var(--mono); font-size:12px; color:var(--text-dim); max-width:160px; line-height:1.4;}
   .cm-wrap{overflow-x:auto;}
   .cm-grid{border-collapse:collapse; font-family:var(--mono); font-size:10.5px;}
   .cm-grid th, .cm-grid td{padding:6px 8px; text-align:center; border:1px solid var(--line); min-width:34px;}
@@ -134,7 +142,7 @@
   @keyframes slidein{from{opacity:0; transform:translateY(-6px);} to{opacity:1; transform:translateY(0);}}
   .log-empty{color:var(--text-dim); font-size:12.5px; padding:12px 0;}
 
-  .footer-note{ font-size:11px; color:var(--text-dim); line-height:1.6; margin-top:22px; padding-top:16px;
+  .footer-note{ font-size:12px; color:var(--text-dim); line-height:1.6; margin-top:22px; padding-top:16px;
     border-top:1px solid var(--line); }
   .footer-note code{font-family:var(--mono); background:var(--surface-2); padding:1px 5px; border-radius:4px;}
 
@@ -147,6 +155,19 @@
   .wizard-progress .seg.done{background:var(--teal);}
 
   input[type=file]{display:none;}
+  /* A range input is a target, and the default 16px track is below the 24px
+     floor (WCAG 2.5.8). The thumb is what a person actually grabs, so the
+     thumb grows to 24px and the track grows with it. */
+  input[type=range]{ -webkit-appearance:none; appearance:none; width:100%; height:24px;
+    background:transparent; cursor:pointer; margin:0 0 16px; }
+  input[type=range]::-webkit-slider-runnable-track{ height:8px; border-radius:4px; background:var(--line); }
+  input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; appearance:none;
+    width:24px; height:24px; margin-top:-8px; border-radius:50%;
+    background:var(--teal); border:2px solid var(--surface); }
+  input[type=range]::-moz-range-track{ height:8px; border-radius:4px; background:var(--line); }
+  input[type=range]::-moz-range-thumb{ width:24px; height:24px; border-radius:50%;
+    background:var(--teal); border:2px solid var(--surface); }
+  input[type=range]:focus-visible{ outline:2px solid var(--teal); outline-offset:2px; }
 
   .confidence-ring{ position:absolute; top:14px; right:14px; z-index:4; filter:drop-shadow(0 0 6px rgba(0,0,0,0.4)); }
   #ringProgress{ transition: stroke-dashoffset .1s linear, stroke .2s ease; }
@@ -168,7 +189,7 @@
   }
 
   .prob-panel{ margin-top:12px; }
-  .prob-row{ display:flex; align-items:center; gap:9px; margin-bottom:7px; font-family:var(--mono); font-size:11px; }
+  .prob-row{ display:flex; align-items:center; gap:9px; margin-bottom:7px; font-family:var(--mono); font-size:12px; }
   .prob-row .pname{ width:78px; flex-shrink:0; color:var(--text-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .prob-track{ flex:1; height:9px; background:var(--surface-2); border-radius:5px; overflow:hidden; }
   .prob-fill{ height:100%; width:0%; background:linear-gradient(90deg,var(--teal-dim),var(--teal)); transition:width .12s ease, background .2s ease; }
@@ -177,7 +198,7 @@
   .prob-pct{ width:34px; text-align:right; color:var(--text-dim); }
 
   .test-voice-row{ display:flex; align-items:center; gap:10px; margin-top:14px; }
-  .test-voice-note{ font-size:11px; color:var(--text-dim); }
+  .test-voice-note{ font-size:12px; color:var(--text-dim); }
 </style>
 </head>
 <body>
@@ -270,14 +291,14 @@
   </div>
 
   <div class="panel">
-    <div class="tabs">
-      <div class="tab active" data-tab="calibrate">Calibrate</div>
-      <div class="tab" data-tab="speak">Speak mode</div>
-      <div class="tab" data-tab="evaluate">Evaluate</div>
-      <div class="tab" data-tab="log">Log</div>
+    <div class="tabs" role="tablist">
+      <button type="button" class="tab active" role="tab" aria-selected="true" data-tab="calibrate">Calibrate</button>
+      <button type="button" class="tab" role="tab" aria-selected="false" data-tab="speak">Speak mode</button>
+      <button type="button" class="tab" role="tab" aria-selected="false" data-tab="evaluate">Evaluate</button>
+      <button type="button" class="tab" role="tab" aria-selected="false" data-tab="log">Log</button>
     </div>
 
-    <div class="tabpage active" id="tab-calibrate">
+    <div class="tabpage active" role="tabpanel" id="tab-calibrate">
       <h2>Gesture vocabulary</h2>
       <p class="desc">"Rest" is protected — it can't be deleted, because it's what the system uses to
       tell "no intent" apart from a real command. Run guided calibration to walk through each gesture
@@ -323,20 +344,20 @@
       </div>
     </div>
 
-    <div class="tabpage" id="tab-speak">
+    <div class="tabpage" role="tabpanel" id="tab-speak">
       <h2>Speak mode</h2>
       <p class="desc">Once trained, hold or perform a calibrated gesture until the ring around the video
       fills — that's the confirmation dwell time, longer for gestures like "Emergency." After it speaks,
       you must return to Rest before triggering again. A prediction is rejected outright — regardless of
       confidence — if it's too far from every known gesture, which catches confident-but-wrong guesses on
       movements the model was never calibrated on.</p>
-      <label style="font-size:12px; color:var(--text-dim); display:block; margin-bottom:6px;">Active model</label>
+      <label for="modelSelect" style="font-size:12px; color:var(--text-dim); display:block; margin-bottom:6px;">Active model</label>
       <select id="modelSelect" disabled style="width:100%; padding:9px 10px; margin-bottom:14px; background:var(--surface-2); border:1px solid var(--line); color:var(--text); border-radius:8px; font-family:var(--body); font-size:13px;">
         <option value="bigru">Bidirectional GRU (default — usually most accurate)</option>
         <option value="dtw">DTW k-NN (simple time-series baseline)</option>
         <option value="prototype">Nearest-prototype (simplest, most interpretable)</option>
       </select>
-      <label style="font-size:12px; color:var(--text-dim); display:block; margin-bottom:6px;">Confidence threshold: <span id="threshVal">0.75</span></label>
+      <label for="threshSlider" style="font-size:12px; color:var(--text-dim); display:block; margin-bottom:6px;">Confidence threshold: <span id="threshVal">0.75</span></label>
       <input type="range" id="threshSlider" min="0.5" max="0.98" step="0.01" value="0.75" style="width:100%; margin-bottom:16px;">
       <button class="btn warm" id="liveToggle" disabled>Enable speak mode</button>
       <div class="test-voice-row">
@@ -358,7 +379,7 @@
       </div>
     </div>
 
-    <div class="tabpage" id="tab-evaluate">
+    <div class="tabpage" role="tabpanel" id="tab-evaluate">
       <h2>Model evaluation</h2>
       <p class="desc">Validation samples are excluded from weight updates but also guide early stopping and model comparison, so these percentages can be optimistic. A separate calibration session is more informative than a random slice of the same sitting; neither proves real-world or clinical accuracy.</p>
       <div class="quality-panel" id="qualityPanel">
@@ -384,7 +405,7 @@
     </div>
 
 
-    <div class="tabpage" id="tab-log">
+    <div class="tabpage" role="tabpanel" id="tab-log">
       <h2>Spoken log</h2>
       <p class="desc">Everything the system has spoken this session.</p>
       <div class="log" id="logList"><div class="log-empty">Nothing spoken yet.</div></div>
@@ -406,6 +427,15 @@ document.getElementById('backToFace').onclick = () => {
 };
 if (!EMBEDDED) location.replace("/dashboard/patient/fingerspeak");
 window.ashaSetTheme = (theme) => { document.documentElement.dataset.theme = theme === 'dark' ? 'dark' : 'light'; };
+// When the studio is opened on its own, or before its host has spoken to it,
+// it reads the theme the person has already chosen for the app rather than
+// sitting in a light theme that nobody asked for.
+(() => {
+  try {
+    const stored = localStorage.getItem('asha_theme');
+    if (stored === 'dark' || stored === 'light') window.ashaSetTheme(stored);
+  } catch (e) {}
+})();
 
 // ================= config =================
 const SEQ_LEN = 20;
@@ -1625,9 +1655,10 @@ function drawVitals(){
 // ================= misc ui wiring =================
 document.querySelectorAll('.tab').forEach(tab => {
   tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t=>{t.classList.remove('active'); t.setAttribute('aria-selected','false');});
     document.querySelectorAll('.tabpage').forEach(p=>p.classList.remove('active'));
     tab.classList.add('active');
+    tab.setAttribute('aria-selected','true');
     document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
   });
 });
@@ -1665,7 +1696,6 @@ renderGestureList();
 if (EMBEDDED) {
   document.getElementById('startBtn').textContent = 'Start shared camera';
   document.getElementById('liveToggle').addEventListener('click', () => tellParent({ type: 'asha-hand-live', enabled: liveMode }));
-  document.querySelectorAll('.tab').forEach((tab) => { tab.setAttribute('role', 'button'); tab.tabIndex = 0; tab.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tab.click(); } }); });
   const resize = () => tellParent({ type: 'asha-hand-height', height: Math.ceil(document.body.getBoundingClientRect().height) + 24 });
   new ResizeObserver(resize).observe(document.body);
   tellParent({ type: 'asha-hand-ready' }); resize();

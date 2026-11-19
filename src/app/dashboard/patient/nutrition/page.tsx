@@ -28,6 +28,7 @@ import { api } from "@/lib/api";
 import { engineModule } from "@/lib/engine/load";
 import type { CameraSupportModule } from "@/lib/engine/types";
 import { cn } from "@/lib/cn";
+import { useDocumentLanguage } from "@/lib/document-lang";
 import { requestId } from "@/lib/uuid";
 
 type Screen = string;
@@ -66,6 +67,9 @@ function canvasToUrl(canvas: HTMLCanvasElement) {
 
 export default function NutritionPage() {
   const lang = useNutrition((s) => s.language);
+  // The Nutrition screen speaks one language at a time: the document says so
+  // while this screen is open, and English again once it is left.
+  useDocumentLanguage(lang);
   const autoFreeze = useNutrition((s) => s.autoFreeze);
   const log = useNutrition((s) => s.log);
   const perception = usePerception();
@@ -752,7 +756,7 @@ export default function NutritionPage() {
             <button type="button" onClick={() => void startLive()} className="flex min-h-36 flex-col items-start gap-3 rounded-2xl bg-brand p-5 text-left text-on-brand shadow-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-brand/40" data-testid="nutrition-scan">
               <CameraIcon size={28} />
               <span className="text-xl font-semibold">{tx(lang, "Scan food live", "লাইভ স্ক্যান")}</span>
-              <span className="text-white/85">{tx(lang, "Point your camera at the plate. ASHA takes the photo when it's steady.", "প্লেটের দিকে ক্যামেরা ধরুন। স্থির হলে আশা ছবি তোলে।")}</span>
+              <span className="text-on-brand/85">{tx(lang, "Point your camera at the plate. ASHA takes the photo when it's steady.", "প্লেটের দিকে ক্যামেরা ধরুন। স্থির হলে আশা ছবি তোলে।")}</span>
             </button>
             <button type="button" onClick={startUpload} className="flex min-h-36 flex-col items-start gap-3 rounded-2xl bg-surface p-5 text-left ring-1 ring-line shadow-sm hover:bg-wash focus:outline-none focus-visible:ring-4 focus-visible:ring-brand/40" data-testid="nutrition-upload">
               <NutritionIcon size={28} className="text-brand" />
@@ -863,7 +867,7 @@ export default function NutritionPage() {
                 </Button>
                 <label className="flex items-center gap-2 text-sm text-ink">
                   {tx(lang, "Crop to the centre", "মাঝখানে কাটুন")}
-                  <input type="range" min={1} max={3} step={0.25} value={zoom} onChange={(e) => setZoom(Number(e.target.value))} aria-valuetext={`${zoom}×`} className="w-32" />
+                  <input type="range" min={1} max={3} step={0.25} value={zoom} onChange={(e) => setZoom(Number(e.target.value))} aria-valuetext={`${zoom}×`} className="h-6 w-32" />
                 </label>
               </div>
               <p className="text-sm text-muted">{tx(lang, "Photo details such as location and time were removed. This copy stays on this device.", "অবস্থান ও সময়ের মতো ছবির তথ্য সরানো হয়েছে। এই কপি এই ডিভাইসেই থাকে।")}</p>

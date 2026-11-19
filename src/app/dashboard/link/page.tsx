@@ -25,7 +25,7 @@ export default function LinkPage() {
       <section className="w-full max-w-xl rounded-3xl border border-line bg-surface p-6 shadow-card sm:p-8">
         <Link
           href="/"
-          className="text-sm font-medium text-brand hover:underline"
+          className="inline-block py-0.5 text-sm font-medium text-brand hover:underline"
         >
           ← About Asha
         </Link>
@@ -46,7 +46,7 @@ export default function LinkPage() {
           Need to set up a care circle?{" "}
           <a
             href="/assistive.html?role=caregiver"
-            className="font-medium text-brand hover:underline"
+            className="inline-block py-1 font-medium text-brand hover:underline"
           >
             Open caregiver setup
           </a>
@@ -56,7 +56,7 @@ export default function LinkPage() {
           aria-label="Other workspaces"
           className="mt-5 flex flex-wrap gap-x-5 gap-y-2 border-t border-line pt-5 text-sm font-medium text-brand"
         >
-          <Link href="/dashboard/patient" className="rounded-sm hover:underline">
+          <Link href="/dashboard/patient" className="inline-block py-0.5 rounded-sm hover:underline">
             Try Asha without a link
           </Link>
         </nav>

@@ -47,7 +47,7 @@ export default function PatientSettings() {
           </label>
           <label className="mt-4 block text-sm font-medium text-ink">
             Speaking speed <span className="font-normal text-muted">{settings.rate.toFixed(2)}×</span>
-            <input type="range" min={0.65} max={1.3} step={0.05} value={settings.rate} onChange={(e) => set({ rate: Number(e.target.value) })} className="mt-2 w-full accent-brand" />
+            <input type="range" min={0.65} max={1.3} step={0.05} value={settings.rate} onChange={(e) => set({ rate: Number(e.target.value) })} className="mt-2 h-6 w-full accent-brand" />
           </label>
           <Button variant="secondary" size="sm" className="mt-3" onClick={() => speak("Hello, I’m Asha. I’m here with you.")}>
             Test voice

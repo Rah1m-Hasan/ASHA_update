@@ -925,7 +925,8 @@ export default function LiveSession() {
         </div>
       </div>
 
-      <div className="sticky bottom-0 z-20 -mx-4 mt-6 border-t border-line bg-surface/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8" data-testid="move-toolbar">
+      {/* Opaque, so the exercise behind it is never half-visible through it. */}
+      <div className="sticky bottom-0 z-20 -mx-4 mt-6 border-t border-line bg-surface px-4 py-3 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8" data-testid="move-toolbar">
         <div className="flex flex-wrap items-center justify-center gap-2">
           {paused ? (
             <Button onClick={() => act((cur) => cur.resume(performance.now()))}>{tx(lang, "Resume", "আবার শুরু")}</Button>

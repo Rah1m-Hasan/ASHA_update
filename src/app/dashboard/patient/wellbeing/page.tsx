@@ -28,11 +28,11 @@ export default function WellbeingPage() {
       </ul>
       <p className="mt-6 text-sm text-muted">
         Looking for exercise or meals?{" "}
-        <Link href="/dashboard/patient/move" className="font-medium text-brand hover:underline">
+        <Link href="/dashboard/patient/move" className="inline-block py-1 font-medium text-brand hover:underline">
           Exercise
         </Link>{" "}
         and{" "}
-        <Link href="/dashboard/patient/nutrition" className="font-medium text-brand hover:underline">
+        <Link href="/dashboard/patient/nutrition" className="inline-block py-1 font-medium text-brand hover:underline">
           Nutrition
         </Link>{" "}
         have their own places.
