@@ -10,6 +10,12 @@ const securityHeaders = [
 
 const nextConfig = {
   reactStrictMode: true,
+  // Development only: hosts of a tunnel to this dev server (see
+  // docs/DEPLOYMENT_NOTES.md, "Sharing a local build through a tunnel").
+  allowedDevOrigins: (process.env.ASHA_DEV_ORIGINS || "")
+    .split(",")
+    .map((host) => host.trim())
+    .filter(Boolean),
   async headers() {
     return [
       { source: "/(.*)", headers: securityHeaders },

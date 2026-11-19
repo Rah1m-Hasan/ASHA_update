@@ -51,3 +51,18 @@ These are additive. Each one is off or falls back safely when its settings are m
 | `ASHA_WORKFLOW_WEBHOOK_URL` + `ASHA_WORKFLOW_SECRET` (32+ characters)                   | Confirmed requests notify the n8n caregiver escalation workflow ([WORKFLOWS.md](WORKFLOWS.md))             | No workflow calls; `/api/workflow` rejects every callback        |
 
 The hybrid retrieval release added three `asha_knowledge_*` tables, the `vector` and `pg_net` extensions, one Vault secret (`asha_index_token`) and the `asha-knowledge` edge function to the Supabase project (migration `supabase/migrations/20261118120000_asha_knowledge_rag.sql`). Two later migrations only add to ASHA's own objects: `asha_hybrid_graph_search` (search and graph expansion in one call) and the chunk `context` and `fts_context` columns for contextual retrieval. Existing tables were not changed. The edge function holds only the public app guides.
+
+## Sharing a local build through a tunnel
+
+To try the offline mode (Ollama on the same computer) from a phone, run the development server in memory-only mode and put a [Cloudflare quick tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/do-more-with-tunnels/trycloudflare/) in front of it. The quick tunnel needs no account and prints a random `*.trycloudflare.com` address. Anyone with that address can use the server while it runs, so keep it short and stop both processes afterwards. No real patient data belongs on it: the memory store is empty at start and cleared on exit.
+
+```powershell
+cloudflared tunnel --url http://127.0.0.1:4190      # prints https://<random>.trycloudflare.com
+$env:LOCAL_DEV = "1"
+$env:ASHA_MEMORY_STORE = "1"
+$env:ASHA_LLM_PROVIDER = "ollama"
+$env:ASHA_DEV_ORIGINS = "<random>.trycloudflare.com"   # the printed host, without https://
+npm run dev -- --hostname 127.0.0.1 --port 4190
+```
+
+`ASHA_DEV_ORIGINS` lets that host call ASHA's API and load Next's development resources. It is honoured only with `LOCAL_DEV=1` outside production, and Ollama itself stays bound to `127.0.0.1`.
