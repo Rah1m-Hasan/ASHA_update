@@ -19,8 +19,43 @@ The static Everyday release `6f11e60` is approved, deployed and production-verif
 | Existing communication | FaceSpeak/FingerSpeak/VitalSense/SenseAssist/posture/care-circle retained at `/assistive.html`; production patient request, caregiver acknowledgement and patient receipt verified | Next compatibility verification and physical-device clinical validation remain separate |
 | Next.js integration    | App Router/React layout, shared assets in `public`, Node API wrappers with relocated server modules, urgent preflight and retention preserved, Clinic's larger selected-record request bound retained; production build passed | Local merge only; final compatibility/browser/offline verification pending |
 
+**The sweep and the gate are two different things, and this document says which is which.**
+
+`scripts/visual-audit.mjs` is the **sweep**: it measures every screen in the route manifest at
+twenty viewport sizes — six desktop, six mobile, five tablet and three browser-zoom levels — in
+each of the light, dark and Bangla variants, and writes a screenshot of every render. It reads the
+rendered DOM for sideways scrolling, clipped text, collisions, contrast, target size and accessible
+names. Its output is a report, not a verdict: it records what it found so that the defects can be
+listed and repaired.
+
+`tests/responsive-browser.mjs` is the **gate**: it runs the same probes over **sixteen screens —
+one per layout family** — at **six viewport sizes** (320×640, 390×844, 768×1024, 1024×768,
+1440×900, 1920×1080), in the light and dark themes and, on the screens that have a Bangla path,
+in Bangla too. It fails if a screen scrolls sideways, clips its text, names no control, drops below
+24×24 on a target, collides with itself, has a broken heading order or fails a contrast pair. It
+does **not** sweep all the screens at all the sizes; the sweep does that, and the gate is the
+subset that has to stay clean.
+
+Until the final stabilisation pass the gate had never actually run: it read its variant list
+before declaring it and died with a `ReferenceError` before Chromium launched, so the documents
+that described it as "the gate that keeps the defects out" described a gate that gated nothing.
+It runs now, and its output names the screens, the sizes and the themes it covered.
+
+The gate also **fails on a page that throws**. It reads the page's errors after the context is
+closed rather than before, because a page that throws while it is being torn down throws after
+the navigation is over — the legacy assistive app resets its rest tracker on `visibilitychange`,
+and the gate used to copy the error list too early to see it. That was checked by putting a
+broken stub back and running the gate against it: the gate fails, at every viewport, with the
+error named. A gate that cannot fail is not a gate.
+
+The audit, the defects it found and the repairs are recorded in
+`docs/VISUAL_AUDIT_REPORT.md`. The sweep measures layout, not behaviour: it says nothing about the
+clinical accuracy of any module, and it is not an accessibility audit against a rules engine —
+there is no axe-core here, and the probe checks names, roles, heading levels, target size and
+contrast, not the whole accessibility tree.
+
 The preceding release passed its automated, browser and offline checks; real CPU model smoke measurements and asset sizes are recorded. Production verification additionally covered Supabase Clinic sharing/plan/revocation, local urgent Asha/Care responses without account credentials, real MAIRA Care generation, and the patient/caregiver acknowledgement loop; anonymous fixtures were deleted. One observed MAIRA Care response used `gemini-flash-latest` and took 12.566 seconds; this is one smoke observation, not a latency benchmark.
 
-Migration verification started from a 233-test pre-migration baseline and added the backend route integration regressions, a production storage-mode regression, and the accuracy regression suite. The suite now holds 650 passing tests and no failures (497 at the previous release) (401 at that release; the 2026-11 repository audit added the rest - see `docs/FULL_AUDIT_REPORT.md` and `docs/TEST_RESULTS.md`); `docs/ACCURACY_REPORT.md` records the measured accuracy of each module against the deterministic synthetic fixtures and states what those measurements do not prove. The full Next production build passed after an initial sandbox filesystem `EPERM` required a build rerun outside that restriction. Next.js, React and their build dependencies were added; no learned weights were added. See `VALIDATION_PLAN.md`, module-specific validation/source docs and `MODEL_BENCHMARKS.md`.
+Migration verification started from a 233-test pre-migration baseline and added the backend route integration regressions, a production storage-mode regression, and the accuracy regression suite. The suite now holds 668 passing tests and no failures (497 at the previous release) (401 at that release; the 2026-11 repository audit added the rest - see `docs/FULL_AUDIT_REPORT.md` and `docs/TEST_RESULTS.md`); `docs/ACCURACY_REPORT.md` records the measured accuracy of each module against the deterministic synthetic fixtures and states what those measurements do not prove. The full Next production build passed after an initial sandbox filesystem `EPERM` required a build rerun outside that restriction. Next.js, React and their build dependencies were added; no learned weights were added. See `VALIDATION_PLAN.md`, module-specific validation/source docs and `MODEL_BENCHMARKS.md`.
 
 External blockers are deliberate, visible release gates rather than fabricated predictions: a labelled Bangladeshi food photograph dataset (the segmenter exists and is evaluated in-domain; the *dataset* does not exist), a weighed-and-photographed plate dataset for any portion accuracy figure, a Bangladesh food composition table; independent motion/gaze/reference user studies; low-end mobile measurements; clinician-authored symptom scenarios and clinical approval; production role identity/staffed-workflow decisions; provider privacy/security/regulatory assessment; release signing trust root. The code supplies usable manual/touch/local paths while those remain unresolved.

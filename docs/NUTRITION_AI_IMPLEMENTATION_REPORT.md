@@ -247,14 +247,18 @@ nutrient = divRound(base × food_mg, 100000)
 ## 13. Tests executed and their results
 
 ```
-npm test                      650 tests, 0 failures   (baseline before this work: 497)
+npm test                      668 tests, 0 failures   (baseline before this work: 497)
 npx tsc --noEmit              clean
 npm run build                 passed (production build)
 npm run models:check          17/17 pinned inference assets match their hash
 npm run tokens:check          tokens up to date; every colour pair clears its contrast ratio
-node scripts/secret-scan.mjs  813 files checked, 0 findings
+node scripts/secret-scan.mjs  830 files checked, 0 findings
 npm run test:browser:nutrition 4 runs passed   (dashboard Nutrition, against the production build on :4180)
 ```
+
+The unit-test count above is the count at the time of this verification run. The
+suite has grown since — it holds 668 tests now, with the same zero failures. The
+current figure and the current run are in [`TEST_RESULTS.md`](TEST_RESULTS.md).
 
 **One browser test does not pass here, and it is not a Nutrition test.**
 `npm run test:everyday` fails at its Clinic step, waiting for the "Invite a person" heading.

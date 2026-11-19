@@ -161,6 +161,109 @@ two separate rows, which is the case the change was made for.
 
 ---
 
+## 3.2 Security items that are design decisions, not bugs
+
+The authorisation model was reviewed and found sound: capability tokens are stored only as
+SHA-256 hashes, compared in constant time, each action is gated by the role that action belongs
+to, the fall-through is deny-by-default, nutrition is recomputed on the server from the shared
+catalogue, credentials travel in the URL fragment and are scrubbed from the history, and the
+provider's error messages are sanitised before they reach a client. Six items are **not** bugs in
+that model but are worth stating plainly, because each is a place where the boundary between
+"demonstration" and "production" would have to be drawn.
+
+### W1 — The `confirmed` flag is supplied by the client
+
+**Where:** the request and meal handlers — the client sends `confirmed: true` and the server
+believes it.
+
+**What this means.** The confirmation gate proves that *a* client confirmed. It does not prove
+that a *human* confirmed, because the browser is the only witness and the browser is under the
+person's own control. A person who cannot press the button does not get a request sent — which
+is the point — but a modified client can press it for them.
+
+**What it would take.** A second factor the browser cannot assert on its own: a caregiver-held
+key, a server-side nonce issued to a device the caregiver also controls, or a deliberate
+physical gesture the server observes. All three need a design decision about who holds what.
+
+**Boundary.** This is a demonstration of the confirmation *pattern*, not a proof of a person's
+intent. Nothing in the app claims otherwise.
+
+### W3 — The per-address budget is keyed by a client-supplied address when there is no trusted proxy
+
+**Where:** `clientIp(req)` in `src/server/lib/common.js`, used by the session, meal and clinic
+budgets.
+
+**What this means.** On a host that does not overwrite the forwarded headers — a home router, a
+clinic's own server, a machine with no proxy in front of it — the address the budget is keyed on
+can be chosen by the client. The budget is then a speed bump rather than a limit. On Vercel, which
+overwrites `x-forwarded-for` and does not forward external addresses, the budget is a real limit.
+
+**What it would take.** Trusting the forwarded header only when the host is known to set it, and
+otherwise keying on something the client cannot choose — which is a hosting decision, not a code
+change.
+
+**Boundary.** The budgets protect against a busy household exhausting a shared allowance by
+accident. They are not an authentication mechanism and are not relied on as one.
+
+### W4 — The blob store degrades silently
+
+**Where:** the storage selection in `src/server/lib/common.js`.
+
+**What this means.** When the preferred private store is unavailable, the app can fall back to the
+blob store. The fallback works, and it works without saying so. A person may believe their data
+is in the private table while it is in a bucket instead.
+
+**What it would take.** Making the fallback loud: report the storage mode in the response and in
+the health endpoint, and fail closed where the storage mode matters.
+
+**Boundary.** `/api/health` does report the storage provider in use, so an operator can see it.
+A person in the app cannot.
+
+### W9 — The health endpoint discloses the storage provider
+
+**Where:** `/api/health`.
+
+**What this means.** The endpoint names which backend is in use. That is useful to an operator and
+is a small amount of information to an anonymous caller.
+
+**What it would take.** Restricting the endpoint to an operator token, or returning the provider
+only when an authorised request asks for it.
+
+**Boundary.** It discloses which of three backends is configured. It discloses no key, no address
+and no data.
+
+### W10 — A clinic workspace can be created anonymously
+
+**Where:** `src/server/handlers/clinic.js`, the `create` action.
+
+**What this means.** Anyone who can reach the endpoint can create a clinic workspace, up to the
+per-address daily budget. The workspace's admin secret is returned once, to its creator, and is
+hashed at rest like every other credential — but the creator is whoever asked first.
+
+**What it would take.** Requiring an invitation or an operator-issued token before a workspace can
+be created. The Everyday companion already links people in by invitation, so the pattern exists
+elsewhere in the app.
+
+**Boundary.** A clinic workspace holds shared records, and the records in it are shared
+deliberately. The gap is in who may create one.
+
+### W11 — The patient capability token is kept in `localStorage`
+
+**Where:** the session store in `src/features/session`.
+
+**What this means.** `localStorage` is readable by any script on the origin. The token is not
+readable by another origin, and the app sets no `Referrer-Policy` leak — but a script injection
+on the origin would reach it. An `httpOnly` cookie would not.
+
+**What it would take.** Moving the token to an `httpOnly`, `SameSite=Strict` cookie, which means
+the caregiver's bearer-token flow changes too, since the two roles are deliberately separate
+credentials.
+
+**Boundary.** The credential is a capability, not an identity: it grants what its holder already
+has. It is not a session that a stolen cookie silently extends.
+
+---
+
 ## 4. Other known limitations (unchanged by this audit)
 
 These were already recorded in the repository and remain true.
@@ -189,7 +292,7 @@ These were already recorded in the repository and remain true.
 * The repository has **no ESLint configuration and no lint script**. Adding one
   was out of scope (it would introduce a dependency). `npx tsc --noEmit` is the
   static check and is clean.
-* `npm run test:browser:all` runs 27 browser suites and takes roughly 20 minutes;
+* `npm run test:browser:all` runs 26 browser suites and takes roughly 20 minutes;
   the EyeSpeak suite alone takes about 4. It is meant for a full pass, not for
   every edit.
 * `public/models/manifest.json` recorded the ONNX Runtime module at
@@ -200,3 +303,23 @@ These were already recorded in the repository and remain true.
   same palette from `public/app/asha-tokens.css`, which `npm run tokens` writes,
   so the legacy surfaces follow the theme — but they are not part of the Tailwind
   utility system.
+* **The browser suites need a storage backend.** They create real care circles,
+  and with neither Supabase, the blob token, nor the memory store configured,
+  `POST /api/session` answers `503` and every suite that opens a care circle
+  fails at setup. A local run needs
+  `ASHA_MEMORY_STORE=1 ASHA_MEMORY_STORE_PRODUCTION=1` — the second flag because
+  `next start` runs with `NODE_ENV=production`, where the in-memory store is
+  refused by default. It is refused for a reason, and it is switched on
+  deliberately, and only for a local run.
+* **Next.js 16.4.3 has a published security advisory.** The build stops to
+  print it; the retry completes and the build is sound, but the framework
+  should be upgraded. It was not upgraded in this pass: the question was put
+  to the operator and answered explicitly — *not now* — so this is an open
+  item rather than a closed one.
+  `docs/VISUAL_AUDIT_REPORT.md` §11 gives the exact command.
+* **The visual harness's stub for the perception module is thinner than the
+  real module in one respect that this pass found and fixed**: it left three
+  objects `null`, which made every assistive screen throw a `TypeError` that
+  was not an app defect. It is now as thick as the module it replaces, and
+  `tests/stabilisation-regressions.test.mjs` holds that shut. The stub is
+  still a stub: the sweep exercises no camera, model or inference timing.

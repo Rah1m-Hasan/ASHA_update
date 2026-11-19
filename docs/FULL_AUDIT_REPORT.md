@@ -238,7 +238,7 @@ SHA-256 hashes; the role is derived server-side and the two roles never act for 
 other; private links carry the token in the URL **fragment**, never the query string;
 the clinic admin secret is required for every clinic write; the caregiver link
 carries its own token; no secret is in client code, `NEXT_PUBLIC_*`, HTML or a log;
-`node scripts/secret-scan.mjs` finds nothing in 545 tracked files; the daily setup
+`node scripts/secret-scan.mjs` finds nothing in 830 tracked files; the daily setup
 budget is keyed by a hash of the address, so no address is stored.
 
 **Not verified here:** the live deployment was not contacted (the user asked for
@@ -274,13 +274,13 @@ invariants themselves were not changed by this repair.
 The commands, their real output and the counts are in
 [`TEST_RESULTS.md`](TEST_RESULTS.md). In summary:
 
-* `npm test` — **497 pass, 0 fail** (424 at the start of the audit).
+* `npm test` — **668 pass, 0 fail** (424 at the start of the audit).
 * `npm run build` — a clean production build.
 * `npm run okf` — the knowledge bundle regenerated from the markdown.
 * `npm run tokens:check` — the generated palette is current and every colour pair
   clears its contrast ratio.
-* `node scripts/secret-scan.mjs` — 545 files, no findings.
-* `npm run models:check` — 14/14 inference assets match their pinned hash.
+* `node scripts/secret-scan.mjs` — 828 files, no findings.
+* `npm run models:check` — 17/17 inference assets match their pinned hash.
 * `npm run benchmark:accuracy` — unchanged from the recorded baseline; no threshold
   was tuned.
 * `npm run test:browser` and `npm run test:everyday` — pass against a production
@@ -293,6 +293,79 @@ The commands, their real output and the counts are in
 (not contacted, by instruction), real camera hardware, real portrait/hand datasets
 (`artifacts/portrait-test.jpg` is not on this machine), and physical low-end
 devices.
+
+---
+
+## 6.1 What the final stabilisation pass added
+
+This report covers the audit of 2026-11-14. A later pass on the same branch
+(2026-11-18) repaired the evidence chain rather than the app's behaviour, and
+added a small number of server fixes. It is recorded here so the two are not
+confused:
+
+* **The responsive gate had never run.** `tests/responsive-browser.mjs` read its
+  variant list before declaring it and died with a `ReferenceError` before
+  Chromium launched, so the documents that called it "the gate" described a
+  gate that gated nothing. It runs now, and it names the screens, sizes and
+  themes it covered in its PASS line.
+* **The visual sweep lost its report to a crash.** It wrote its report once, at
+  the end, so every crash lost the whole measurement. It writes after every
+  route now, and relaunches the browser when it dies.
+* **The baseline was not a baseline.** The two ledgers were byte-identical
+  copies. The baseline is now re-measured, with the same probes and the same
+  manifest as the current build, into its own directory.
+* **The Bangla sweep included ten English screens.** The legacy assistive app
+  has no Bangla interface — its language controls change the language Asha
+  replies in and the language the microphone listens in. Those screens are no
+  longer counted as Bangla coverage.
+* **Server fixes:** the care-circle and meal budgets no longer share a key
+  prefix; the provider's timeout fits inside the request adapter's and the
+  upstream call is now cancelled when the request is given up on; a duplicate
+  food in one meal is a 400 rather than a 500; and the body-size limit is
+  declared once, per route, instead of being contradicted by a second hard-coded
+  number.
+
+The measurements that pass produced, against the same probes and the same
+manifest on both sides:
+
+| | Baseline | Current |
+| --- | ---: | ---: |
+| Renders | 2400 | 2400 |
+| **Defects** | **4234** | **0** |
+| Floating-chrome overlaps | 521 | 500 |
+| Page errors | 23 | 0 |
+
+Three defects in the *instrument* were found in the process, and they are
+recorded in [`VISUAL_AUDIT_REPORT.md`](VISUAL_AUDIT_REPORT.md) §2.2 rather
+than hidden:
+
+* The harness's stub for the perception module was **thinner than the module it
+  replaced** — three objects were left `null` — so every assistive screen threw
+  a `TypeError` that was not an app defect. The stub is now as thick as the
+  real module.
+* The gate **copied the page's errors before closing the page**, so a page that
+  threw while being torn down — the legacy app resets its rest tracker on
+  `visibilitychange` — threw after the gate had already read the list. The
+  gate now reads it afterwards, and it was checked by putting the broken stub
+  back: the gate fails, at every viewport.
+* The harness **threw away the page error's stack**, so an error named a
+  method and not a file. The first two frames are in the report now.
+
+Two further things are worth stating plainly, because they were found by
+running the thing rather than by reading it:
+
+* **The browser suites needed a storage backend and did not have one.** With no
+  Supabase, no blob token and no memory store, `POST /api/session` answered
+  503 and every suite that opened a care circle failed at setup. The local
+  run now sets `ASHA_MEMORY_STORE=1 ASHA_MEMORY_STORE_PRODUCTION=1`.
+* **Nineteen browser scripts joined the base URL and a path by
+  concatenation** and only worked when the environment variable ended in a
+  slash. Setting `ASHA_TEST_BASE=http://host:4180` produced
+  `http://127.0.0.1:4180app` — an invalid URL, in a suite that had nothing to
+  do with the fault. Every suite now normalises the base.
+
+The full account, with the measurements, is in
+[`VISUAL_AUDIT_REPORT.md`](VISUAL_AUDIT_REPORT.md).
 
 ---
 

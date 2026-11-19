@@ -1,10 +1,15 @@
 # NeuroBridge Asha · Unified app
 
+> **This is a demonstration application, not a validated clinical device.** Camera-derived
+> posture, facial asymmetry and pulse are engineering observations, not diagnoses. The app
+> does not place telephone calls, and a caregiver is contacted only when a real push
+> delivery confirms it. See [`docs/CLINICAL_SAFETY_BOUNDARIES.md`](docs/CLINICAL_SAFETY_BOUNDARIES.md).
+
 ## Stack (Next.js + Tailwind)
 
 ```bash
 npm install
-npm run dev        # http://localhost:3000  (landing at /, app at /app)
+npm run dev        # http://localhost:3000  (landing at /, workspace at /dashboard)
 npm run build && npm start
 npm test           # unit tests
 ```
@@ -13,8 +18,8 @@ npm test           # unit tests
 src/
   app/                    Next.js App Router
     page.tsx              Landing page (sections composed from components/landing)
-    dashboard/            Patient and caregiver dashboards (old /app links redirect here)
-    api/*/route.ts        API routes (session, asha, cleanup, health)
+    dashboard/            Patient and caregiver workspace (old /app links redirect here)
+    api/*/route.ts        API routes (session, care, asha, nutrition, clinic, cleanup, health)
   components/
     ui/                   Reusable primitives: Button, Container, Section, SectionHeading,
                           Eyebrow, FeatureItem, VideoFrame, Reveal, icons
@@ -28,6 +33,9 @@ src/
     node-adapter.ts       Runs handlers inside Next route handlers
 public/
   engine/                 Browser engine: camera, ML workers, calibration, caregiver sync
+  assistive.html          The retained assistive app (FaceSpeak, FingerSpeak, VitalSense,
+                          SenseAssist, Posture, Care Circle)
+  everyday.html           The retained Everyday companion (Nutrition, Move, EyeSpeak, Care, Clinic)
   neuroface/, models/     MediaPipe/TF vendor files and model weights
 ```
 
@@ -35,11 +43,21 @@ public/
 (e.g. put `asha-demo.mp4` in `public/videos/` and use `"/videos/asha-demo.mp4"`). Until then a
 branded placeholder is shown.
 
+### The four surfaces
+
+| Surface | URL | What it is |
+|---|---|---|
+| Landing | `/` | The marketing page |
+| Workspace | `/dashboard/**` | The React patient and caregiver workspace |
+| Assistive app | `/assistive.html` | The retained assistive app |
+| Everyday companion | `/everyday.html` | The retained Everyday companion |
+
 ### Dashboard
 
 | Role | Route | Pages |
 |---|---|---|
-| Patient | `/dashboard/patient` | Home, Ask for help, Talk to Asha, FaceSpeak, FingerSpeak, SenseAssist, VitalSense, Posture, Calibration, Settings |
+| Patient | `/dashboard/patient` | Home, Communicate, Talk to Asha, Care journal, EyeSpeak (+ spell a message), FaceSpeak, FingerSpeak, Nutrition, Posture, SenseAssist, VitalSense, Practise your signals, Wellbeing, Settings |
+| Patient (Move) | `/dashboard/patient/move` | Explore, Build a plan, My plan, Live workout, Progress, Safety, Clinician programs |
 | Caregiver | `/dashboard/caregiver` | Overview, Requests, Patients, Add patient, Patient profile, Settings |
 
 - `src/features/perception` — one shared camera + engine (`PerceptionProvider`, `CameraView`, hooks)
@@ -52,12 +70,16 @@ Local dev without cloud storage: `ASHA_MEMORY_STORE=1 LOCAL_DEV=1 npm run dev` (
 LAN demo without cloud storage: `ASHA_MEMORY_STORE=1 ASHA_MEMORY_STORE_PRODUCTION=1 LOCAL_DEV=1 npm run serve:lan` — see `docs/LAN_SETUP.md`.
 **Phones must open the https address** (`https://<lan-ip>:8443`), not the http one. A browser only exposes the camera in a secure context, so `http://<lan-ip>:3000` cannot open a camera at all.
 
-Routes: `/` landing · `/app` app · `/app?module=facespeak|fingerspeak|senseassist|vitalsense|posture`
-· `/app?role=caregiver` (also `/care`).
+Routes: `/` landing · `/dashboard` workspace · `/assistive.html` assistive app ·
+`/everyday.html` Everyday companion. The old `/app`, `/care`, `/patient` and
+`/?module=…` / `/?role=…` links redirect to `/assistive.html`; a private credential is
+carried in the URL **fragment** (`#patientId=…&token=…`), never in the query string.
 
 The 2026-11 repository audit: [`docs/FULL_AUDIT_REPORT.md`](docs/FULL_AUDIT_REPORT.md)
 (what was found and fixed) · [`docs/TEST_RESULTS.md`](docs/TEST_RESULTS.md) (what was
 run, and what could not be run here) · [`docs/REMAINING_ISSUES.md`](docs/REMAINING_ISSUES.md)
+· [`docs/VISUAL_AUDIT_REPORT.md`](docs/VISUAL_AUDIT_REPORT.md) (the visual and responsive
+audit) · [`docs/ROADMAP.md`](docs/ROADMAP.md) (what is left, and what each item needs)
 (what is still open).
 
 
@@ -105,7 +127,7 @@ Choose **Explore live demo** on the first page or open a direct `?module=` link.
 
 ## Asha model routing and retrieval
 
-The web app stays at `https://neurobridge-asha-live.vercel.app/`; `/app` remains a compatibility entry. Existing `/?module=…` and private `/?role=…` links and installed PWA startup continue to open the app. The separate public website is `https://asha-neurobridge-website.vercel.app/`, deployed from the self-contained `website/` folder to its own Vercel project with no API keys, patient sessions or sensing engines. It introduces the pitch-deck story, five capabilities, care-circle flow, team and pilot roadmap. Public Try Asha links explicitly open the original app domain; About Asha in the app opens the separate website. Team contacts use the supplied public GitHub profiles, with no fabricated testimonials or validation claims.
+The web app stays at `https://neurobridge-asha-live.vercel.app/`; `/app` remains a compatibility entry that redirects to `/assistive.html`. Existing `/?module=…` and private `/?role=…` links and installed PWA startup continue to open the app. The separate public website is `https://asha-neurobridge-website.vercel.app/`, deployed to its **own** Vercel project with no API keys, patient sessions or sensing engines. Its source is not in this repository — it was a self-contained `website/` folder here until commit `a03127b` moved the app to Next.js and the site was split out — so nothing in this repository builds, tests or depends on it. It introduces the pitch-deck story, five capabilities, care-circle flow, team and pilot roadmap. Public Try Asha links explicitly open the original app domain; About Asha in the app opens the separate website. Team contacts use the supplied public GitHub profiles, with no fabricated testimonials or validation claims.
 
 The commercial website includes owner-confirmed portraits of Mysunat, Rahim and Jibon, optimized as lazy-loaded WebP images. Hardware and planned USD pricing follow pitch slides 10 and 21: Plus $5/month, Pro $12/month and an optional $100 camera/switch/mount kit, with phone/tablet and subscription excluded. The separately scoped refurbished-tablet/ESP32 hospital pilot configuration is not misrepresented as part of that add-on. Placement is an illustration, not a shipping-product photo or installation specification. The public email/phone were explicitly supplied for publication. The enquiry form requires contact consent, builds an email or WhatsApp draft and stores/sends nothing on this server; availability and booking remain unconfirmed until the team replies. No payment checkout, fabricated booking receipt or patient-data collection is included.
 
@@ -141,15 +163,58 @@ model. The portion estimate from a photograph has **not** been measured. See
 `docs/NUTRITION_AI_ACCURACY_REPORT.md` for the numbers and
 `docs/NUTRITION_AI_IMPLEMENTATION_REPORT.md` for what is and is not verified.
 
+**The pinned Next.js version has a published security advisory.** `next build` stops to print
+it and asks you to retry; the retry completes and the build is sound, but the framework should
+be upgraded before this app is deployed anywhere. (It was not upgraded in the pass that produced
+this README — the question was put and answered explicitly: *not now*. So it is an open item,
+not a closed one.)
+
+```sh
+next upgrade --agent=security --internal-nudge-id=9c616fa7-4009-4709-8935-eaaeb4b06376
+```
+
+**The visual audit tooling.** `npm run audit:visual:all` renders every screen at every
+viewport in the light, dark and Bangla variants and measures the result; the pass/fail gate is
+`npm run test:browser:responsive`. The full account is in
+[`docs/VISUAL_AUDIT_REPORT.md`](docs/VISUAL_AUDIT_REPORT.md) and the delivery summary is in
+[`docs/DELIVERY_REPORT.md`](docs/DELIVERY_REPORT.md).
+
 ## Development
+
+### Setup
 
 ```sh
 npm install
-npm test
-npm start
+cp .env.example .env.local     # then fill in what you need
 ```
 
-Local preview: http://127.0.0.1:4180. Every `/api/*` endpoint runs locally through `src/app/api/*/route.ts` and `src/server/handlers`; there is no development proxy to the deployed backend, and no secret is ever embedded in the client. Browser tests are in `tests/`, and use the desktop's bundled Playwright/Chrome paths; adapt these paths for another machine. Test artifacts are ignored by Git and deployment.
+Every server variable is listed in [`.env.example`](.env.example) with what happens when it
+is absent. None of them may be given a `NEXT_PUBLIC_` prefix, and none of them belongs in
+client code, HTML or a URL.
+
+| You want to | Set |
+|---|---|
+| Run the app with no cloud services at all | `ASHA_MEMORY_STORE=1` (plus `ASHA_MEMORY_STORE_PRODUCTION=1` and `LOCAL_DEV=1` for a production build) |
+| Store data privately | `SUPABASE_URL` + `SUPABASE_SECRET_KEY`, after running `supabase/schema.sql` once in the SQL editor |
+| Use cloud assistance (Talk to Asha, AI interpretation) | `MAIRA_API_KEY` + `MAIRA_PROJECT_KEY` |
+| Send caregiver push notifications | the three `VAPID_*` variables |
+
+Without the Maira keys, `/api/asha` answers `503 "Asha cloud connection is not configured."`
+Every local communication control keeps working; only the cloud assistance is off, and the
+app says so rather than failing silently.
+
+```sh
+npm run dev                     # http://localhost:3000
+npm run build && npm start      # production build
+npm run serve:lan               # production build on HTTP :3000 and HTTPS :8443 for phones
+npm test                        # unit tests
+```
+
+`npm run serve:lan` serves the production build on `0.0.0.0:3000` (HTTP) and `0.0.0.0:8443`
+(HTTPS, an mkcert certificate in `.certs/`). **A phone must use the HTTPS URL**: a browser only
+exposes the camera, the microphone and the push service worker in a secure context, which a
+plain `http://<lan-ip>` origin is not. The CA certificate is downloadable at `/asha-ca.pem`.
+See [`docs/LAN_SETUP.md`](docs/LAN_SETUP.md).
 
 ### Tests
 
@@ -158,8 +223,10 @@ npm test                 # unit tests (node --test tests/*.test.mjs)
 npm run test:browser     # the two-phone request journey
 npm run test:everyday    # the Everyday companion, browser + offline
 npm run test:browser:all # every browser suite, one after another (~20 minutes)
+npm run test:browser:responsive  # the responsive and accessibility gate
 npm run models:check     # every pinned model matches its recorded size and SHA-256
 npm run tokens:check     # the generated palette is current and legible
+node scripts/secret-scan.mjs     # no provider, Vercel or Supabase key in a tracked file
 ```
 
 Each browser suite also has a script of its own - `npm run test:browser:move`,
@@ -168,11 +235,37 @@ for all of them - so a single journey can be re-run on its own. The browser
 suites expect a server on `http://127.0.0.1:4180`; run a production build
 (`npm run build && npm start`) rather than the dev server.
 
+The browser suites need a Chromium and a Playwright install. On a machine where the
+bundled ones do not run, point the suite at your own:
+
+```sh
+PLAYWRIGHT_MODULE=/path/to/playwright CHROME_PATH=/path/to/chrome node tests/<name>-browser.mjs
+```
+
+Browser tests ask for the camera and the microphone. A headless Chromium with no
+camera answers with an empty stream, and the modules that need a live picture will
+report that no camera is available rather than inventing a signal.
+
+The browser suites create real care circles, so the server they talk to needs a
+storage backend. With none configured, `POST /api/session` answers `503` and every
+suite that opens a care circle fails at setup. For a local run:
+
+```sh
+ASHA_MEMORY_STORE=1 ASHA_MEMORY_STORE_PRODUCTION=1 LOCAL_DEV=1 npm start
+```
+
+`ASHA_MEMORY_STORE_PRODUCTION=1` is needed because `npm start` runs with
+`NODE_ENV=production`, where the in-memory store is refused by default — a
+production deployment that silently lost every write would be worse than one that
+refused to start. Switch it on deliberately, and only for a local run.
+
 Two suites talk to the **deployed** site rather than a local server:
 `npm run test:api:live` (the deployed API) and `npm run test:browser:production`
 (the deployed site end to end; it creates a temporary care circle and deletes it
 again). Both are deliberately **not** part of `test:browser:all`, so an ordinary
 full run never touches the deployment.
+
+Local preview: http://127.0.0.1:4180. Every `/api/*` endpoint runs locally through `src/app/api/*/route.ts` and `src/server/handlers`; there is no development proxy to the deployed backend, and no secret is ever embedded in the client. Test artifacts are ignored by Git and deployment.
 
 `src/app/` is the Next.js App Router frontend and the `/api/*` routes; `src/server/handlers/` holds the request handlers and `src/server/lib/` the persistence, provider and retrieval code. The camera pipeline and the retained legacy static app live in `public/engine/`, `public/app/` and `public/neuroface/`. The original static export remains in Git history and supporting assets are reused. FingerSpeak is embedded from `neuroface/fingerspeak.html`, receiving hand results and the parent's existing media stream through a same-origin bridge; it cannot request another camera or microphone. Other legacy frontend routes are redirected/excluded on Vercel.
 
