@@ -77,6 +77,9 @@ export default async function handler(req, res) {
             .map((item) => clean(item, 200))
             .filter(Boolean)
         : [],
+      // Aborted when the request is given up on, so the provider call does not
+      // outlive the person who asked for it.
+      signal: req.signal,
     });
     res.setHeader(
       "Server-Timing",

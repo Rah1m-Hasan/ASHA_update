@@ -8,6 +8,23 @@ interface NodeLikeRequest {
   headers: Record<string, string>;
   query: Record<string, string>;
   body: unknown;
+  /**
+   * The largest body this route accepts, in characters.
+   *
+   * The handler reads this rather than carrying a second limit of its own, so
+   * the bound the route enforces and the bound the handler enforces are the
+   * same number.
+   */
+  bodyLimit: number;
+  /**
+   * Aborted when the request is given up on.
+   *
+   * A handler that is waiting on an outbound call needs to be told to stop.
+   * Without this, the upstream request kept running after the person had
+   * already been told the server took too long, and the provider's work was
+   * paid for twice over.
+   */
+  signal: AbortSignal;
 }
 
 interface NodeLikeResponse {
@@ -97,11 +114,16 @@ export function toRouteHandler(
         );
       }
     }
+    const abort = new AbortController();
     const req: NodeLikeRequest = {
       method: request.method,
       headers: Object.fromEntries(request.headers.entries()),
       query: Object.fromEntries(url.searchParams.entries()),
       body,
+      signal: abort.signal,
+      // The bound this route declared, so the handler reads the same limit
+      // the adapter enforced rather than a second, separate one.
+      bodyLimit: maxBodyLength,
     };
 
     let statusCode = 200;
@@ -150,6 +172,10 @@ export function toRouteHandler(
         expiry,
       ]);
       if (outcome === "timeout") {
+        // Tell the handler to stop. An outbound call it is waiting on must
+        // not keep running after the person has been told the server took
+        // too long.
+        abort.abort();
         if (!answered) {
           statusCode = 503;
           headers.set("content-type", "application/json");
@@ -176,6 +202,10 @@ export function toRouteHandler(
       }
     } finally {
       if (timer) clearTimeout(timer);
+      // The handler may still be in flight when the race resolves; the abort
+      // makes sure an outbound request it started does not outlive the
+      // request that asked for it.
+      abort.abort();
     }
     return new Response(statusCode === 204 ? null : payload, {
       status: statusCode,

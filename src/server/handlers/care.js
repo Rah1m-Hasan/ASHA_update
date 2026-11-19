@@ -13,7 +13,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   try {
     const input = body(req);
-    if (JSON.stringify(input).length > 20000)
+    if (JSON.stringify(input).length > (req.bodyLimit || 20000))
       return res
         .status(413)
         .json({ error: "Send a shorter message and fewer context records." });

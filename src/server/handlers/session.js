@@ -31,9 +31,16 @@ export default async function handler(req, res) {
     const b = req.method === "POST" ? body(req) : {};
     if (b.action === "create") {
       // Durable, per-day creation budget. No patient data in the rate key.
+      //
+      // The budget lives under its own name, not under the shared limits
+      // directory. It used to share that directory with the meal log, so on a
+      // shared address — a family's router, a clinic's network — setting up
+      // care circles spent the person's meal-logging allowance, and vice
+      // versa. Two budgets, two directories.
       const ip = hash(clientIp(req));
       const today = new Date().toISOString().slice(0, 10);
-      const quota = await store.list(`asha-live/limits/${today}/${ip}/`, 15);
+      const bucket = `asha-live/limits/${today}/sessions/${ip}/`;
+      const quota = await store.list(bucket, 15);
       if (quota.length >= 12)
         return res.status(429).json({
           error: "Daily setup limit reached. Reopen an existing private link.",
@@ -55,7 +62,7 @@ export default async function handler(req, res) {
         expiresAt: new Date(Date.now() + 7 * 86400000).toISOString(),
       };
       await store.write(path(id, "profile"), p);
-      await store.write(`asha-live/limits/${today}/${ip}/${id}.json`, {
+      await store.write(`${bucket}${id}.json`, {
         at: p.createdAt,
       });
       return res.json({ ...publicProfile(p), patientToken, caregiverToken });

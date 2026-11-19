@@ -1,7 +1,12 @@
 const BASE = "https://api.recommender.gigalogy.com";
 const PROFILE_TTL_MS = 15 * 60 * 1000;
 const DISCOVERY_TIMEOUT_MS = 5000;
-const ASK_TIMEOUT_MS = 45000;
+// The provider's own budget has to be shorter than the request adapter's, or
+// the adapter gives up first and the upstream call keeps running with nobody
+// waiting for it. The adapter waits 30 s for a handler; the provider gives up
+// at 25 s, so the provider's own timeout is what the person hears — a clear
+// "the cloud is busy" rather than a bare server timeout.
+const PROVIDER_TIMEOUT_MS = 25000;
 const ROUTES = Object.freeze({
   conversation: {
     name: "ashagemini",
@@ -249,7 +254,7 @@ export function createMairaProvider({
           },
         }),
       },
-      ASK_TIMEOUT_MS,
+      PROVIDER_TIMEOUT_MS,
       signal,
     );
     const text = data?.detail?.response ?? data?.response ?? data?.answer;

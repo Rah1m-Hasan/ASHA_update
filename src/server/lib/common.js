@@ -136,10 +136,24 @@ export function begin(req, res) {
   }
   return true;
 }
+/**
+ * The request body, parsed.
+ *
+ * The size limit lives in one place. It used to be hard-coded here at 20,000
+ * characters, which contradicted the Clinic route's own limit of 660,000:
+ * a Clinic share large enough to be worth sending was refused by this
+ * function while the route beside it said it was allowed.
+ *
+ * The limit travels on the request, so a handler is bounded by whatever bound
+ * its route declared.
+ */
+export const DEFAULT_BODY_LIMIT = 20000;
+
 export function body(req) {
   let b = req.body;
   if (typeof b === "string") {
-    if (b.length > 20000) throw Error("Request too large");
+    const limit = Number(req.bodyLimit) || DEFAULT_BODY_LIMIT;
+    if (b.length > limit) throw Error("Request too large");
     b = JSON.parse(b);
   }
   return b && typeof b === "object" ? b : {};

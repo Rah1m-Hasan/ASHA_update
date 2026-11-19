@@ -208,16 +208,31 @@ export default async function handler(req, res) {
     if (rawItems.length > MAX_ITEMS) return res.status(400).json({ error: `A meal may hold up to ${MAX_ITEMS} foods.` });
 
     const items = [];
+    const seenFoods = new Set();
     for (const raw of rawItems) {
       const cleaned = cleanItem(raw);
       if (!cleaned.ok) return res.status(400).json({ error: cleaned.reason });
+      // The same food twice in one meal is a mistake in the payload, not a
+      // fault on the server. It used to reach the calculator, which threw,
+      // and the person was told the meal could not be saved.
+      if (seenFoods.has(cleaned.item.foodId))
+        return res.status(400).json({
+          error: "The same food was added twice. Change its amount, or remove one of them.",
+        });
+      seenFoods.add(cleaned.item.foodId);
       items.push(cleaned.item);
     }
 
     // The daily budget, keyed by a hash of the caller's address. No patient data in the key.
+    //
+    // The budget lives under its own name. It used to share the limits
+    // directory with the care-circle setup budget, so on a shared address
+    // setting up a care circle spent the person's meal-logging allowance, and
+    // logging meals spent the setup allowance.
     const ip = hash(clientIp(req));
     const today = new Date().toISOString().slice(0, 10);
-    const quota = await store.list(`asha-live/limits/${today}/${ip}/`, 200);
+    const bucket = `asha-live/limits/${today}/meals/${ip}/`;
+    const quota = await store.list(bucket, 200);
     if (quota.length >= DAILY_MEAL_LIMIT) {
       return res.status(429).json({ error: "Too many meals logged today." });
     }
@@ -251,7 +266,7 @@ export default async function handler(req, res) {
     };
     // An idempotent write: the same meal id always stores the same record.
     await store.write(path(id, `nutrition/meals/${mealId}`), record, true);
-    await store.write(`asha-live/limits/${today}/${ip}/${mealId}.json`, { at: record.at });
+    await store.write(`${bucket}${mealId}.json`, { at: record.at });
 
     return res.json({ ok: true, meal: record });
   } catch (err) {

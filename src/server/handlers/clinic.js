@@ -13,7 +13,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   try {
     const input = body(req);
-    if (JSON.stringify(input).length > 660000)
+    if (JSON.stringify(input).length > (req.bodyLimit || 660000))
       return res.status(413).json({ error: "Share fewer records at once." });
     if (input.action === "create") {
       if (input.confirmed !== true)
