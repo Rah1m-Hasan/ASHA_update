@@ -48,6 +48,11 @@ export function createGatewayProvider({ env = process.env, fetchImpl = fetch, no
         }),
         signal: controller.signal,
       });
+      if (!response.ok) {
+        // The gateway's own reason (no prompt, no token) so a refusal can be fixed.
+        const body = await response.clone().json().catch(() => null);
+        console.warn("ai-gateway refused", response.status, String(body?.error?.type || body?.error?.code || ""), String(body?.error?.message || "").slice(0, 200));
+      }
       if (response.status === 401 || response.status === 403)
         throw new MairaProviderError("credentials_rejected", "Asha's AI connection needs its server credentials checked.", 503);
       if (response.status === 402)
