@@ -212,7 +212,7 @@ const jpeg = (page, w, h) =>
   assert.equal(entry.captureMethod, "live_scan");
   assert.equal(entry.photoStored, false);
   assert.equal(entry.items[0].canonical.databaseRecordId, "fdc:173944");
-  assert.equal(entry.items[0].canonical.modelId, "mediapipe/efficientnet_lite0-int8");
+  assert.equal(entry.items[0].canonical.modelId, "asha/food-effv2b0-oi35-int8");
   assert.equal(entry.items[0].canonical.captureMethod, "live_scan");
   assert.equal(entry.items[0].canonical.dataVersion, "asha-nutrition-v5/2026-11-10");
   assert.ok(entry.items[0].sources.every((x) => x.databaseRecordId && x.verification), "every figure keeps its source id");
@@ -228,11 +228,26 @@ const jpeg = (page, w, h) =>
   await context.close();
 }
 
+// ---------- 1b. The orange bug: best guess "orange" (no record) is named, never turned into apple ----------
+{
+  const { context, page } = await setup();
+  await page.goto(URL_);
+  await page.evaluate(() => window.__script({ categories: [{ label: "orange", score: 0.62 }, { label: "apple", score: 0.31 }, { label: "lemon_lime", score: 0.04 }] }));
+  await page.getByTestId("nutrition-upload").click();
+  await page.getByTestId("nutrition-file").setInputFiles({ name: "orange.jpg", mimeType: "image/jpeg", buffer: Buffer.from(await jpeg(page, 800, 600), "base64") });
+  await screenIs(page, "IMAGE_VALIDATED");
+  await page.getByTestId("nutrition-use-photo").click();
+  await screenIs(page, "FOOD_REVIEW");
+  await page.getByTestId("nutrition-recognised").getByText("Orange (or malta)").waitFor();
+  assert.equal(await page.locator("[data-testid=nutrition-chips] li[data-dish]").count(), 0, "no apple (or any food) added for an orange");
+  await context.close();
+}
+
 // ---------- 2. Upload: rotate, no suggestion, rice + dal + fish curry kept separate, oil changes, unknown sodium ----------
 {
   const { context, page } = await setup();
   await page.goto(URL_);
-  await page.evaluate(() => window.__script({ categories: [{ label: "cheeseburger", score: 0.95 }] }));
+  await page.evaluate(() => window.__script({ categories: [{ label: "not_food", score: 0.95 }] }));
   await page.getByTestId("nutrition-upload").click();
   await page.getByTestId("nutrition-file").setInputFiles({ name: "plate.jpg", mimeType: "image/jpeg", buffer: Buffer.from(await jpeg(page, 800, 600), "base64") });
   await screenIs(page, "IMAGE_VALIDATED");

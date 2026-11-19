@@ -2,11 +2,11 @@
 // and photo checks. Numbers are worked out by hand from the cited USDA records.
 import assert from "node:assert/strict";
 import test from "node:test";
-import { DISHES, FOOD_RECORDS, getRecord, NUTRIENT_KEYS, PORTIONS, searchFoods, suggestionFor } from "../src/features/nutrition/catalog.js";
+import { DISHES, FOOD_RECORDS, FOOD_VISION, getRecord, NUTRIENT_KEYS, PORTIONS, searchFoods, suggestionFor, visionLabel } from "../src/features/nutrition/catalog.js";
 import { approx, estimateItem, estimateMeal, formatValue, spoonGrams } from "../src/features/nutrition/engine.js";
 import { checkDimensions, checkFile, fitWithin, sniffImageType } from "../src/features/nutrition/image.js";
 import { answer, applicable, back, nextQuestion, newItem, progress, questionsFor, reopen, storageTips, validAnswer } from "../src/features/nutrition/interview.js";
-import { readSample, SCAN_RULE, StabilityTracker, suggestionsFrom } from "../src/features/nutrition/scan.js";
+import { readSample, recognisedFrom, SCAN_RULE, StabilityTracker, suggestionsFrom } from "../src/features/nutrition/scan.js";
 import { canGo, NutritionFlow, TRANSITIONS } from "../src/features/nutrition/state.js";
 
 const close = (a, b, eps = 1e-6) => assert.ok(Math.abs(a - b) < eps, `${a} ≈ ${b}`);
@@ -29,14 +29,37 @@ test("every food record names its source, state and verification; unknown values
   for (const d of ["banana", "apple", "strawberries", "rice", "dal", "fish_curry", "packaged"]) assert.ok(DISHES[d], d);
 });
 
-test("the camera only turns three ImageNet labels into suggestions; everything else gives none", () => {
+test("only the recogniser's best guess can become a suggestion, and only foods with records", () => {
   assert.equal(suggestionFor("banana"), "banana");
-  assert.equal(suggestionFor("Granny Smith"), "apple");
+  assert.equal(suggestionFor("apple"), "apple");
   assert.equal(suggestionFor("strawberry"), "strawberries");
-  for (const label of ["cheeseburger", "plate", "pizza", "orange", "lemon", "suit"]) assert.equal(suggestionFor(label), null, label);
-  const s = suggestionsFrom([{ label: "banana", score: 0.8 }, { label: "banana", score: 0.4 }, { label: "lemon", score: 0.6 }, { label: "strawberry", score: 0.1 }]);
-  assert.deepEqual(s.map((x) => x.dishId), ["banana"], "one suggestion per food, low scores dropped");
+  assert.equal(suggestionFor("rice"), "rice");
+  for (const label of ["orange", "lemon_lime", "pizza", "not_food", "Granny Smith"]) assert.equal(suggestionFor(label), null, label);
+  const s = suggestionsFrom([{ label: "banana", score: 0.8 }, { label: "banana", score: 0.4 }, { label: "strawberry", score: 0.1 }]);
+  assert.deepEqual(s.map((x) => x.dishId), ["banana"]);
   assert.equal(s[0].experimental, true);
+  assert.equal(s[0].modelId, FOOD_VISION.modelId);
+  // The orange bug: best guess "orange" (no record) must never fall through to a lower "apple".
+  assert.deepEqual(suggestionsFrom([{ label: "orange", score: 0.55 }, { label: "apple", score: 0.4 }]), []);
+  assert.deepEqual(suggestionsFrom([{ label: "apple", score: 0.3 }, { label: "pear", score: 0.25 }]), [], "below minScore");
+  assert.deepEqual(suggestionsFrom([{ label: "not_food", score: 0.9 }, { label: "apple", score: 0.05 }]), []);
+  // The orange is still named for the person.
+  const r = recognisedFrom([{ label: "apple", score: 0.4 }, { label: "orange", score: 0.55 }, { label: "not_food", score: 0.02 }]);
+  assert.equal(r[0].label, "orange");
+  assert.equal(r[0].dishId, null);
+  assert.equal(visionLabel("orange", "en"), "Orange (or malta)");
+  assert.equal(visionLabel("orange", "bn"), "কমলা / মাল্টা");
+  // Labels and model metadata agree.
+  assert.equal(FOOD_VISION.classes.length, 35);
+  for (const c of FOOD_VISION.classes) assert.ok(FOOD_VISION.labels[c], c);
+});
+
+test("the shipped food model file matches its recorded size and checksum", async () => {
+  const { createHash } = await import("node:crypto");
+  const { readFileSync } = await import("node:fs");
+  const buf = readFileSync(new URL(`../public${FOOD_VISION.url}`, import.meta.url));
+  assert.equal(buf.length, FOOD_VISION.bytes);
+  assert.equal(createHash("sha256").update(buf).digest("hex"), FOOD_VISION.sha256);
 });
 
 test("acceptance 1: a steady candidate (4 of the last 6 good frames) fires once; Retake re-arms", () => {
@@ -46,7 +69,7 @@ test("acceptance 1: a steady candidate (4 of the last 6 good frames) fires once;
   assert.equal(t.push({ ...good(), faceInView: true }).state, "QUALITY_WAIT", "a face in view never counts");
   assert.equal(t.push({ ...good(), quality: { warnings: ["low_light"] } }).state, "QUALITY_WAIT");
   assert.equal(t.push(good()).tentative, "banana", "a tentative label after 2 matches");
-  assert.equal(t.push(good("lemon")).state, "SCANNING");
+  assert.equal(t.push(good("lemon_lime")).state, "SCANNING");
   assert.equal(t.push(good()).state, "SCANNING", "only 3 of the last 6");
   assert.equal(t.push(good()).state, "SCANNING", "still 3: the oldest banana left the window");
   const fire = t.push(good());
@@ -61,7 +84,8 @@ test("acceptance 1: a steady candidate (4 of the last 6 good frames) fires once;
   const u = new StabilityTracker();
   for (let i = 0; i < 4; i++) u.push(good());
   assert.notEqual(u.push({ ...good(), quality: { warnings: ["low_detail_or_blur"] } }).state, "CANDIDATE_STABLE");
-  assert.equal(readSample({ categories: [{ label: "cheeseburger", score: 0.99 }], quality: { warnings: [] } }).best, null);
+  assert.equal(readSample({ categories: [{ label: "not_food", score: 0.99 }], quality: { warnings: [] } }).best, null);
+  assert.equal(readSample({ categories: [{ label: "orange", score: 0.9 }], quality: { warnings: [] } }).best.dishId, null, "recognised, but no record");
 });
 
 test("screen states follow the spec; no duplicate capture; a meal is logged once", () => {

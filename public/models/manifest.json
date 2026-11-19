@@ -27,7 +27,16 @@
       "downloadedAt": "2026-11-10",
       "publishedAt": "2023-04-26",
       "license": "Apache-2.0 (stated in the model's embedded TFLite metadata)",
-      "use": "Nutrition: experimental whole-fruit suggestions only (ImageNet classes banana, Granny Smith, strawberry)"
+      "use": "No longer used by Nutrition since 2026-11-19 (replaced by models/asha-food-35-int8.onnx); kept for older cached pages."
+    },
+    {
+      "file": "models/asha-food-35-int8.onnx",
+      "bytes": 7122072,
+      "sha256": "c00a37dfe953870e139b962f2e79f53a539443a1c1d07b6fca5ef867545cb31a",
+      "source": "Built by ASHA: Keras Applications EfficientNetV2-B0 ImageNet weights (https://storage.googleapis.com/tensorflow/keras-applications/efficientnet_v2/efficientnetv2-b0_notop.h5) + a logistic-regression head trained on Open Images V7 food photos, exported with tf2onnx (opset 17) and statically quantised to int8 (QDQ) with onnxruntime. Scripts: scripts/public-data-validation/nutrition/",
+      "createdAt": "2026-11-19",
+      "license": "Backbone Apache-2.0; training images CC BY 2.0, labels CC BY 4.0 (Open Images V7)",
+      "use": "Nutrition: on-device food recognition (34 foods + not food), experimental, always confirmed by the person"
     }
   ]
 }

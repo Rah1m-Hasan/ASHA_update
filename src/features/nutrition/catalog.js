@@ -156,17 +156,45 @@ export function searchFoods(query = "") {
 }
 
 /**
- * The general image classifier (ImageNet, not food-trained) knows only these whole fruits that
- * ASHA has records for. Every other class produces no suggestion. Suggestions are always shown
- * as experimental and must be confirmed.
+ * ASHA's on-device food recogniser: EfficientNetV2-B0 (ImageNet weights, Keras Applications, Apache-2.0)
+ * with a classification head trained by ASHA on Open Images V7 photos (CC BY 2.0) for 34 foods plus
+ * "not food". Measured on 4,951 held-out Open Images photos: 77.2% top-1, 96.8% top-5 (see
+ * docs/NUTRITION_PUBLIC_DATA_VALIDATION.md). Public-photo accuracy is not clinical validation.
+ *
+ * Only the model's single best guess can become a suggestion, and only when it is at least
+ * `minScore`. ASHA never skips past the best guess to a lower one it happens to have a record for:
+ * that is how an orange used to be suggested as "apple" (the old general model's top label was
+ * "orange", which ASHA ignored, and its lower "Granny Smith" label became apple).
+ * Foods ASHA has no nutrition record for are named ("Looks like an orange") but never get numbers.
  */
 export const FOOD_VISION = Object.freeze({
-  modelId: "mediapipe/efficientnet_lite0-int8",
-  modelVersion: "2023-04-26",
-  sha256: "bc2ffe19c1118de0c0c2a9088992da5589722656e0fba81421385300a4a34b16",
-  url: "/models/efficientnet_lite0_int8.tflite",
-  license: "Apache-2.0 (embedded model metadata)",
+  modelId: "asha/food-effv2b0-oi35-int8",
+  modelVersion: "2026-11-19",
+  sha256: "c00a37dfe953870e139b962f2e79f53a539443a1c1d07b6fca5ef867545cb31a",
+  bytes: 7122072,
+  url: "/models/asha-food-35-int8.onnx",
+  license: "Backbone Apache-2.0 (Keras Applications EfficientNetV2-B0); head trained by ASHA on Open Images V7 (CC BY 2.0 images, CC BY 4.0 labels)",
   experimental: true,
-  classes: Object.freeze({ banana: "banana", "Granny Smith": "apple", strawberry: "strawberries" }),
+  input: Object.freeze({ size: 224, layout: "NHWC", range: "0-255 RGB" }),
+  minScore: 0.5,
+  // Output order of the model's probabilities. Never reorder without retraining.
+  classes: Object.freeze(["apple", "banana", "bell_pepper", "bread", "cabbage", "cake", "carrot", "cauliflower", "chili", "cucumber", "curry", "grape", "grapefruit_pomelo", "hamburger", "lemon_lime", "milk", "noodles", "not_food", "omelette", "onion", "orange", "peach", "pear", "pineapple", "pizza", "pomegranate", "potato", "pumpkin", "rice", "salad", "sandwich", "strawberry", "tea", "tomato", "watermelon"]),
+  // Recognised foods that ASHA can log with sourced nutrition.
+  dishFor: Object.freeze({ apple: "apple", banana: "banana", strawberry: "strawberries", rice: "rice" }),
+  labels: Object.freeze({
+    apple: { en: "Apple", bn: "আপেল" }, banana: { en: "Banana", bn: "কলা" }, bell_pepper: { en: "Bell pepper (capsicum)", bn: "ক্যাপসিকাম" },
+    bread: { en: "Bread", bn: "পাউরুটি" }, cabbage: { en: "Cabbage", bn: "বাঁধাকপি" }, cake: { en: "Cake", bn: "কেক" }, carrot: { en: "Carrot", bn: "গাজর" },
+    cauliflower: { en: "Cauliflower", bn: "ফুলকপি" }, chili: { en: "Chilli", bn: "মরিচ" }, cucumber: { en: "Cucumber", bn: "শসা" }, curry: { en: "Curry", bn: "তরকারি" },
+    grape: { en: "Grapes", bn: "আঙুর" }, grapefruit_pomelo: { en: "Grapefruit or pomelo (jambura)", bn: "জাম্বুরা" }, hamburger: { en: "Burger", bn: "বার্গার" },
+    lemon_lime: { en: "Lemon or lime", bn: "লেবু" }, milk: { en: "Milk", bn: "দুধ" }, noodles: { en: "Noodles", bn: "নুডলস" }, not_food: { en: "Not a food", bn: "খাবার নয়" },
+    omelette: { en: "Omelette", bn: "ডিম ভাজি / অমলেট" }, onion: { en: "Onion", bn: "পেঁয়াজ" }, orange: { en: "Orange (or malta)", bn: "কমলা / মাল্টা" }, peach: { en: "Peach", bn: "পীচ ফল" },
+    pear: { en: "Pear", bn: "নাশপাতি" }, pineapple: { en: "Pineapple", bn: "আনারস" }, pizza: { en: "Pizza", bn: "পিৎজা" }, pomegranate: { en: "Pomegranate", bn: "ডালিম" },
+    potato: { en: "Potato", bn: "আলু" }, pumpkin: { en: "Pumpkin", bn: "মিষ্টি কুমড়া" }, rice: { en: "Rice", bn: "ভাত" }, salad: { en: "Salad", bn: "সালাদ" },
+    sandwich: { en: "Sandwich", bn: "স্যান্ডউইচ" }, strawberry: { en: "Strawberries", bn: "স্ট্রবেরি" }, tea: { en: "Tea", bn: "চা" }, tomato: { en: "Tomato", bn: "টমেটো" },
+    watermelon: { en: "Watermelon", bn: "তরমুজ" },
+  }),
 });
-export const suggestionFor = (label) => FOOD_VISION.classes[label] ?? null;
+/** The ASHA dish a recognised label maps to, or null when ASHA has no nutrition record for it. */
+export const suggestionFor = (label) => FOOD_VISION.dishFor[label] ?? null;
+/** Display name of a recogniser label (falls back to the raw label). */
+export const visionLabel = (label, lang = "en") => FOOD_VISION.labels[label]?.[lang === "bn" ? "bn" : "en"] ?? label;
