@@ -144,6 +144,30 @@ function proposedText(kind) {
   }[kind];
 }
 
+// When a request is proposed, Asha says exactly what will happen instead of the model's wording.
+// Small models sometimes write as if they will act themselves ("I will bring water"); the request
+// only goes to the caregiver after the patient presses the button.
+const CONFIRM = {
+  water: ["ask your caregiver to bring you water", "কেয়ারগিভারকে পানি আনতে বলতে"],
+  food: ["ask your caregiver to bring you food", "কেয়ারগিভারকে খাবার আনতে বলতে"],
+  toilet: [
+    "ask your caregiver to help you to the toilet",
+    "কেয়ারগিভারকে টয়লেটে যেতে সাহায্য করতে বলতে",
+  ],
+  comfort: [
+    "ask your caregiver to help you get comfortable",
+    "কেয়ারগিভারকে আরাম করে বসতে বা শুতে সাহায্য করতে বলতে",
+  ],
+  help: ["ask your caregiver to come to you", "কেয়ারগিভারকে আপনার কাছে আসতে বলতে"],
+};
+
+export function proposalReply(kind, language) {
+  const [en, bn] = CONFIRM[kind] ?? CONFIRM.help;
+  return language === "bn"
+    ? `আমি আপনার ${bn} পারি। নিচের বোতাম চাপলে তবেই পাঠানো হবে।`
+    : `I can ${en}. Nothing is sent until you press the button below.`;
+}
+
 function toolCalls(envelope) {
   const calls = Array.isArray(envelope?.tool_calls)
     ? envelope.tool_calls
@@ -350,14 +374,16 @@ export function createAshaOrchestrator({
       typeof parsed?.reply === "string" &&
       !!parsed.reply.trim() &&
       validCitations;
-    const reply = verified
-      ? clean(parsed.reply, 1800)
-      : parsed
-        ? "I could not prepare a clear reply. Please try again."
-        : clean(generated.text, 1800);
     const tools = verified
       ? verifyTools(parsed, safeText, safeHistory)
       : { proposal: null, suggestedModule: null, accepted: 0, rejected: 0 };
+    const reply = tools.proposal
+      ? proposalReply(tools.proposal.kind, resolvedLanguage)
+      : verified
+        ? clean(parsed.reply, 1800)
+        : parsed
+          ? "I could not prepare a clear reply. Please try again."
+          : clean(generated.text, 1800);
     return {
       reply,
       language: resolvedLanguage,

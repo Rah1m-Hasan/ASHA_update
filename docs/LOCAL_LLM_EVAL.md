@@ -36,6 +36,8 @@ Each case runs through the real orchestrator, with the same retrieval, prompt an
 
 Loading the weights took 3.5 s (qwen2.5), 5.9 s (llama3.2), 7.4 s (gemma2) and 13.3 s (deepseek-r1). That time is not counted in the reply times.
 
+The `/ai` page draws the median and 95th-percentile reply times as a chart ([`public/charts/local-llm-reply-times.svg`](../public/charts/local-llm-reply-times.svg)), rendered from the summary with Vega-Lite by `scripts/local-llm-chart.mjs`. A test fails if the chart and the summary disagree.
+
 ## What this shows
 
 1. **`qwen2.5:1.5b` is the default for all three tasks.** It gave valid JSON every time, answered every Bangla message in Bangla, and was the fastest. `gemma2:2b` came second, at about twice the time. Before this run, gemma2 was the default for Bangla. It is now qwen2.5 in `src/server/lib/ollama-provider.js`, and each task can still be overridden with `OLLAMA_CHAT_MODEL`, `OLLAMA_BILINGUAL_MODEL` and `OLLAMA_SPEECH_MODEL`.
@@ -44,6 +46,7 @@ Loading the weights took 3.5 s (qwen2.5), 5.9 s (llama3.2), 7.4 s (gemma2) and 1
 4. **One rule bug showed up.** "Please help me go to the toilet" matches both "toilet" and "help", so the rules treat it as unclear and propose nothing, with every model. The fix is to prefer the specific need when "help" appears with it. It is not in this run.
 5. **`deepseek-r1:1.5b` does not fit this contract.** 11 of 14 replies came back empty and 3 ran out of tokens without JSON. It is a reasoning model: in the smoke test it used 304 tokens to answer `{"ok": true}`. That probably used up the 320-token limit before any answer. Turning its thinking off might help, but that has not been tried.
 6. **Citations are weak.** Only 1 of the 8 answers about the app cited a source (gemma2, in Bangla). The local models answer these questions, but the citation rule needs work before they can be trusted for them.
+7. **Reply wording can overstate what happens.** In a later test of the same setup through a tunnel, qwen2.5 answered "I need water please" with "I will check if water is available and provide it if possible", and its Bangla reply to a food request did not mention food. The request itself was right both times. Since then, whenever a request is proposed, Asha replaces the model's wording with its own fixed sentence in the patient's language, saying it can ask the caregiver and that nothing is sent until the patient presses the button (`proposalReply`, with tests). The numbers above are from before that change.
 
 ## Limits
 
@@ -55,6 +58,7 @@ This is one run on one laptop with little free memory, and 14 cases written by t
 ollama pull qwen2.5:1.5b && ollama pull llama3.2:1b && ollama pull gemma2:2b && ollama pull deepseek-r1:1.5b
 npm run eval:local-llm            # writes docs/local-llm-eval.json and docs/local-llm-eval-summary.json
 node scripts/local-llm-summary.mjs # recomputes the summary from an existing report
+node scripts/local-llm-chart.mjs   # redraws the reply-time chart from the summary
 ```
 
 The eval imports only Node built-ins and repository files, so it runs from a plain clone without `npm install`. From now on, it also records each model's quantization from Ollama's `/api/show`. The 18 Nov report predates that, so `local-llm-summary.mjs` holds the values `ollama show` printed on that machine.
