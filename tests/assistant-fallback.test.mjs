@@ -151,8 +151,11 @@ test("an exhausted gateway allowance still ends in a guide answer", async () => 
 test("a free Gemini key alone answers through Google's OpenAI-compatible endpoint", async () => {
   const { createLlmProvider } = await import("../src/server/lib/llm-provider.js");
   let body;
+  const tried = [];
   const fetchImpl = async (url, init) => {
     if (String(url).includes("gigalogy")) return new Response("{}", { status: 401 });
+    tried.push(JSON.parse(init.body).model);
+    if (tried.length === 1) return Response.json([{ error: { code: 503, status: "UNAVAILABLE" } }], { status: 503 });
     assert.match(String(url), /generativelanguage\.googleapis\.com\/v1beta\/openai\/chat\/completions$/);
     assert.match(init.headers.authorization, /^Bearer gm-test$/);
     body = JSON.parse(init.body);
@@ -161,8 +164,9 @@ test("a free Gemini key alone answers through Google's OpenAI-compatible endpoin
   const provider = createLlmProvider({ env: { MAIRA_API_KEY: "k", MAIRA_PROJECT_KEY: "p", GEMINI_API_KEY: "gm-test" }, fetchImpl });
   const result = await createAshaOrchestrator({ provider, retrieve: () => [] }).run({ patientId: "p", profile, text: "Hello" });
   assert.equal(result.reply, "Hi from Gemini.");
-  assert.equal(body.model, "gemini-2.5-flash");
-  assert.equal(body.reasoning_effort, "none");
+  assert.deepEqual(tried, ["gemini-3.5-flash-lite", "gemini-3.1-flash-lite"], "an overloaded model falls through to the next");
+  assert.equal(result.orchestration.model, "gemini-3.1-flash-lite");
+  assert.equal(body.reasoning_effort, "minimal");
 });
 
 test("the guide answers everyday wellbeing safely and sends emergencies to a real number", () => {

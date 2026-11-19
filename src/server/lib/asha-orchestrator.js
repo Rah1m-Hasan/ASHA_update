@@ -1,6 +1,6 @@
 import { clean, requestKinds } from "./logic.js";
 import { retrieveKnowledge } from "./retrieval.js";
-import { guideAnswer } from "../../lib/guide-answer.js";
+import { guideAnswer, guideTopic } from "../../lib/guide-answer.js";
 
 // Each cloud route gets one attempt; a failed or unusable answer moves to the
 // other route once, and if that fails too Asha answers from its own guide.
@@ -413,6 +413,11 @@ export function createAshaOrchestrator({
         memories: confirmedMemories,
         limit: 3,
       });
+    // Nothing retrieved but the message names an app feature: give the model the guide's line on it.
+    if (!sources.length) {
+      const topic = guideTopic(safeText);
+      if (topic) sources = [topic];
+    }
     const abilities = JSON.stringify(profile?.assessment || {});
     const preferences = JSON.stringify(profile?.supportContext || {});
     const target =

@@ -90,3 +90,11 @@ export function guideAnswer({ query, module = "companion", language = "en" }) {
     answeredBy: "guide",
   };
 }
+
+/** The guide's sentence on the app feature a message names, as a source an AI reply can cite. */
+export function guideTopic(query) {
+  const text = String(query || "");
+  const index = TOPICS.findIndex(([pattern]) => pattern.test(text));
+  if (index < 0) return null;
+  return { id: `asha-guide-${index}`, title: "Asha guide", text: TOPICS[index][1] };
+}
