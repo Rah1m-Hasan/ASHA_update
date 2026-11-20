@@ -1,4 +1,4 @@
-# Move rep counting: public-video validation (2026-11-19)
+# Move rep counting: public-video validation (2026-11-19, updated 2026-11-20)
 
 A "virtual" check of ASHA Move's camera rep counters on public exercise video, before real volunteers. It is **not clinical validation**: the clips are young people training at speed, filmed by anyone, while ASHA is built for slower, guided movement with a set-up step. Results: `docs/validation/move-public-video-results.json`; scripts: `scripts/public-data-validation/move/`.
 
@@ -45,6 +45,40 @@ On all 90 squat clips with the body in view (43), the squat error fell from 2.14
 **The counters still undercount** (they count about half to three quarters of true reps on these clips) and **almost never overcount** the right exercise (0–1% of clips). For ASHA that's the safer side: a missed rep can be added with the manual +1 button, a phantom rep can't be trusted.
 
 **False counts on other exercises** (reps counted per minute of video of a *different* exercise; before → after): squat counter on front raises 0.22 → 0.30, on push-ups 0.08 → 0.29, on sit-ups 0.19 → 0.94, on jumping jacks 0.55 → 1.09; arm-raise counter on squats 1.8 → 2.5, on lunges 1.6 → 2.1; wall push-up counter on squats 0.8 → 1.1, on front raises 5.3 → 6.5. In ASHA the person picks the exercise first, so these matter less, but the looser thresholds do trade some specificity for sensitivity.
+
+## Robustness checks and a fix (2026-11-20, detectors 1.2.0 → 1.3.0)
+
+The same held-out Countix validation clips, with the landmarks changed the way a real ASHA session could change them: front-camera mirror view, the same movement at half or a third of the speed (as an older person might move), a slower phone (7.5 instead of 15 frames per second), landmark noise of 0.5% and 1% of the frame, and 10% of frames where no person is found. Script: `scripts/public-data-validation/move/robust.mjs`; results: `docs/validation/move-robustness-results.json`.
+
+**Problem found:** every single frame without a usable pose threw away the repetition in progress. With 1 frame in 10 missing, the counters counted nothing on 82–95% of clips.
+
+**Fix:** a missed frame no longer resets the count. The counter still starts over by itself when the next good frame comes more than 0.7 s later, so a longer occlusion still drops the unfinished repetition (a unit test covers both).
+
+Mean count error per clip, body in view (95% CI), before → after the fix:
+
+| Condition | Squat (11 clips) | Wall push-up (21) | Arm raise (20) |
+| --- | --- | --- | --- |
+| As recorded | 0.82 → 0.82 | 1.90 → 1.90 | 1.35 → 1.35 |
+| 10% of frames missing | 2.73 → **0.82** (0.36–1.27) | 3.57 → **2.05** (1.19–3.05) | 3.40 → **1.35** (0.65–2.40) |
+| Clips counted as zero, 10% missing | 55% → 0% | 86% → 10% | 95% → 15% |
+
+With the fix (body in view, error per clip):
+
+| Condition | Squat | Wall push-up | Arm raise |
+| --- | --- | --- | --- |
+| As recorded | 0.82 | 1.90 | 1.35 |
+| Mirror (front camera) | 0.82 | 1.90 | 1.35 |
+| Half speed | 0.82 | 1.67 | 1.10 |
+| A third of the speed | 0.82 | 1.62 (overcounts on 14% of clips) | 1.10 |
+| 7.5 fps | 0.91 | 2.43 | 1.75 |
+| Landmark noise 1% | 1.36 | 2.00 | 1.25 |
+| 10% frames missing | 0.82 | 2.05 | 1.35 |
+
+- **Mirror view and slow movement don't hurt**: counts are identical mirrored, and as good or better at half speed. Very slow wall push-ups start to overcount a little (14% of clips at a third of the speed).
+- **Frame rate matters**: at 7.5 fps all three counters miss more reps, so ASHA should keep sampling pose at about 15 fps or more.
+- On every held-out clip (not only body in view), the fix also helped as recorded, because Kinetics clips already have missed frames: arm raise 1.62 → 1.46, squat 1.58 → 1.54, lunge through the squat counter 2.19 → 2.14.
+- **Trade-off:** false counts on a *different* exercise went up a little (for example the arm-raise counter on squat clips 2.5 → 3.3 per minute, the squat counter on push-ups 0.29 → 0.33). In ASHA the person picks the exercise first.
+- All Move unit tests pass, including a new one for a missed frame. `tests/move-browser.mjs` still times out on the same Bangla-layout click as before this change.
 
 ## Limits, said plainly
 

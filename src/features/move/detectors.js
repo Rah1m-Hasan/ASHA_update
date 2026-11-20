@@ -2,7 +2,7 @@
 // clinically validated one. A detector never counts what it cannot see: when the needed body part
 // is missing, low-confidence or out of frame it reports why and drops the incomplete repetition.
 
-export const DETECTOR_VERSION = "move-detectors/1.2.0";
+export const DETECTOR_VERSION = "move-detectors/1.3.0";
 
 /** MediaPipe pose landmark indices, person-relative. */
 const POSE = {
@@ -216,9 +216,11 @@ export class PoseDetector {
   }
   lost(reason, t) {
     this.badFrames++;
-    this.counter?.reset();
-    this.smooth.reset();
-    this.anchorHip = null;
+    // A single missed frame (pose not found, a joint briefly hidden) no longer throws away the
+    // repetition in progress. The counter and the smoother already start over by themselves when the
+    // next good frame comes more than gapMs (700 ms) after the last one, so a longer occlusion still
+    // drops the unfinished repetition. On public video, resetting on every missed frame lost almost
+    // every count when 1 frame in 10 was missing (docs/MOVE_PUBLIC_VIDEO_VALIDATION.md).
     if (this.baseline === null) (this.samples = []), (this.calibStart = null);
     return { valid: false, reason, reps: this.reps, partials: this.counter?.partials ?? 0, phase: "lost", counted: false, progress: 0, confidence: 0, t };
   }

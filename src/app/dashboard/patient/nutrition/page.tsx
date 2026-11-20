@@ -28,7 +28,7 @@ const L = (lang: string, x?: Text | null) => (x ? (lang === "bn" ? x.bn : x.en) 
 const tx = (lang: string, en: string, bn: string) => (lang === "bn" ? bn : en);
 const fmt = formatValue as (v: unknown, key: string, lang: string) => string;
 const DISH = DISHES as Record<string, { id: string; category: string; en: string; bn: string }>;
-const ADDABLE = ["rice", "dal", "fish_curry", "banana", "apple", "strawberries", "packaged", "other"];
+const ADDABLE = ["rice", "dal", "fish_curry", "banana", "mango", "orange", "guava", "apple", "pear", "peach", "pomegranate", "tomato", "strawberries", "packaged", "other"];
 const SCANNING = ["SCANNING", "QUALITY_WAIT", "CANDIDATE_STABLE"];
 
 const QUALITY_TEXT: Record<string, Text> = {
@@ -572,7 +572,7 @@ export default function NutritionPage() {
           <div className="rounded-2xl bg-wash p-4 text-sm text-muted">
             <p className="font-medium text-ink">{tx(lang, "Good to know", "জেনে রাখুন")}</p>
             <ul className="mt-1 list-disc space-y-1 pl-5">
-              <li>{tx(lang, "The camera recognises 34 common foods with an on-device model trained on public food photos (right about 3 times in 4 on our test photos, not yet tested on Bangladeshi meals). It only fills in apple, banana, strawberries and rice; for anything else it names the food and you choose. Always check it.", "ক্যামেরা ডিভাইসের ভেতরের একটি মডেলে ৩৪টি সাধারণ খাবার চেনে, যা প্রকাশ্য খাবারের ছবিতে প্রশিক্ষিত (আমাদের পরীক্ষার ছবিতে প্রায় প্রতি ৪টিতে ৩টি ঠিক, বাংলাদেশি খাবারে এখনো পরীক্ষা হয়নি)। এটি কেবল আপেল, কলা, স্ট্রবেরি ও ভাত নিজে বসায়; অন্য খাবারের নাম বলে, বাছবেন আপনি। সবসময় যাচাই করুন।")}</li>
+              <li>{tx(lang, "The camera recognises 65 foods, including 31 Bangladeshi dishes, with an on-device model trained on public food photos (right about 4 times in 5 on our Bangladeshi test photos; not yet tested on volunteers' own meals). It fills in a food only when it has USDA numbers for it and is sure enough (rice, dal, fish curry, banana, apple, pear, peach, pomegranate, raw tomato, strawberries); for anything else it names the food and you choose. Always check it.", "ক্যামেরা ডিভাইসের ভেতরের একটি মডেলে ৩১টি বাংলাদেশি পদসহ ৬৫টি খাবার চেনে, যা প্রকাশ্য খাবারের ছবিতে প্রশিক্ষিত (আমাদের বাংলাদেশি পরীক্ষার ছবিতে প্রায় প্রতি ৫টিতে ৪টি ঠিক; স্বেচ্ছাসেবকদের নিজের খাবারে এখনো পরীক্ষা হয়নি)। এটি কেবল USDA-র মান আছে এবং যথেষ্ট নিশ্চিত হলে খাবার নিজে বসায় (ভাত, ডাল, মাছের ঝোল, কলা, আপেল, নাশপাতি, পীচ, ডালিম, কাঁচা টমেটো, স্ট্রবেরি); অন্য খাবারের নাম বলে, বাছবেন আপনি। সবসময় যাচাই করুন।")}</li>
               <li>{tx(lang, "Photos are looked at on this device only and are never saved or sent.", "ছবি কেবল এই ডিভাইসে দেখা হয়, কখনো সংরক্ষণ বা পাঠানো হয় না।")}</li>
               <li>{tx(lang, "Numbers are estimates from food tables (USDA), not measurements. ASHA shows what it assumed.", "সংখ্যাগুলো খাদ্য তালিকার (USDA) অনুমান, মাপ নয়। আশা কী ধরে নিয়েছে তা দেখায়।")}</li>
             </ul>
@@ -886,7 +886,11 @@ function StillFindings({ still, lang }: { still: { suggestions: Suggestion[]; re
           {tx(lang, "Looks like: ", "দেখে মনে হচ্ছে: ")}
           <strong>{visionLabel(still.recognised[0].label, lang)}</strong>
           <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">{tx(lang, "experimental, check it", "পরীক্ষামূলক, যাচাই করুন")}</span>
-          <span className="mt-1 block text-sm text-muted">{tx(lang, "ASHA doesn't have nutrition numbers for this food yet, so it isn't added for you. Choose what you ate below.", "এই খাবারের পুষ্টির হিসাব আশার কাছে এখনো নেই, তাই নিজে থেকে যোগ হয়নি। নিচে যা খেয়েছেন তা বাছুন।")}</span>
+          <span className="mt-1 block text-sm text-muted">
+            {still.recognised[0].dishId
+              ? tx(lang, `Not added for you: the camera isn't sure enough about this food. If it's right, tap + ${DISH[still.recognised[0].dishId].en} below.`, `নিজে থেকে যোগ হয়নি: ক্যামেরা এই খাবারে যথেষ্ট নিশ্চিত নয়। ঠিক হলে নিচে + ${DISH[still.recognised[0].dishId].bn} চাপুন।`)
+              : tx(lang, "ASHA doesn't have nutrition numbers for this food yet, so it isn't added for you. Choose what you ate below.", "এই খাবারের পুষ্টির হিসাব আশার কাছে এখনো নেই, তাই নিজে থেকে যোগ হয়নি। নিচে যা খেয়েছেন তা বাছুন।")}
+          </span>
         </p>
       ) : (
         <p className="text-lg text-ink">{v?.unavailable || v?.timeout || v?.error ? tx(lang, "No camera suggestion this time. You'll choose the foods next.", "এবার ক্যামেরার পরামর্শ নেই। এরপর আপনি খাবার বাছবেন।") : tx(lang, "ASHA's camera didn't recognise a food it knows. You'll choose the foods next.", "আশার ক্যামেরা চেনা কোনো খাবার পায়নি। এরপর আপনি খাবার বাছবেন।")}</p>
