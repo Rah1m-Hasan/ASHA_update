@@ -20,23 +20,24 @@ export function CareLoop() {
           />
         </Reveal>
 
-        <div className="relative mt-12 sm:mt-16">
-          <div
-            aria-hidden="true"
-            className="absolute inset-x-0 top-[5.5px] hidden h-px bg-gradient-to-r from-transparent via-accent/60 to-transparent md:block"
-          />
+        <div className="care-loop relative mt-12 sm:mt-16">
+          {/* The connector. In a row it is one rule, from the first node's
+              centre to the last's; stacked, each step carries the piece of
+              rule that reaches the next node. See globals.css. */}
+          <div aria-hidden="true" className="care-loop__rule" />
 
-          <ol className="grid gap-6 md:grid-cols-3 md:gap-8">
-            {steps.map((s, i) => {
+          <ol className="grid gap-[var(--care-gap)] md:grid-cols-3">
+            {steps.map((s) => {
               const central = s.side === "The patient";
               return (
-                <Reveal as="li" key={s.n} stagger={(i + 1) as 1 | 2 | 3} className="h-full">
+                <Reveal as="li" key={s.n} className="h-full">
                   <div className="flex h-full flex-col">
-                    <div className="flex items-center gap-3">
-                      <SignalNode />
-                      <p className="text-[12px] font-semibold tracking-[0.14em] text-accent-deep uppercase">
+                    {/* The label sits above the node, so the rule crosses no type. */}
+                    <div className="care-loop__head flex flex-col items-start">
+                      <p className="whitespace-nowrap leading-[var(--care-label)] text-[12px] font-semibold tracking-[0.14em] text-accent-deep uppercase">
                         {s.n} / {s.tag}
                       </p>
+                      <SignalNode className="care-loop__node" />
                     </div>
                     <div
                       className={cn(

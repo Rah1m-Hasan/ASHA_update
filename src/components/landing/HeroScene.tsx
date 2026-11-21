@@ -1,4 +1,4 @@
-import { heroScene } from "@/content/landing";
+import { heroScene, storyThread } from "@/content/landing";
 import { PhonePreview } from "./PhonePreview";
 import { SignalLine } from "./Signal";
 
@@ -33,9 +33,15 @@ export function HeroScene() {
             </div>
           </div>
 
-          <div className="mx-auto mt-9 max-w-[368px]">
-            <SignalLine draw />
-            <p className="mt-3 text-center text-[12px] tracking-[0.14em] text-body uppercase">{heroScene.signal}</p>
+          <div className="mx-auto mt-7 max-w-[368px] rounded-[20px] border border-line bg-surface/90 p-4 sm:p-5">
+            <p className="text-center text-[11px] font-semibold tracking-[0.12em] text-body uppercase">{heroScene.signal}</p>
+            <div className="my-4 px-2">
+              <SignalLine draw />
+            </div>
+            <div className="ml-auto max-w-[88%] rounded-[16px] rounded-tr-[5px] bg-brand-strong px-4 py-3 text-on-brand">
+              <p className="text-[11px] font-medium text-on-brand/80">{storyThread.caregiverLabel}</p>
+              <p className="mt-1 font-medium">{heroScene.reply}</p>
+            </div>
           </div>
         </div>
       </div>

@@ -28,7 +28,7 @@ export function SectionHeading({
   const titleClass = cn(
     "font-medium text-balance text-display",
     level === 1
-      ? "text-[clamp(2.5rem,6.2vw,4.75rem)] leading-[0.98] tracking-[-0.022em]"
+      ? "text-[clamp(2.5rem,4.6vw,3.25rem)] leading-[1.02] tracking-[-0.022em]"
       : "text-[clamp(2rem,3.6vw,3.125rem)] leading-[1.06] tracking-[-0.015em]",
   );
 

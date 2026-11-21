@@ -22,7 +22,7 @@ export function Eyebrow({
     <Tag
       id={id}
       className={cn(
-        "inline-flex items-center gap-2.5 text-[12px] font-semibold tracking-[0.14em] text-accent-deep uppercase",
+        "inline-flex items-center gap-2.5 text-[13px] font-medium tracking-[0.025em] text-accent-deep",
         className,
       )}
     >

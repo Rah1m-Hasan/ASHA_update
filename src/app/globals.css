@@ -208,6 +208,81 @@ html[data-eye-cursor] body { padding-bottom: 7rem; }
   box-shadow: 0 0 0 5px color-mix(in srgb, var(--color-accent) 16%, transparent);
 }
 
+/* --- The care loop ------------------------------------------------------
+   Three steps joined by a rule. The rule meets every node at its centre, so
+   the variables below — the node's size, the label's line height and the step
+   gap — are shared by the rule, the grid and the node, and cannot drift
+   apart. The label sits above the node so the rule never crosses the type. */
+.care-loop {
+  --care-node: 11px; /* the node's diameter */
+  --care-label: 18px; /* the label's line height */
+  --care-stem: 8px; /* the gap between the label and its node */
+  --care-gap: 1.5rem; /* the step gap: 24px stacked, 32px in a row */
+  --care-gutter: 2rem; /* the gutter the stacked rule runs in */
+}
+@media (min-width: 48rem) {
+  .care-loop {
+    --care-gap: 2rem;
+  }
+}
+
+.care-loop__rule {
+  position: absolute;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* The label, then the node it belongs to. The gap is the rule's own stem
+   distance, so the node's centre stays where the rule expects it. */
+.care-loop__head {
+  gap: var(--care-stem);
+}
+
+/* In a row: one horizontal rule from the first node's centre to the third's.
+   The right inset is the grid's own maths — a column is a third of the
+   content width less the gaps, so the rule lands exactly on the last node. */
+@media (min-width: 48rem) {
+  .care-loop__rule {
+    left: calc(var(--care-node) / 2);
+    right: calc((100% - 2 * var(--care-gap)) / 3 - var(--care-node) / 2);
+    top: calc(var(--care-label) + var(--care-stem) + var(--care-node) / 2);
+    height: 1px;
+    translate: 0 -50%;
+    background: color-mix(in srgb, var(--color-accent) 60%, transparent);
+  }
+}
+
+/* Stacked: the rule turns down the gutter. It cannot be one box here — the
+   steps are of different heights, so a single box would run past the last
+   node — so each step carries the piece of rule that reaches the next node,
+   and every piece ends on a node's centre. */
+@media (max-width: 47.99rem) {
+  .care-loop__rule {
+    display: none;
+  }
+  .care-loop > ol {
+    padding-left: var(--care-gutter);
+  }
+  .care-loop > ol > li {
+    position: relative;
+  }
+  .care-loop__node {
+    margin-left: calc(-1 * var(--care-gutter));
+  }
+  .care-loop > ol > li::after {
+    content: "";
+    position: absolute;
+    left: calc(-1 * var(--care-gutter) + var(--care-node) / 2);
+    top: calc(var(--care-label) + var(--care-stem) + var(--care-node) / 2);
+    width: 1px;
+    height: calc(100% + var(--care-gap));
+    background: color-mix(in srgb, var(--color-accent) 60%, transparent);
+  }
+  .care-loop > ol > li:last-child::after {
+    display: none;
+  }
+}
+
 /* A faint dot grid, used behind stage panels. */
 .dot-grid {
   background-image: radial-gradient(color-mix(in srgb, var(--color-heading) 14%, transparent) 1px, transparent 1px);

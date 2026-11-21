@@ -28,7 +28,7 @@ export function Modules() {
               </div>
             </SectionHeading>
           </Reveal>
-          <Reveal stagger={2}>
+          <Reveal>
             {modulesIntro.video.src ? (
               <VideoFrame {...modulesIntro.video} mode="ambient" />
             ) : (
@@ -39,33 +39,27 @@ export function Modules() {
       </Container>
 
       <Container width="page" className="mt-14 sm:mt-16">
-        {/* Two equal columns from 640px up. Every card is the same shape and the
-            same padding, and the Explore link sits at the bottom of each card,
-            so all eight align however long a description runs. */}
+        {/* A consistent two-column showcase keeps all eight ways to connect easy to scan. */}
         <ol className="grid gap-5 sm:grid-cols-2 sm:gap-6">
-          {modules.map((m, i) => (
+          {modules.map((m) => (
             <Reveal
               as="li"
               key={m.key}
-              stagger={((i % 3) + 1) as 1 | 2 | 3}
-              className="flex h-full flex-col rounded-[22px] border border-line bg-surface p-6 shadow-card transition-colors hover:border-brand/45 sm:p-7"
+              className="group flex h-full flex-col rounded-[20px] border border-line bg-surface p-5 transition-colors hover:border-brand/55 hover:bg-surface-hover sm:p-6"
             >
-              <div className="flex items-start justify-between gap-4">
-                <span className="grid size-10 shrink-0 place-items-center rounded-[12px] bg-brand-soft text-brand">
+              <div className="flex items-center gap-3">
+                <span className="grid size-10 shrink-0 place-items-center rounded-[12px] bg-brand-soft text-brand transition-colors group-hover:bg-brand-strong group-hover:text-on-brand">
                   <ModuleIcon module={m.key} size={18} />
                 </span>
-                <span aria-hidden="true" className="font-semibold text-[13px] tracking-[0.14em] text-brand/70">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
+                <p className="text-[12px] font-semibold tracking-[0.12em] text-accent-deep uppercase">{m.name}</p>
               </div>
 
-              <p className="mt-4 text-[12px] font-semibold tracking-[0.14em] text-accent-deep uppercase">{m.name}</p>
-              <h3 className="mt-2 text-[1.375rem] leading-[1.25] font-medium text-heading">{m.title}</h3>
-              <p className="mt-3 text-[1.0625rem] leading-[1.7] text-body">{m.text}</p>
+              <h3 className="mt-5 text-[1.25rem] leading-[1.3] font-medium text-heading">{m.title}</h3>
+              <p className="mt-2.5 text-base leading-[1.6] text-body">{m.text}</p>
 
               <a
                 href={`/dashboard/patient/${m.key}`}
-                className="mt-auto inline-flex items-center gap-1.5 self-start pt-6 text-[15px] font-medium text-brand transition-colors hover:text-brand-hover hover:underline"
+                className="mt-auto inline-flex min-h-11 items-center gap-1.5 self-start pt-4 text-[15px] font-medium text-brand transition-colors hover:text-brand-hover hover:underline"
               >
                 Explore {m.name}
                 <ArrowRightIcon size={16} />

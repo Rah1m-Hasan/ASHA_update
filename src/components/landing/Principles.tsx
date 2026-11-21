@@ -18,7 +18,7 @@ export function Principles() {
 
           <ol className="border-t border-line">
             {principles.map((p, i) => (
-              <Reveal as="li" key={p.title} stagger={(i + 1) as 1 | 2 | 3}>
+              <Reveal as="li" key={p.title}>
                 <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-5 border-b border-line py-7 sm:gap-7">
                   <span className="grid size-10 place-items-center rounded-[14px] bg-surface text-brand shadow-card">
                     {icons[i]}

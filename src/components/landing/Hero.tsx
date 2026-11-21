@@ -42,7 +42,7 @@ export function Hero() {
             <p className="mt-7 max-w-[52ch] text-[15px] leading-[1.65] text-body">{hero.notes}</p>
           </Reveal>
 
-          <Reveal stagger={2}>
+          <Reveal>
             {hero.video.src ? (
               <VideoFrame {...hero.video} />
             ) : (

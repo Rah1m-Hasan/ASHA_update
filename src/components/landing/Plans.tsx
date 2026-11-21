@@ -21,10 +21,10 @@ export function Plans() {
         </Reveal>
 
         <div className="mt-14 grid gap-8 sm:mt-16 lg:grid-cols-3 lg:gap-7">
-          {plans.map((p, i) => {
+          {plans.map((p) => {
             const featured = "featured" in p && p.featured;
             return (
-              <Reveal key={p.name} stagger={(i + 1) as 1 | 2 | 3} className="h-full">
+              <Reveal key={p.name} className="h-full">
                 <article
                   className={cn(
                     "flex h-full flex-col rounded-[24px] p-7 sm:p-8",

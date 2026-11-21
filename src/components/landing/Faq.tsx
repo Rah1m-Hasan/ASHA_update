@@ -15,7 +15,7 @@ export function Faq() {
 
         <div className="mx-auto mt-12 max-w-[900px] border-t border-line">
           {faqs.map((f, i) => (
-            <Reveal key={f.q} stagger={(i + 1) as 1 | 2 | 3 | 4}>
+            <Reveal key={f.q}>
               <details className="group border-b border-line">
                 <summary className="flex cursor-pointer list-none items-start justify-between gap-6 py-6 [&::-webkit-details-marker]:hidden">
                   <span className="flex gap-4 sm:gap-6">

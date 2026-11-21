@@ -66,14 +66,13 @@ export function HardwareKit() {
             </div>
           </Reveal>
 
-          <Reveal stagger={2}>
+          <Reveal>
             <figure className="m-0 overflow-hidden rounded-[28px] bg-surface p-5 shadow-panel sm:p-8">
               <Image
                 src={kit.image.src}
                 alt={kit.image.alt}
                 width={1200}
                 height={520}
-                unoptimized
                 className="mx-auto h-auto w-full max-w-[720px]"
               />
               <figcaption className="mt-5 text-center text-[13px] text-body">{kit.caption}</figcaption>

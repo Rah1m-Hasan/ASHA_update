@@ -18,17 +18,17 @@ export const nav = [
 ];
 
 export const hero = {
-  badge: "Assistive communication, reimagined",
+  badge: "An assistive communication companion",
   title: "A little support. A lot more independence.",
-  // The headline, set as two lines. The second one carries the accent colour.
+  // The headline is set as two lines; the second carries the signal blue.
   titleLines: [
     { text: "A little support.", accent: false },
     { text: "A lot more independence.", accent: true },
   ],
-  lead: "When words are hard, connection shouldn’t be. Meet Asha — the companion that helps people express their needs in their own way.",
+  lead: "When words are hard, connection shouldn’t be. Asha helps people share what they need in the way that works for them.",
   primary: { label: "Try Asha", href: site.appUrl },
   secondary: { label: "Book a guided demo", href: "#contact" },
-  notes: "An assistive communication prototype — not a medical device, and not an emergency service.",
+  notes: "A prototype for assistive communication. Not a medical device or emergency service.",
   video: {
     // Add the demo video URL here when it is ready, e.g. "/videos/asha-demo.mp4".
     src: "",
@@ -46,7 +46,6 @@ export const heroScene = {
   promptHint: "Your comfortable gesture. Your choice.",
   needs: ["Water", "Comfort", "Help"],
   reply: "I’m on my way.",
-  replyLabel: "Caregiver acknowledged",
   signal: "Signal sent to the care circle",
   caption: "Illustrative interface — a signal becomes a message.",
 };
@@ -61,26 +60,26 @@ export const storyThread = {
 };
 
 export const journeys = [
-  { n: "01", title: "Recovery & rehabilitation", text: "After stroke, neurological illness or an accident." },
-  { n: "02", title: "Complex communication needs", text: "For people who use alternative ways to express themselves." },
-  { n: "03", title: "Ageing & bedside care", text: "For everyday needs when reaching or calling is difficult." },
+  { n: "Recovery", title: "Recovery & rehabilitation", text: "Support after a stroke, illness or injury." },
+  { n: "Communication", title: "Complex communication needs", text: "More ways to express everyday needs." },
+  { n: "Everyday care", title: "Ageing & bedside care", text: "A way to call for support when reaching is difficult." },
 ];
 
 export const story = {
   eyebrow: "Why we’re building Asha",
   title: "Silence shouldn’t mean being alone.",
   // A phrase from the paragraph below, lifted out as a pull-quote.
-  pullQuote: "A bridge between what a person wants to say and the people who care for them.",
+  pullQuote: "A calmer way to communicate, shaped around what feels comfortable.",
   paragraphs: [
-    "A neurological illness took a grandfather’s speech. His needs were still there. His way to call for help wasn’t.",
-    "That experience is at the heart of Asha: a bridge between what a person wants to say and the people who care for them. Not another complicated dashboard — a calmer way to communicate, with support that adapts to what someone can comfortably do.",
+    "A neurological illness took our grandfather’s speech. His needs remained, but calling for help became difficult.",
+    "That experience shaped Asha: flexible ways to communicate, with caregivers close by. Asha supports human care; it does not replace it.",
   ],
 };
 
 export const modulesIntro = {
-  eyebrow: "Many ways to say “I need you”",
-  title: "One companion. Your way to connect.",
-  lead: "Speech, eyes, face or hands. A caregiver helps assess what works; Asha recommends a starting point without locking anyone out.",
+  eyebrow: "Many ways to communicate",
+  title: "One companion. More ways to connect.",
+  lead: "Use speech, eyes, face or hands. A caregiver can help find a comfortable starting point; every module stays available.",
   rail: {
     title: "The app home",
     hint: "Choose what you want to use — every module is open in the demo.",
@@ -90,38 +89,38 @@ export const modulesIntro = {
 
 export type ModuleKey = "facespeak" | "eyespeak" | "fingerspeak" | "senseassist" | "vitalsense" | "posture" | "move" | "nutrition";
 export const modules: { key: ModuleKey; name: string; title: string; text: string }[] = [
-  { key: "facespeak", name: "FaceSpeak", title: "A movement can become a message.", text: "Guided calibration learns a personal baseline for deliberate blinks, smiles and head movements. A separate confirmation keeps ordinary movement from becoming an unintended request." },
-  { key: "eyespeak", name: "EyeSpeak", title: "Your eyes. Your words.", text: "Spell a word or pick a phrase by looking at it, with touch or a single switch always available. Eye tracking is experimental and checks its own accuracy before it can select anything." },
-  { key: "fingerspeak", name: "FingerSpeak", title: "Hands and fingers, understood.", text: "Practise comfortable gestures and map them to phrases. Asha speaks the phrase and can send it to the caregiver after confirmation." },
-  { key: "senseassist", name: "SenseAssist", title: "Clearer speech, together.", text: "Asha suggests a meaning for unclear speech in Bangla or English. The person confirms before anything is spoken or sent." },
-  { key: "vitalsense", name: "VitalSense", title: "A gentle signal check.", text: "Experimental camera-based pulse estimates for awareness only — not a clinical measurement." },
-  { key: "posture", name: "Posture", title: "Comfort at a glance.", text: "On-device posture sensing helps caregivers notice when someone may need repositioning." },
-  { key: "move", name: "Move", title: "Movement, at your own pace.", text: "Short guided routines with a demonstration and a practice try first. The camera counts only what it can see, and fixed safety rules stop a workout when warning signs appear." },
-  { key: "nutrition", name: "Nutrition", title: "Meals, honestly estimated.", text: "Choose what you ate, or try the experimental photo suggestion for a few fruits. Asha asks a few short questions and gives a sourced calorie estimate, and says so when it can\u2019t tell." },
+  { key: "facespeak", name: "FaceSpeak", title: "Turn a movement into a message.", text: "Practise personal blink, smile or head-movement signals. Confirm each request before it reaches a caregiver." },
+  { key: "eyespeak", name: "EyeSpeak", title: "Choose words with your eyes.", text: "Look to spell or select a phrase. Eye tracking is experimental; touch and switch input remain available." },
+  { key: "fingerspeak", name: "FingerSpeak", title: "Make a gesture speak.", text: "Map comfortable hand gestures to phrases, then confirm before sharing them." },
+  { key: "senseassist", name: "SenseAssist", title: "Clarify speech together.", text: "Get a Bangla or English suggestion for unclear speech. The person confirms before it is shared." },
+  { key: "vitalsense", name: "VitalSense", title: "Notice a pulse estimate.", text: "Experimental camera estimates are for awareness only, not clinical measurements." },
+  { key: "posture", name: "Posture", title: "Check for comfort.", text: "On-device posture sensing can help a caregiver notice when repositioning may help." },
+  { key: "move", name: "Move", title: "Practise at your own pace.", text: "Try short guided routines. Camera counts can miss movement; safety rules stop a session when needed." },
+  { key: "nutrition", name: "Nutrition", title: "Explore meal estimates.", text: "Log a meal or try experimental photo suggestions for selected fruit. Asha gives a sourced estimate and says when it can’t tell." },
 ];
 
 export const steps = [
-  { n: "01", tag: "Adapt", title: "Start with the person.", text: "A caregiver sets up movement, speech, vision and hearing preferences. Practise the signals that feel comfortable.", side: "The caregiver" },
-  { n: "02", tag: "Understand", title: "Support, not pressure.", text: "Asha explains the next step, offers gentle check-ins and helps clarify speech. The patient confirms their meaning.", side: "The patient" },
-  { n: "03", tag: "Connect", title: "Close the loop.", text: "Confirmed requests reach the assigned care circle. The patient can see when a caregiver acknowledges them.", side: "The caregiver" },
+  { n: "01", tag: "Adapt", title: "Start with the person.", text: "Set preferences and practise a comfortable signal.", side: "The caregiver" },
+  { n: "02", tag: "Understand", title: "Confirm the meaning.", text: "Asha offers support; the patient confirms each request.", side: "The patient" },
+  { n: "03", tag: "Connect", title: "Close the loop.", text: "Confirmed requests reach the care circle. Acknowledgements return to the patient.", side: "The caregiver" },
 ];
 
 export const kit = {
   eyebrow: "Optional Asha Kit · proposed hardware add-on",
-  title: "Support that fits your space.",
-  lead: "Start with your own compatible phone or tablet. Explore an optional camera, switch and mount when a more stable bedside setup would help.",
+  title: "A setup that fits your space.",
+  lead: "Start with a compatible phone or tablet. The optional camera, switch and mount are designed for a steadier bedside setup.",
   image: { src: "/assets/kit-placement.svg", alt: "Illustrative placement of a tablet, camera, mount and switch beside a bed" },
   caption: "Illustrative placement — not a photograph of a shipping kit.",
-  price: "$100 one-time · planned launch price",
-  priceNote: "Subscription separate · No required kit purchase",
+  price: "$100 one-time · proposed",
+  priceNote: "Subscription separate · Kit optional",
   parts: [
     { key: "camera", title: "Camera + clear view", text: "Position the screen so the person can see it comfortably and the camera has a clear view of the face." },
     { key: "mount", title: "Adjustable mount", text: "Choose a secure mounting point with the caregiver. Check angle, stability and cable route." },
     { key: "switch", title: "Optional assistive switch", text: "A comfortable, reachable switch for people who prefer a physical input. Compatibility is checked first." },
   ],
   privacy: {
-    title: "Camera sensing stays on the device",
-    text: "Face, hand and posture sensing run locally in the browser. AI clarification uses the cloud only after opt-in, and secret keys stay on the server.",
+    title: "You control camera access",
+    text: "Face, hand and posture sensing run on-device. Cloud AI is used only after opt-in.",
   },
 };
 
@@ -133,7 +132,7 @@ export const languages = {
     { text: "I need help", lang: "en" },
   ],
   title: "Bangla + English",
-  text: "Asha listens, speaks and clarifies in Bangla, English or a mix of both — so people can communicate in the language that feels like home.",
+  text: "Communicate in Bangla, English or a mix of both.",
 };
 
 export const plans = [
@@ -142,8 +141,8 @@ export const plans = [
     name: "Asha Plus",
     price: "$5",
     period: "/ month",
-    summary: "Everyday communication and a connected caregiver.",
-    features: ["Core communication interfaces", "Adaptive access and AI sentence support", "Bangla + English companion support", "Caregiver requests and history"],
+    summary: "Everyday communication with caregiver connection.",
+    features: ["Eight communication and support modules", "Bangla and English support", "Confirmed caregiver requests"],
     cta: "Discuss home support",
     note: "Proposed subscription · not yet sold online",
     interest: "homecare",
@@ -153,8 +152,8 @@ export const plans = [
     name: "Asha Pro",
     price: "$12",
     period: "/ month",
-    summary: "A proposed path to more personalised care support.",
-    features: ["Everything proposed in Asha Plus", "Planned advanced AI personalisation", "Care-workflow and reporting options", "Onboarding scope agreed with your team"],
+    summary: "A proposed option for care teams.",
+    features: ["Everything in proposed Asha Plus", "Planned AI personalisation", "Care workflow options discussed after demo"],
     cta: "Discuss a care pilot",
     note: "Proposed subscription · scope confirmed after demo",
     interest: "hospital",
@@ -165,8 +164,8 @@ export const plans = [
     name: "Asha Kit",
     price: "$100",
     period: "/ once",
-    summary: "A more stable setup, when it suits the person.",
-    features: ["Camera, assistive switch and mount", "Phone / tablet excluded", "Subscription separate", "No required kit purchase"],
+    summary: "An optional, more stable setup.",
+    features: ["Camera, switch and adjustable mount", "Phone or tablet not included", "Subscription sold separately"],
     cta: "Enquire about the kit",
     note: "Planned one-time price · compatibility check first",
     interest: "kit",
@@ -177,9 +176,9 @@ export const plansNote =
   "USD reference prices from the pitch deck — not a checkout or a payment request. The team confirms a written quote, availability and any delivery or installation scope.";
 
 export const principles = [
-  { title: "Ability first.", text: "Large controls, spoken guidance and clear text. Details appear when you want them." },
-  { title: "Private by choice.", text: "Camera sensing runs locally. AI clarification uses the cloud after opt-in; secret keys stay on the server." },
-  { title: "People stay in control.", text: "Interpretations are suggestions. Care requests need confirmation. Asha supports human care, not replaces it." },
+  { title: "Ability first.", text: "Choose a comfortable way to communicate, with clear text and large controls." },
+  { title: "Private by choice.", text: "Camera sensing runs on-device. Cloud AI needs your opt-in." },
+  { title: "People stay in control.", text: "Suggestions are confirmed by the person. Asha supports human care; it does not replace it." },
 ];
 
 export type SocialKey = "github" | "linkedin" | "facebook";
@@ -213,10 +212,10 @@ export const team: { name: string; role: string; photo: string; socials: Partial
 ];
 
 export const faqs = [
-  { q: "Can I try it without setting up a patient?", a: "Yes. Try every module in the live demo. Create a private care circle only to test delivery between patient and caregiver devices." },
-  { q: "Does Asha diagnose health conditions?", a: "No. Asha is an assistive communication prototype, not a diagnostic or emergency service. VitalSense produces experimental camera estimates, not clinical measurements." },
-  { q: "How does the AI help?", a: "It offers brief conversation and guidance, and suggests meanings for unclear speech. Retrieved app guidance and confirmed speech pairs ground replies; patients check interpretations before sending requests." },
-  { q: "Is Asha ready for a hospital-wide rollout?", a: "The live prototype is available to explore. Supervised validation and pilot evaluation come next. We welcome conversations with care teams and accessibility partners." },
+  { q: "Can I try Asha without setting up a patient?", a: "Yes. Explore every module in the demo. A private care circle is only needed to test requests between devices." },
+  { q: "Does Asha diagnose or handle emergencies?", a: "No. Asha is an assistive communication prototype, not a medical device or emergency service. VitalSense estimates are experimental, not clinical measurements." },
+  { q: "How does the AI help?", a: "It can clarify speech and offer guidance. The person checks suggestions before sharing a request. Cloud AI requires opt-in." },
+  { q: "Is Asha ready for a hospital rollout?", a: "The prototype is available to explore. Supervised validation and pilot evaluation have not yet happened." },
 ];
 
 export const contact = {

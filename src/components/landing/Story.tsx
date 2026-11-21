@@ -21,7 +21,7 @@ export function Story() {
             </p>
           </Reveal>
 
-          <Reveal stagger={2}>
+          <Reveal>
             <div className="rounded-[28px] bg-mist p-5 sm:p-8">
               <MessageThread />
             </div>
@@ -35,7 +35,7 @@ export function Story() {
             </blockquote>
           </Reveal>
 
-          <Reveal stagger={2} className="lg:col-start-2 lg:row-start-2">
+          <Reveal className="lg:col-start-2 lg:row-start-2">
             <p className="max-w-[52ch] text-[1.0625rem] leading-[1.7] text-body">{story.paragraphs[1]}</p>
           </Reveal>
         </div>

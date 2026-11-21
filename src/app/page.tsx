@@ -19,8 +19,20 @@ import { hero } from "@/content/landing";
 
 export const metadata: Metadata = {
   title: `Asha — ${hero.title}`,
-  description: "Asha helps people communicate their needs, move, eat well and stay connected with the people who care for them.",
+  description: "Asha is an assistive communication companion that helps people express their needs and stay connected with caregivers.",
   manifest: "/app.webmanifest",
+  openGraph: {
+    title: `Asha — ${hero.title}`,
+    description: "An assistive communication companion for people and the people who care for them.",
+    type: "website",
+    images: [{ url: "/assets/brand/asha-icon-512.png", width: 512, height: 512, alt: "Asha" }],
+  },
+  twitter: {
+    card: "summary",
+    title: `Asha — ${hero.title}`,
+    description: "An assistive communication companion for people and the people who care for them.",
+    images: ["/assets/brand/asha-icon-512.png"],
+  },
 };
 
 // The one page about Asha. "Try Asha" opens the app home, where people choose what they want to use.

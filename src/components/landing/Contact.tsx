@@ -16,7 +16,7 @@ export function Contact() {
               align="left"
               eyebrow="Let’s find the right fit"
               title="Book a demo. Start a conversation."
-              lead="For families, care teams, hospitals and partners. Tell us what you want to explore — we’ll discuss the next step and confirm a suitable time."
+              lead="For families, care teams and accessibility partners. Tell us what you’d like to explore."
             />
 
             <ul className="mt-10 border-t border-mist-line">
@@ -50,7 +50,7 @@ export function Contact() {
             </p>
           </Reveal>
 
-          <Reveal stagger={2}>
+          <Reveal>
             <EnquiryForm />
           </Reveal>
         </div>

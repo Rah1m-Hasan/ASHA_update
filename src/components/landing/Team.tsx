@@ -21,14 +21,13 @@ export function Team() {
           <SectionHeading
             align="center"
             eyebrow="Meet the team"
-            title="Built with purpose. And a lot of heart."
-            lead="Technical implementation, product direction and care-focused business thinking, together."
+            title="Built with purpose and care."
           />
         </Reveal>
 
         <ul className="mt-12 grid gap-10 text-center sm:grid-cols-3 sm:gap-8">
-          {team.map((m, i) => (
-            <Reveal as="li" key={m.name} stagger={(i + 1) as 1 | 2 | 3}>
+          {team.map((m) => (
+            <Reveal as="li" key={m.name}>
               <Image
                 src={m.photo}
                 alt={m.name}
