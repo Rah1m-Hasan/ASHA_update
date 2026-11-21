@@ -16,6 +16,10 @@ const nextConfig = {
     .split(",")
     .map((host) => host.trim())
     .filter(Boolean),
+  experimental: {
+    // Opt in to Next.js's security-patch upgrade behaviour (16.4.3 -> 16.4.6).
+    agentUpgrade: "security",
+  },
   async headers() {
     return [
       { source: "/(.*)", headers: securityHeaders },
