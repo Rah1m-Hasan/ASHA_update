@@ -3,7 +3,7 @@
 // person to confirm. Rule: the same best guess in 4 of the last 6 good frames, and the newest frame
 // must itself agree. Only the model's single best guess counts, and only above FOOD_VISION.minScore
 // (on public photos, best guesses at 0.5 or more were right 84% of the time).
-import { FOOD_VISION, suggestionFor } from "./catalog.js";
+import { FOOD_VISION, autoFillFor, suggestionFor } from "./catalog.js";
 
 export const SCAN_RULE = Object.freeze({ window: 6, need: 4, minScore: FOOD_VISION.minScore, tentativeNeed: 2 });
 
@@ -66,12 +66,13 @@ export class StabilityTracker {
 /**
  * Suggestions from one still image (upload, manual shutter, or the frozen live frame: the same
  * function for all three). At most one: the model's best guess, when it is a food ASHA has a
- * nutrition record for. A best guess without a record (for example an orange) gives no suggestion;
- * `recognisedFrom` names it instead so the person can pick it themselves.
+ * nutrition record for AND its score reaches that food's fill-in threshold (FOOD_VISION.fillMin).
+ * Otherwise (no record, or a food the camera confuses too often, such as orange vs pomelo) there is
+ * no suggestion; `recognisedFrom` names it instead so the person can pick it themselves.
  */
 export function suggestionsFrom(categories, rule = SCAN_RULE) {
   const best = topFood(categories, rule);
-  if (!best?.dishId) return [];
+  if (!best?.dishId || !autoFillFor(best.label, best.score)) return [];
   return [{ dishId: best.dishId, label: best.label, score: Math.round(best.score * 100) / 100, modelId: FOOD_VISION.modelId, modelVersion: FOOD_VISION.modelVersion, experimental: true }];
 }
 

@@ -10,7 +10,9 @@ Research scripts behind `docs/NUTRITION_PUBLIC_DATA_VALIDATION.md` and `docs/MOV
 4. `feats.py` (old ImageNet model + MobileNetV3 embedder), `kfeats.py` (Keras EfficientNetV2-B0 / ConvNeXt-Tiny embeddings).
 5. `eval1.py`: trains the logistic-regression head on train embeddings and reports test metrics. `evalcore.py`: metrics, Wilson and bootstrap intervals.
 6. `export.py`: backbone + head to ONNX. `quant.py`: int8 static quantisation with 300 training photos for calibration.
-7. `final_eval.py`: evaluates the shipped ONNX file on the test photos, writes `docs/validation/nutrition-public-photo-results.json`.
+7. `final_eval.py`: evaluates the first (35-class) ONNX file on the test photos, writes `docs/validation/nutrition-public-photo-results.json`.
+8. Bangladeshi update (2026-11-20): `bd_feats.py` (class mapping, embeddings), `bd_split.py` (near-duplicate scenes, grouped split), `bd_train.py` (head on Open Images + Bangladeshi), `bd_export.py` (ONNX + int8), `bd_fill_thresholds.py` (per-food fill-in scores from the training-side holdout), `bd_final_eval.py` (shipped file on both test sets, writes the data behind `docs/validation/nutrition-bangladeshi-results.json`).
+9. `scripts/verify-nutrition-records-csv.mjs` (in the repo's scripts folder) checks every food record against the USDA SR Legacy CSV download.
 
 ## Move (`move/`)
 
@@ -18,3 +20,4 @@ Research scripts behind `docs/NUTRITION_PUBLIC_DATA_VALIDATION.md` and `docs/MOV
 2. `grid.mjs`: loads the app's `detectors.js` (optionally patched) and scores counted vs true reps.
 3. `tune3.mjs`, `tune4.mjs`: threshold and timing searches on Countix train clips.
 4. `final.mjs`: before/after on held-out clips and false counts on other exercises; writes `docs/validation/move-public-video-results.json`.
+5. `robust.mjs`: mirror, slow movement, low frame rate, landmark noise and missed frames on the held-out clips (`DETECTORS=<file>` to test another version); data behind `docs/validation/move-robustness-results.json`.

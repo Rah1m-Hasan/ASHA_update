@@ -3,14 +3,14 @@
 // It answers three things about a still image (a sampled live frame, the frozen frame, or an
 // uploaded photo, all through the same message):
 //   - ASHA's food recogniser's top five labels for the centre square (EfficientNetV2-B0 with a head
-//     trained on Open Images food photos, int8 ONNX, run with onnxruntime-web; 34 foods + "not food".
+//     trained on Open Images and Bangladeshi food photos, int8 ONNX, run with onnxruntime-web; 65 foods (31 Bangladeshi dishes) + "not food".
 //     Labels and their order live in src/features/nutrition/catalog.js FOOD_VISION.classes),
 //   - whether a face is in the picture (MediaPipe face landmarker, already shipped), so ASHA can
 //     ask for a photo without people in it,
 //   - basic picture quality (light, blur) of the centre square.
 // Nothing is sent anywhere. Images arrive as ImageBitmaps and are closed after use.
 // Same order as FOOD_VISION.classes in src/features/nutrition/catalog.js (the model's output order).
-const CLASSES = ["apple", "banana", "bell_pepper", "bread", "cabbage", "cake", "carrot", "cauliflower", "chili", "cucumber", "curry", "grape", "grapefruit_pomelo", "hamburger", "lemon_lime", "milk", "noodles", "not_food", "omelette", "onion", "orange", "peach", "pear", "pineapple", "pizza", "pomegranate", "potato", "pumpkin", "rice", "salad", "sandwich", "strawberry", "tea", "tomato", "watermelon"];
+const CLASSES = ["achar", "apple", "bakarkhani", "banana", "beguni", "bell_pepper", "bhorta", "bread", "cabbage", "cake", "carrot", "cauliflower", "chicken_curry", "chili", "chomchom", "chop", "cucumber", "curry", "dal", "egg_curry", "fish_curry", "french_fries", "fried_chicken", "fried_fish", "fuchka", "grape", "grapefruit_pomelo", "haleem", "hamburger", "jalebi", "jhalmuri", "kabab", "kotkoti", "lemon_lime", "milk", "muglai_paratha", "mutton_roast", "noodles", "not_food", "omelette", "onion", "orange", "paratha", "peach", "pear", "peyaju", "pineapple", "pitha", "pizza", "polao", "pomegranate", "potato", "prawn_curry", "pumpkin", "rasmalai", "rice", "roast_chicken", "salad", "sandesh", "sandwich", "shawarma", "singara_samosa", "strawberry", "tea", "tomato", "watermelon"];
 const SIZE = 224;
 let classifier = null;
 let ort = null;
@@ -29,7 +29,7 @@ async function init(base) {
   ort = await import(new URL("./ort.wasm.min.mjs", self.location.href).href);
   ort.env.wasm.numThreads = 1;
   ort.env.wasm.wasmPaths = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.22.0/dist/";
-  classifier = await ort.InferenceSession.create(new URL("../models/asha-food-35-int8.onnx", base || self.location.href).href, { executionProviders: ["wasm"], graphOptimizationLevel: "all" });
+  classifier = await ort.InferenceSession.create(new URL("../models/asha-food-66-int8.onnx", base || self.location.href).href, { executionProviders: ["wasm"], graphOptimizationLevel: "all" });
   try {
     faces = await V.FaceLandmarker.createFromOptions(files, opts("../neuroface/models/face_landmarker.task", { numFaces: 3, minFaceDetectionConfidence: 0.5 }));
   } catch {

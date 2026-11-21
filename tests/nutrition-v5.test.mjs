@@ -18,15 +18,16 @@ test("every food record names its source, state and verification; unknown values
     assert.match(r.databaseRecordId, /^fdc:\d+$/);
     assert.ok(r.source.url.includes(String(r.fdcId)));
     assert.ok(["raw", "cooked", "frozen", "dried", "as_sold"].includes(r.state), r.id);
-    assert.ok(["api_verified", "cross_checked"].includes(r.verification.status));
+    assert.ok(["api_verified", "cross_checked", "csv_verified"].includes(r.verification.status));
     for (const k of NUTRIENT_KEYS) assert.ok(r.per100g[k] === null || Number.isFinite(r.per100g[k]), `${r.id}.${k}`);
     if (r.verification.status === "cross_checked") assert.equal(r.per100g.fiber, null, "fibre left unknown until verified");
+    if (r.verification.status === "csv_verified") assert.ok(Number.isFinite(r.per100g.fiber), `${r.id}: fibre filled in from the USDA CSV`);
   }
   // Cooked and dry rice are different records with different states.
   assert.equal(getRecord("rice-cooked").state, "cooked");
   assert.equal(getRecord("rice-raw").state, "dried");
   assert.notEqual(getRecord("rice-cooked").fdcId, getRecord("rice-raw").fdcId);
-  for (const d of ["banana", "apple", "strawberries", "rice", "dal", "fish_curry", "packaged"]) assert.ok(DISHES[d], d);
+  for (const d of ["banana", "apple", "orange", "pear", "peach", "pomegranate", "tomato", "mango", "guava", "strawberries", "rice", "dal", "fish_curry", "packaged"]) assert.ok(DISHES[d], d);
 });
 
 test("only the recogniser's best guess can become a suggestion, and only foods with records", () => {
@@ -34,23 +35,43 @@ test("only the recogniser's best guess can become a suggestion, and only foods w
   assert.equal(suggestionFor("apple"), "apple");
   assert.equal(suggestionFor("strawberry"), "strawberries");
   assert.equal(suggestionFor("rice"), "rice");
-  for (const label of ["orange", "lemon_lime", "pizza", "not_food", "Granny Smith"]) assert.equal(suggestionFor(label), null, label);
+  assert.equal(suggestionFor("orange"), "orange");
+  for (const label of ["lemon_lime", "grapefruit_pomelo", "pizza", "not_food", "Granny Smith"]) assert.equal(suggestionFor(label), null, label);
+  // Every recognised food with a dish points at a real dish whose record exists.
+  for (const [label, dish] of Object.entries(FOOD_VISION.dishFor)) {
+    assert.ok(FOOD_VISION.classes.includes(label), label);
+    assert.ok(DISHES[dish], dish);
+  }
   const s = suggestionsFrom([{ label: "banana", score: 0.8 }, { label: "banana", score: 0.4 }, { label: "strawberry", score: 0.1 }]);
   assert.deepEqual(s.map((x) => x.dishId), ["banana"]);
   assert.equal(s[0].experimental, true);
   assert.equal(s[0].modelId, FOOD_VISION.modelId);
-  // The orange bug: best guess "orange" (no record) must never fall through to a lower "apple".
-  assert.deepEqual(suggestionsFrom([{ label: "orange", score: 0.55 }, { label: "apple", score: 0.4 }]), []);
+  // The orange bug: best guess "orange" never falls through to the lower "apple". Orange has a dish but
+  // is never filled in by the camera (too often confused with pomelo and lemon), only named.
+  assert.deepEqual(suggestionsFrom([{ label: "orange", score: 0.95 }, { label: "apple", score: 0.04 }]), []);
+  assert.equal(recognisedFrom([{ label: "orange", score: 0.62 }, { label: "apple", score: 0.31 }])[0].dishId, "orange");
+  // Per-food fill-in thresholds: apple needs 0.75, rice 0.85; dal and fish curry 0.5.
+  assert.deepEqual(suggestionsFrom([{ label: "apple", score: 0.7 }]), []);
+  assert.deepEqual(suggestionsFrom([{ label: "apple", score: 0.8 }]).map((x) => x.dishId), ["apple"]);
+  assert.deepEqual(suggestionsFrom([{ label: "rice", score: 0.8 }]), []);
+  assert.deepEqual(suggestionsFrom([{ label: "rice", score: 0.9 }]).map((x) => x.dishId), ["rice"]);
+  assert.deepEqual(suggestionsFrom([{ label: "dal", score: 0.55 }]).map((x) => x.dishId), ["dal"]);
+  assert.deepEqual(suggestionsFrom([{ label: "fish_curry", score: 0.6 }]).map((x) => x.dishId), ["fish_curry"]);
+  for (const label of Object.keys(FOOD_VISION.fillMin)) assert.ok(FOOD_VISION.dishFor[label], `${label} fills in only with a dish`);
+  // A best guess without a record never falls through to a lower food that has one.
+  assert.deepEqual(suggestionsFrom([{ label: "lemon_lime", score: 0.55 }, { label: "apple", score: 0.4 }]), []);
   assert.deepEqual(suggestionsFrom([{ label: "apple", score: 0.3 }, { label: "pear", score: 0.25 }]), [], "below minScore");
   assert.deepEqual(suggestionsFrom([{ label: "not_food", score: 0.9 }, { label: "apple", score: 0.05 }]), []);
-  // The orange is still named for the person.
-  const r = recognisedFrom([{ label: "apple", score: 0.4 }, { label: "orange", score: 0.55 }, { label: "not_food", score: 0.02 }]);
-  assert.equal(r[0].label, "orange");
+  // A food without a record is still named for the person.
+  const r = recognisedFrom([{ label: "apple", score: 0.4 }, { label: "lemon_lime", score: 0.55 }, { label: "not_food", score: 0.02 }]);
+  assert.equal(r[0].label, "lemon_lime");
   assert.equal(r[0].dishId, null);
   assert.equal(visionLabel("orange", "en"), "Orange (or malta)");
   assert.equal(visionLabel("orange", "bn"), "কমলা / মাল্টা");
   // Labels and model metadata agree.
-  assert.equal(FOOD_VISION.classes.length, 35);
+  assert.equal(FOOD_VISION.classes.length, 66);
+  for (const c of ["dal", "fish_curry", "bhorta", "polao", "pitha", "fuchka", "singara_samosa", "egg_curry"]) assert.ok(FOOD_VISION.classes.includes(c), c);
+  assert.equal(visionLabel("bhorta", "bn"), "ভর্তা");
   for (const c of FOOD_VISION.classes) assert.ok(FOOD_VISION.labels[c], c);
 });
 
@@ -85,7 +106,8 @@ test("acceptance 1: a steady candidate (4 of the last 6 good frames) fires once;
   for (let i = 0; i < 4; i++) u.push(good());
   assert.notEqual(u.push({ ...good(), quality: { warnings: ["low_detail_or_blur"] } }).state, "CANDIDATE_STABLE");
   assert.equal(readSample({ categories: [{ label: "not_food", score: 0.99 }], quality: { warnings: [] } }).best, null);
-  assert.equal(readSample({ categories: [{ label: "orange", score: 0.9 }], quality: { warnings: [] } }).best.dishId, null, "recognised, but no record");
+  assert.equal(readSample({ categories: [{ label: "orange", score: 0.9 }], quality: { warnings: [] } }).best.dishId, "orange");
+  assert.equal(readSample({ categories: [{ label: "lemon_lime", score: 0.9 }], quality: { warnings: [] } }).best.dishId, null, "recognised, but no record");
 });
 
 test("screen states follow the spec; no duplicate capture; a meal is logged once", () => {
@@ -261,9 +283,10 @@ test("acceptance 11: every figure carries source and version ids; unknown sodium
   assert.ok(r.canonical.missingInputs.includes("salt"));
   assert.equal(r.canonical.recipeServingsMade, 3);
   close(r.canonical.addedFatGrams, 13.6 / 3);
-  // Apple fibre is unknown (record not yet re-verified), so it is shown as unknown, not 0.
+  // Apple fibre now comes from the USDA SR Legacy CSV (2.4 g per 100 g; medium apple 182 g).
   const apple = estimateItem(fill("apple", [["size", { choice: "medium" }], ["count", { choice: "1" }]]));
-  assert.equal(apple.nutrients.fiber, null);
+  close(apple.nutrients.fiber.min, (182 * 2.4) / 100);
+  assert.equal(apple.components[0].sources[0].verification, "csv_verified");
   assert.equal(apple.canonical.databaseRecordId, "fdc:171688");
   // Packaged: label values the person typed, kJ converted; sodium unknown unless entered.
   const pk = fill("packaged", [["productName", { text: "Biscuits" }], ["labelKcal", { choice: "kJ", value: 418.4 }], ["servings", { choice: "two" }], ["labelExtras", { protein: 2, sodium: 90 }]]);
@@ -337,4 +360,14 @@ test("acceptance 9: photo checks use the file's own bytes, size and dimensions",
   assert.ok(checkDimensions(4032, 3024).ok);
   assert.deepEqual(fitWithin(4032, 3024), { width: 1280, height: 960 });
   assert.deepEqual(fitWithin(640, 480), { width: 640, height: 480 });
+});
+
+test("fruit added for the camera: USDA SR Legacy values and whole-fruit weights (orange, mango)", () => {
+  const orange = estimateItem(fill("orange", [["size", { choice: "medium" }], ["count", { choice: "2" }]]));
+  close(orange.nutrients.kcal.min, (2 * 131 * 47) / 100);
+  close(orange.nutrients.fiber.min, (2 * 131 * 2.4) / 100);
+  assert.equal(orange.canonical.databaseRecordId, "fdc:169097");
+  const mango = estimateItem(fill("mango", [["size", { choice: "whole" }], ["count", { choice: "1" }]]));
+  close(mango.nutrients.kcal.min, (336 * 60) / 100);
+  assert.deepEqual(searchFoods("peyara").map((x) => x.id), ["guava-raw"]);
 });
