@@ -1,45 +1,59 @@
 import { Container } from "@/components/ui/Container";
+import { ArrowRightIcon } from "@/components/ui/icons";
+import { Reveal } from "@/components/ui/Reveal";
 import { Section } from "@/components/ui/Section";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { contact } from "@/content/landing";
 import { EnquiryForm } from "@/features/enquiry/EnquiryForm";
 
-const channels = [
-  { label: "Email", value: contact.email, href: `mailto:${contact.email}` },
-  { label: "Call", value: contact.phoneDisplay, href: contact.phoneHref },
-  { label: "WhatsApp", value: "Chat with the Asha team", href: contact.whatsapp },
-];
-
 export function Contact() {
   return (
-    <Section id="contact" tone="wash">
-      <Container width="text">
-        <SectionHeading
-          eyebrow="Let’s find the right fit"
-          title="Book a demo. Start a conversation."
-          lead="For families, care teams, hospitals and partners. Tell us what you want to explore — we’ll discuss the next step and confirm a suitable time."
-        />
-      </Container>
-      <Container width="content" className="mt-14 grid gap-8 lg:grid-cols-[1fr_1.6fr]">
-        <div>
-          <ul className="space-y-3">
-            {channels.map((c) => (
-              <li key={c.label}>
-                <a
-                  href={c.href}
-                  target={c.href.startsWith("http") ? "_blank" : undefined}
-                  rel="noopener noreferrer"
-                  className="block rounded-2xl bg-white p-5 ring-1 ring-line transition hover:ring-brand"
-                >
-                  <span className="text-xs font-semibold tracking-wide text-muted uppercase">{c.label}</span>
-                  <span className="mt-1 block font-medium text-ink">{c.value} ↗</span>
-                </a>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-5 text-sm leading-6 text-muted">{contact.disclaimer}</p>
+    <Section id="contact" tone="mist">
+      <Container width="page">
+        <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:items-start lg:gap-16">
+          <Reveal>
+            <SectionHeading
+              align="left"
+              eyebrow="Let’s find the right fit"
+              title="Book a demo. Start a conversation."
+              lead="For families, care teams, hospitals and partners. Tell us what you want to explore — we’ll discuss the next step and confirm a suitable time."
+            />
+
+            <ul className="mt-10 border-t border-mist-line">
+              {contact.channels.map((c) => (
+                <li key={c.key} className="border-b border-mist-line">
+                  <a
+                    href={c.href}
+                    target={c.href.startsWith("http") ? "_blank" : undefined}
+                    rel="noopener noreferrer"
+                    className="group flex items-center justify-between gap-4 py-5"
+                  >
+                    <span className="min-w-0">
+                      <span className="block text-[12px] font-semibold tracking-[0.14em] text-accent-deep uppercase">
+                        {c.label}
+                      </span>
+                      <span className="mt-1 block truncate font-medium text-[clamp(1.125rem,1.8vw,1.375rem)] text-heading">
+                        {c.value}
+                      </span>
+                    </span>
+                    <ArrowRightIcon
+                      size={20}
+                      className="shrink-0 text-brand transition-transform duration-300 group-hover:translate-x-1"
+                    />
+                  </a>
+                </li>
+              ))}
+            </ul>
+
+            <p className="mt-7 rounded-[18px] border border-mist-line bg-surface/70 p-5 text-[15px] leading-[1.65] text-body">
+              {contact.disclaimer}
+            </p>
+          </Reveal>
+
+          <Reveal stagger={2}>
+            <EnquiryForm />
+          </Reveal>
         </div>
-        <EnquiryForm />
       </Container>
     </Section>
   );

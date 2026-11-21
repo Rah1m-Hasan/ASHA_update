@@ -7,6 +7,7 @@ export function SectionHeading({
   lead,
   level = 2,
   align = "center",
+  layout = "stack",
   className,
   children,
 }: {
@@ -15,25 +16,69 @@ export function SectionHeading({
   lead?: React.ReactNode;
   level?: 1 | 2;
   align?: "center" | "left";
+  /**
+   * "stack" puts the lead directly under the title.
+   * "split" is the editorial two-column header: title on the left, lead on the right.
+   */
+  layout?: "stack" | "split";
   className?: string;
   children?: React.ReactNode;
 }) {
   const Tag = level === 1 ? "h1" : "h2";
-  return (
-    <div className={cn(align === "center" ? "mx-auto text-center" : "text-left", "max-w-[664px]", className)}>
-      {eyebrow && <Eyebrow className="mb-5">{eyebrow}</Eyebrow>}
-      <Tag
+  const titleClass = cn(
+    "font-medium text-balance text-display",
+    level === 1
+      ? "text-[clamp(2.5rem,6.2vw,4.75rem)] leading-[0.98] tracking-[-0.022em]"
+      : "text-[clamp(2rem,3.6vw,3.125rem)] leading-[1.06] tracking-[-0.015em]",
+  );
+
+  if (layout === "split") {
+    return (
+      <div
         className={cn(
-          "font-medium tracking-tight text-ink text-balance",
-          level === 1
-            ? "text-[40px] leading-[1.05] sm:text-[64px] sm:leading-[1]"
-            : "text-[34px] leading-[1.15] sm:text-[48px] sm:leading-[1.25]",
+          "grid gap-y-7 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] lg:gap-x-16",
+          className,
         )}
       >
-        {title}
-      </Tag>
+        {eyebrow && (
+          <Eyebrow className="w-fit justify-self-start lg:col-start-1 lg:row-start-1">
+            {eyebrow}
+          </Eyebrow>
+        )}
+        <Tag className={cn(titleClass, "lg:col-start-1 lg:row-start-2")}>{title}</Tag>
+        {lead && (
+          <p
+            className={cn(
+              "max-w-[46ch] text-[clamp(1.0625rem,1.3vw,1.25rem)] leading-[1.65] text-body",
+              "lg:col-start-2 lg:row-start-2 lg:self-start lg:pt-3",
+            )}
+          >
+            {lead}
+          </p>
+        )}
+        {children && <div className="lg:col-start-1 lg:row-start-3">{children}</div>}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={cn(
+        align === "center" ? "mx-auto max-w-[680px] text-center" : "max-w-[680px] text-left",
+        className,
+      )}
+    >
+      {eyebrow && (
+        <Eyebrow className={cn("mb-6", align === "center" && "justify-center")}>{eyebrow}</Eyebrow>
+      )}
+      <Tag className={titleClass}>{title}</Tag>
       {lead && (
-        <p className={cn("mt-5 text-lg leading-7 text-muted sm:text-xl sm:leading-8", align === "center" && "mx-auto")}>
+        <p
+          className={cn(
+            "mt-6 text-[clamp(1.0625rem,1.3vw,1.25rem)] leading-[1.65] text-body",
+            align === "center" && "mx-auto",
+          )}
+        >
           {lead}
         </p>
       )}

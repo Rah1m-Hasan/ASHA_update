@@ -129,7 +129,7 @@ export function Calibration({ mode, model: existing, feed, onDone, onCancel }: {
         {step?.check ? "Checking accuracy" : "Calibrating"} · dot {index + 1} of {total}. Look at the centre of the dot.
       </p>
       {hint && (
-        <p role="status" className="absolute inset-x-0 top-12 mx-auto w-fit max-w-[90vw] rounded-full bg-amber-50 px-4 py-1.5 text-center text-sm text-amber-800 ring-1 ring-amber-200">
+        <p role="status" className="absolute inset-x-0 top-12 mx-auto w-fit max-w-[90vw] rounded-full bg-warn-soft px-4 py-1.5 text-center text-sm text-warn-text ring-1 ring-warn-line">
           {hint}
         </p>
       )}

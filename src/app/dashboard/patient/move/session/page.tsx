@@ -546,7 +546,7 @@ export default function LiveSession() {
                 </Choice>
               ))}
               <Choice selected={false} onClick={() => setUnwell(true)} className="p-3">
-                <span className="text-red-700">Unwell</span>
+                <span className="text-danger-text">Unwell</span>
               </Choice>
             </div>
             <Button
@@ -631,7 +631,7 @@ export default function LiveSession() {
             {flow.map((f, i) => {
               const at = flow.indexOf(flowAt);
               return (
-                <li key={f} aria-current={f === flowAt ? "step" : undefined} className={cn("rounded-full px-2.5 py-1 ring-1", f === flowAt ? "bg-brand text-white ring-brand" : i < at ? "bg-brand-soft text-brand ring-brand-mint" : "bg-white text-muted ring-line")}>
+                <li key={f} aria-current={f === flowAt ? "step" : undefined} className={cn("rounded-full px-2.5 py-1 ring-1", f === flowAt ? "bg-brand text-on-brand ring-brand" : i < at ? "bg-brand-soft text-brand ring-brand-mint" : "bg-white text-muted ring-line")}>
                   {i + 1}. {stage[f]}
                 </li>
               );
@@ -740,7 +740,7 @@ export default function LiveSession() {
                       <dd className="text-muted">{lesson.topErrors.map((e) => pick(e, lang)).join("; ")}</dd>
                     </div>
                   </dl>
-                  <div className="mt-3 rounded-xl bg-red-50 p-3 text-sm text-red-900 ring-1 ring-red-200">
+                  <div className="mt-3 rounded-xl bg-danger-soft p-3 text-sm text-danger-text ring-1 ring-danger-line">
                     <p className="font-medium">{tx(lang, "Safety", "নিরাপত্তা")}</p>
                     <ul className="mt-1 list-disc space-y-0.5 pl-5">
                       {lesson.cautions.map((c) => (
@@ -765,7 +765,7 @@ export default function LiveSession() {
               {s.state === "CAMERA_SETUP" && lesson && (
                 <Panel title={tx(lang, "Set up your camera", "ক্যামেরা ঠিক করুন")} description={pick(VIEWPOINTS[lesson.viewpoint as keyof typeof VIEWPOINTS], lang)}>
                   {camera === "error" ? (
-                    <div role="alert" className="rounded-xl bg-amber-50 p-3 text-sm text-amber-900 ring-1 ring-amber-200">
+                    <div role="alert" className="rounded-xl bg-warn-soft p-3 text-sm text-warn-text ring-1 ring-warn-line">
                       <p className="font-medium">{tx(lang, "Camera unavailable. You can log the workout manually.", "ক্যামেরা পাওয়া যাচ্ছে না। আপনি নিজে গুনে ব্যায়াম লিখতে পারেন।")}</p>
                       {cameraStatus && <p className="mt-1">{cameraStatus}</p>}
                     </div>
@@ -963,15 +963,15 @@ function VisibilityList({ view, lang }: { view: View | null; lang: Lang }) {
   return (
     <ul className="mt-3 grid gap-1 text-sm sm:grid-cols-2" data-testid="move-visibility">
       {view.points.map((p) => (
-        <li key={p.name} className={cn("flex items-center gap-2", p.visible ? "text-emerald-700" : "text-amber-800")}>
+        <li key={p.name} className={cn("flex items-center gap-2", p.visible ? "text-good-text" : "text-warn-text")}>
           <span aria-hidden="true">{p.visible ? "✓" : "✕"}</span>
           <span>
             {name(p.name)}: {p.visible ? tx(lang, "seen", "দেখা যাচ্ছে") : p.inFrame ? tx(lang, "unclear", "অস্পষ্ট") : tx(lang, "out of view", "ছবির বাইরে")}
           </span>
         </li>
       ))}
-      {view.points.length === 0 && <li className="text-amber-800">{view.hint ? pick(view.hint, lang) : tx(lang, "Nothing seen yet", "এখনো কিছু দেখা যায়নি")}</li>}
-      <li className={cn("flex items-center gap-2", view.lighting === "ok" || view.lighting === null ? "text-emerald-700" : "text-amber-800")}>
+      {view.points.length === 0 && <li className="text-warn-text">{view.hint ? pick(view.hint, lang) : tx(lang, "Nothing seen yet", "এখনো কিছু দেখা যায়নি")}</li>}
+      <li className={cn("flex items-center gap-2", view.lighting === "ok" || view.lighting === null ? "text-good-text" : "text-warn-text")}>
         <span aria-hidden="true">{view.lighting === "ok" || view.lighting === null ? "✓" : "✕"}</span>
         <span>
           {tx(lang, "Light", "আলো")}: {view.lighting === "dark" ? tx(lang, "too dark", "খুব অন্ধকার") : view.lighting === "bright" ? tx(lang, "too bright behind you", "পেছনে খুব উজ্জ্বল") : view.lighting === "ok" ? tx(lang, "good", "ভালো") : tx(lang, "not measured", "মাপা হয়নি")}
@@ -1019,14 +1019,14 @@ function AdvancedPanel({ lang, view, result, frame, showAll }: { lang: Lang; vie
 function SymptomPicker({ onPick, onClose, text, setText }: { onPick: (v: string) => void; onClose: () => void; text: string; setText: (v: string) => void }) {
   const lang = useMove((s) => s.language);
   return (
-    <Panel className="mb-6 ring-2 ring-red-300" title={tx(lang, "What are you feeling?", "কেমন লাগছে?")} description="Choose one. ASHA's safety rules decide what happens next.">
+    <Panel className="mb-6 ring-2 ring-danger-line" title={tx(lang, "What are you feeling?", "কেমন লাগছে?")} description="Choose one. ASHA's safety rules decide what happens next.">
       <div className="grid gap-2 sm:grid-cols-2">
         {SESSION_SYMPTOMS.map((x: { id: string; en: string; bn: string; action: string }) => (
           <button
             key={x.id}
             type="button"
             onClick={() => onPick(x.id)}
-            className={cn("min-h-12 rounded-2xl p-3 text-left font-medium ring-1", x.action === "emergency" ? "bg-red-50 text-red-900 ring-red-200 hover:bg-red-100" : "bg-white text-ink ring-line hover:bg-wash")}
+            className={cn("min-h-12 rounded-2xl p-3 text-left font-medium ring-1", x.action === "emergency" ? "bg-danger-soft text-danger-text ring-danger-line hover:bg-danger-soft" : "bg-white text-ink ring-line hover:bg-wash")}
           >
             {tx(lang, x.en, x.bn)}
           </button>

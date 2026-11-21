@@ -61,7 +61,7 @@ export default function PatientHome() {
 
       {last && (
         <Link href={last.href} className="group mb-8 flex items-center gap-4 rounded-2xl bg-brand-soft p-4 ring-1 ring-brand-mint transition hover:ring-brand" data-testid="home-continue">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-white text-brand">
+          <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-on-brand text-brand">
             <last.icon size={20} />
           </span>
           <span className="min-w-0 flex-1">

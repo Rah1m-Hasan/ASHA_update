@@ -12,3 +12,6 @@ private/
 next-env.d.ts
 *.tsbuildinfo
 .tmp/
+
+# Local Playwright CLI artifacts
+.playwright-cli/

@@ -64,7 +64,7 @@ export default function CalibrationPage() {
               <Button className="mt-4" onClick={() => profile && void begin(profile.assessment)} disabled={!profile}>
                 {trained ? "Calibrate again" : "Start calibration"}
               </Button>
-              {finished && <p className="mt-3 text-sm text-emerald-700">Saved. {finished.length} signals turned on.</p>}
+              {finished && <p className="mt-3 text-sm text-good-text">Saved. {finished.length} signals turned on.</p>}
             </Panel>
           )}
         </div>
@@ -86,7 +86,7 @@ export default function CalibrationPage() {
             <p className="text-sm text-muted">No signals yet. Until you calibrate, use the buttons on screen.</p>
           )}
           {trained && (
-            <button onClick={() => saveCalibration(id, null)} className="mt-5 text-sm font-medium text-muted hover:text-red-600">
+            <button onClick={() => saveCalibration(id, null)} className="mt-5 text-sm font-medium text-muted hover:text-danger-text">
               Clear calibration
             </button>
           )}

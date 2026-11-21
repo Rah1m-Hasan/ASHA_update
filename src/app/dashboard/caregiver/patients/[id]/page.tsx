@@ -88,14 +88,14 @@ export default function PatientDetail() {
             <Button onClick={save} disabled={!assessment}>
               Save changes
             </Button>
-            {saved && <span className="text-sm text-emerald-700">{saved}</span>}
+            {saved && <span className="text-sm text-good-text">{saved}</span>}
           </div>
           <Panel title="Remove">
             <div className="flex flex-wrap gap-2">
               <Button variant="secondary" size="sm" onClick={() => (sessionStore.removeCare(entry.patientId), router.push("/dashboard/caregiver/patients"))}>
                 Remove from this device
               </Button>
-              <button onClick={remove} className="h-9 rounded-full px-3 text-sm font-medium text-red-700 hover:bg-red-50">
+              <button onClick={remove} className="h-9 rounded-full px-3 text-sm font-medium text-danger-text hover:bg-danger-soft">
                 Delete care circle
               </button>
             </div>

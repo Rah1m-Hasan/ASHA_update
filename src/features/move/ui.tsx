@@ -61,11 +61,11 @@ export function UrgentCard({ reasons = [], kind = "emergency" }: { reasons?: str
   const lang = useMove((s) => s.language);
   const lines = kind === "emergency" ? urgentGuidance(lang, "BD", reasons) : restGuidance(lang, "BD");
   return (
-    <section role="alert" aria-live="assertive" className={cn("rounded-2xl p-5 ring-1", kind === "emergency" ? "bg-red-50 ring-red-200" : "bg-amber-50 ring-amber-200")}>
-      <h2 className={cn("text-lg font-semibold", kind === "emergency" ? "text-red-800" : "text-amber-900")}>
+    <section role="alert" aria-live="assertive" className={cn("rounded-2xl p-5 ring-1", kind === "emergency" ? "bg-danger-soft ring-danger-line" : "bg-warn-soft ring-warn-line")}>
+      <h2 className={cn("text-lg font-semibold", kind === "emergency" ? "text-danger-text" : "text-warn-text")}>
         {kind === "emergency" ? tx(lang, "Stop. Get urgent help now.", "থামুন। এখনই জরুরি সহায়তা নিন।") : tx(lang, "Stop and rest.", "থামুন এবং বিশ্রাম নিন।")}
       </h2>
-      <ul className={cn("mt-2 list-disc space-y-1 pl-5", kind === "emergency" ? "text-red-900" : "text-amber-900")}>
+      <ul className={cn("mt-2 list-disc space-y-1 pl-5", kind === "emergency" ? "text-danger-text" : "text-warn-text")}>
         {lines.map((l: string) => (
           <li key={l}>{l}</li>
         ))}

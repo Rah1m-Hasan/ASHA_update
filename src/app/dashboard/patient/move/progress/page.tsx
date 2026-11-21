@@ -127,7 +127,7 @@ export default function MoveProgress() {
                   <span className="text-sm text-muted">{when(h.startedAt)}</span>
                 </div>
                 <p className="mt-0.5 text-sm text-muted">
-                  <span className={cn(ended.alert ? "font-medium text-red-700" : "text-ink")}>{tx(lang, ended.en, ended.bn)}</span> · {h.setsDone}/{h.setsPlanned} sets · {h.activeMinutes} min ·{" "}
+                  <span className={cn(ended.alert ? "font-medium text-danger-text" : "text-ink")}>{tx(lang, ended.en, ended.bn)}</span> · {h.setsDone}/{h.setsPlanned} sets · {h.activeMinutes} min ·{" "}
                   {h.mode === "camera" ? tx(lang, "camera", "ক্যামেরা") : tx(lang, "manual", "নিজে")}
                   {h.effort != null ? ` · effort ${h.effort}/10` : ""}
                   {h.feltAfter ? ` · felt ${h.feltAfter.toLowerCase()}` : ""}
@@ -138,7 +138,7 @@ export default function MoveProgress() {
                     .map((e) => `${title(EXERCISES[e.exerciseId], lang)} ${e.seconds ? `${e.seconds}s` : `${e.reps} reps`}`)
                     .join(" · ")}
                 </p>
-                {h.safety && <p className="mt-1 text-xs text-red-700">Stopped for: {h.safety.reasons.join(", ")}</p>}
+                {h.safety && <p className="mt-1 text-xs text-danger-text">Stopped for: {h.safety.reasons.join(", ")}</p>}
               </li>
             );
           })}

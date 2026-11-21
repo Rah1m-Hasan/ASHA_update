@@ -159,13 +159,13 @@ function Wizard() {
           <>
             <p>Many people with heart conditions can exercise, and regular activity is often part of their care. The right type and amount depends on your condition, so it should come from your clinician.</p>
             <p>ASHA won't build a heart exercise routine by itself. You can record your clinician's clearance and then choose a gentle beginner plan, or follow a plan your clinician assigns.</p>
-            <p className="rounded-xl bg-red-50 p-3 text-sm text-red-900">Chest pain or pressure, fainting, unusual breathlessness or a racing heartbeat that doesn't settle mean stop and get urgent help (call 999).</p>
+            <p className="rounded-xl bg-danger-soft p-3 text-sm text-danger-text">Chest pain or pressure, fainting, unusual breathlessness or a racing heartbeat that doesn't settle mean stop and get urgent help (call 999).</p>
           </>
         ) : (
           <p>Medical rehabilitation needs a clinician's assessment. General fitness plans aren't used as recovery prescriptions. If your clinician uses ASHA Clinic, their plan appears under Clinician programs once you've shared Move with them.</p>
         )}
         <div className="flex flex-wrap gap-2 pt-2">
-          <Link href={`${BASE}/clinician`} className="inline-flex h-11 items-center rounded-full bg-brand px-5 font-medium text-white">
+          <Link href={`${BASE}/clinician`} className="inline-flex h-11 items-center rounded-full bg-brand px-5 font-medium text-on-brand">
             {clinicianPrograms.length ? "Open my clinician plans" : "Clinician programs"}
           </Link>
           {a.category === "heart" && (
@@ -189,7 +189,7 @@ function Wizard() {
           ))}
         </div>
         {goal?.clarify && (
-          <div className="rounded-2xl bg-amber-50 p-4 text-amber-950 ring-1 ring-amber-200" role="note">
+          <div className="rounded-2xl bg-warn-soft p-4 text-warn-text ring-1 ring-warn-line" role="note">
             <p className="font-medium">An honest note</p>
             <p className="mt-1 text-sm">{goal.clarify}</p>
             <Button className="mt-3" size="sm" onClick={() => (set({ clarified: true }), next())}>
@@ -318,7 +318,7 @@ function Wizard() {
         </ul>
         <p>You can record that a clinician has cleared you for general activity, or follow a plan they assign. ASHA can't give medical clearance itself.</p>
         <div className="flex flex-wrap gap-2">
-          <Link href={`${BASE}/safety#clearance`} className="inline-flex h-11 items-center rounded-full bg-brand px-5 font-medium text-white">
+          <Link href={`${BASE}/safety#clearance`} className="inline-flex h-11 items-center rounded-full bg-brand px-5 font-medium text-on-brand">
             Record clearance
           </Link>
           <Link href={`${BASE}/clinician`} className="inline-flex h-11 items-center rounded-full bg-brand-soft px-5 font-medium text-brand">
@@ -345,7 +345,7 @@ function Wizard() {
           <span>Remember my safety answers on this device so I'm not asked every time. (“Right now” symptoms are always asked.)</span>
         </label>
         {error && (
-          <p role="alert" className="mt-3 text-sm text-red-700">
+          <p role="alert" className="mt-3 text-sm text-danger-text">
             {error}
           </p>
         )}

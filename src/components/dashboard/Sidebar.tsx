@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NAV, type NavGroup, type NavItem } from "@/features/dashboard/nav";
@@ -30,13 +29,7 @@ export function Sidebar({
     <div className="flex h-full flex-col">
       <div className="flex h-16 items-center px-5">
         <Link href="/" aria-label="Asha home">
-          <Image
-            src="/assets/brand/asha-wordmark-light.png" style={{ width: "auto" }}
-            alt="Asha"
-            width={144}
-            height={24}
-            className="h-6 w-auto"
-          />
+          <span role="img" aria-label="Asha" className="wordmark h-6 w-[144px]" />
         </Link>
       </div>
       <nav
@@ -65,13 +58,13 @@ export function Sidebar({
                       className={cn(
                         "flex h-10 items-center gap-3 rounded-xl px-3 text-[15px] font-medium transition-colors",
                         on
-                          ? "bg-brand text-white"
+                          ? "bg-brand text-on-brand"
                           : "text-ink hover:bg-brand-soft",
                       )}
                     >
                       <Icon
                         size={19}
-                        className={on ? "text-white" : "text-muted"}
+                        className={on ? "text-on-brand" : "text-muted"}
                       />
                       <span className="flex-1">{label}</span>
                       {!!count && (
@@ -79,7 +72,7 @@ export function Sidebar({
                           className={cn(
                             "min-w-6 rounded-full px-1.5 text-center text-xs leading-6 font-semibold",
                             on
-                              ? "bg-white text-brand"
+                              ? "bg-on-brand text-brand"
                               : "bg-red-500 text-white",
                           )}
                         >

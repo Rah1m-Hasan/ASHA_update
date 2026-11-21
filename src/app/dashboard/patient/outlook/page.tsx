@@ -26,7 +26,7 @@ type Step = { id: string; time: string; text: string; because: string };
 
 const LEVEL: Record<Level, { label: string; dot: string; text: string }> = {
   act: { label: "Act now", dot: "bg-danger", text: "text-danger" },
-  watch: { label: "Watch", dot: "bg-amber-500", text: "text-amber-700" },
+  watch: { label: "Watch", dot: "bg-amber-500", text: "text-warn-text" },
   info: { label: "For today", dot: "bg-line", text: "text-muted" },
 };
 

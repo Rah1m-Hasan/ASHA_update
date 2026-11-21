@@ -20,9 +20,15 @@ export const nav = [
 export const hero = {
   badge: "Assistive communication, reimagined",
   title: "A little support. A lot more independence.",
+  // The headline, set as two lines. The second one carries the accent colour.
+  titleLines: [
+    { text: "A little support.", accent: false },
+    { text: "A lot more independence.", accent: true },
+  ],
   lead: "When words are hard, connection shouldn’t be. Meet Asha — the companion that helps people express their needs in their own way.",
   primary: { label: "Try Asha", href: site.appUrl },
   secondary: { label: "Book a guided demo", href: "#contact" },
+  notes: "An assistive communication prototype — not a medical device, and not an emergency service.",
   video: {
     // Add the demo video URL here when it is ready, e.g. "/videos/asha-demo.mp4".
     src: "",
@@ -31,6 +37,27 @@ export const hero = {
     label: "Watch the demo",
     duration: "",
   },
+};
+
+/** The illustrative patient space drawn in the hero. Not recorded footage. */
+export const heroScene = {
+  eyebrow: "Your space · Here with you",
+  prompt: "Would you like some water?",
+  promptHint: "Your comfortable gesture. Your choice.",
+  needs: ["Water", "Comfort", "Help"],
+  reply: "I’m on my way.",
+  replyLabel: "Caregiver acknowledged",
+  signal: "Signal sent to the care circle",
+  caption: "Illustrative interface — a signal becomes a message.",
+};
+
+/** The illustrative patient-to-caregiver exchange in the story section. */
+export const storyThread = {
+  patient: "Water, please",
+  patientLabel: "Patient · one blink",
+  caregiver: "On my way.",
+  caregiverLabel: "Caregiver · acknowledged",
+  caption: "From a blink to a reply.",
 };
 
 export const journeys = [
@@ -42,6 +69,8 @@ export const journeys = [
 export const story = {
   eyebrow: "Why we’re building Asha",
   title: "Silence shouldn’t mean being alone.",
+  // A phrase from the paragraph below, lifted out as a pull-quote.
+  pullQuote: "A bridge between what a person wants to say and the people who care for them.",
   paragraphs: [
     "A neurological illness took a grandfather’s speech. His needs were still there. His way to call for help wasn’t.",
     "That experience is at the heart of Asha: a bridge between what a person wants to say and the people who care for them. Not another complicated dashboard — a calmer way to communicate, with support that adapts to what someone can comfortably do.",
@@ -52,6 +81,10 @@ export const modulesIntro = {
   eyebrow: "Many ways to say “I need you”",
   title: "One companion. Your way to connect.",
   lead: "Speech, eyes, face or hands. A caregiver helps assess what works; Asha recommends a starting point without locking anyone out.",
+  rail: {
+    title: "The app home",
+    hint: "Choose what you want to use — every module is open in the demo.",
+  },
   video: { src: "", poster: undefined, posterAlt: "Asha modules in use", label: "See the modules", duration: "" },
 };
 
@@ -68,9 +101,9 @@ export const modules: { key: ModuleKey; name: string; title: string; text: strin
 ];
 
 export const steps = [
-  { n: "01", tag: "Adapt", title: "Start with the person.", text: "A caregiver sets up movement, speech, vision and hearing preferences. Practise the signals that feel comfortable." },
-  { n: "02", tag: "Understand", title: "Support, not pressure.", text: "Asha explains the next step, offers gentle check-ins and helps clarify speech. The patient confirms their meaning." },
-  { n: "03", tag: "Connect", title: "Close the loop.", text: "Confirmed requests reach the assigned care circle. The patient can see when a caregiver acknowledges them." },
+  { n: "01", tag: "Adapt", title: "Start with the person.", text: "A caregiver sets up movement, speech, vision and hearing preferences. Practise the signals that feel comfortable.", side: "The caregiver" },
+  { n: "02", tag: "Understand", title: "Support, not pressure.", text: "Asha explains the next step, offers gentle check-ins and helps clarify speech. The patient confirms their meaning.", side: "The patient" },
+  { n: "03", tag: "Connect", title: "Close the loop.", text: "Confirmed requests reach the assigned care circle. The patient can see when a caregiver acknowledges them.", side: "The caregiver" },
 ];
 
 export const kit = {
@@ -80,6 +113,7 @@ export const kit = {
   image: { src: "/assets/kit-placement.svg", alt: "Illustrative placement of a tablet, camera, mount and switch beside a bed" },
   caption: "Illustrative placement — not a photograph of a shipping kit.",
   price: "$100 one-time · planned launch price",
+  priceNote: "Subscription separate · No required kit purchase",
   parts: [
     { key: "camera", title: "Camera + clear view", text: "Position the screen so the person can see it comfortably and the camera has a clear view of the face." },
     { key: "mount", title: "Adjustable mount", text: "Choose a secure mounting point with the caregiver. Check angle, stability and cable route." },
@@ -190,7 +224,13 @@ export const contact = {
   phoneDisplay: "01641576801",
   phoneHref: "tel:+8801641576801",
   whatsapp: "https://wa.me/8801641576801",
+  whatsappLabel: "Chat with the Asha team",
   disclaimer: "Business enquiries only. Please don’t include patient names, medical records or urgent requests. This is not an emergency contact service.",
+  channels: [
+    { key: "email", label: "Email", value: "mysunatislam@gmail.com", href: "mailto:mysunatislam@gmail.com" },
+    { key: "call", label: "Call", value: "01641576801", href: "tel:+8801641576801" },
+    { key: "whatsapp", label: "WhatsApp", value: "Chat with the Asha team", href: "https://wa.me/8801641576801" },
+  ],
 };
 
 export const closing = {

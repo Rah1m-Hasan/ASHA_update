@@ -26,9 +26,9 @@ const RULES = [
     bn: "থামুন, জরুরি সহায়তা নিন",
     noteEn: "Call 999. Move pauses for 12 hours.",
     noteBn: "৯৯৯ নম্বরে কল করুন। মুভ ১২ ঘণ্টা বন্ধ থাকবে।",
-    tone: "text-red-700",
+    tone: "text-danger-text",
   },
-  { action: "stop_rest", en: "Stop and rest", bn: "থামুন, বিশ্রাম নিন", noteEn: "Move pauses for 15 minutes.", noteBn: "মুভ ১৫ মিনিট বন্ধ থাকবে।", tone: "text-amber-800" },
+  { action: "stop_rest", en: "Stop and rest", bn: "থামুন, বিশ্রাম নিন", noteEn: "Move pauses for 15 minutes.", noteBn: "মুভ ১৫ মিনিট বন্ধ থাকবে।", tone: "text-warn-text" },
   {
     action: "stop_exercise",
     en: "Stop that exercise",
@@ -338,7 +338,7 @@ export default function MoveSafety() {
                 </Button>
               </>
             ) : (
-              <Button size="sm" variant="ghost" className="text-red-700" onClick={() => setConfirmDelete(true)}>
+              <Button size="sm" variant="ghost" className="text-danger-text" onClick={() => setConfirmDelete(true)}>
                 Delete all Move data
               </Button>
             )}

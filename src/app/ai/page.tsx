@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BarChart, type Bar } from "@/components/ai/BarChart";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import report from "../../../docs/retrieval-eval.json";
 import withoutContext from "../../../docs/retrieval-eval-no-context.json";
 import localEval from "../../../docs/local-llm-eval-summary.json";
@@ -167,9 +168,12 @@ export default function AiPage() {
   return (
     <main className="min-h-screen bg-wash pb-20">
       <div className="mx-auto w-full max-w-3xl px-4 pt-12 sm:px-8">
-        <Link href="/" className="text-sm text-muted hover:text-ink">
-          ← Asha
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link href="/" className="text-sm text-muted hover:text-ink">
+            ← Asha
+          </Link>
+          <ThemeToggle />
+        </div>
         <h1 className="mt-6 text-3xl font-semibold text-heading">
           How Asha uses AI
         </h1>

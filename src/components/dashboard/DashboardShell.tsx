@@ -2,6 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { CloseIcon, MenuIcon, SwapIcon } from "@/components/ui/icons";
 import { titleFor } from "@/features/dashboard/nav";
 import { sessionStore } from "@/features/session/store";
@@ -66,6 +67,7 @@ export function DashboardShell({
           <p className="hidden text-sm text-muted lg:block">{role === "patient" ? "Patient space" : "Caregiver space"}</p>
           <div className="ml-auto flex items-center gap-2">
             {topbarExtra}
+            <ThemeToggle />
             <button
               onClick={switchRole}
               className="flex h-10 items-center gap-2 rounded-xl px-3 text-sm font-medium text-ink ring-1 ring-line hover:bg-wash"

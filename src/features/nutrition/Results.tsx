@@ -24,8 +24,8 @@ export const EATEN_TEXT: Record<string, Text> = {
 const TONE: Record<string, string> = {
   estimate: "bg-brand-soft text-brand",
   range: "bg-brand-soft text-brand",
-  lower_bound: "bg-amber-100 text-amber-900",
-  uncertain: "bg-amber-100 text-amber-900",
+  lower_bound: "bg-warn-soft text-warn-text",
+  uncertain: "bg-warn-soft text-warn-text",
   unavailable: "bg-wash text-muted",
 };
 
@@ -105,7 +105,7 @@ export function ItemCard({ r, lang, eaten, onEaten }: { r: ItemResult; lang: str
         </p>
       )}
       {r.notes.length > 0 && (
-        <ul className="mt-2 space-y-1 text-sm text-amber-900">
+        <ul className="mt-2 space-y-1 text-sm text-warn-text">
           {r.notes.map((n, i) => (
             <li key={i}>{L(lang, n)}</li>
           ))}
@@ -133,7 +133,7 @@ export function ItemCard({ r, lang, eaten, onEaten }: { r: ItemResult; lang: str
           <legend className="text-sm font-medium text-ink">{tx(lang, "How much of it did you eat?", "এর কতটা খেয়েছেন?")}</legend>
           <div className="mt-2 flex flex-wrap gap-2">
             {(EATEN_CHOICES as string[]).map((c) => (
-              <button key={c} type="button" aria-pressed={eaten === c} onClick={() => onEaten(c)} className={cn("min-h-11 rounded-full px-4 text-sm font-medium ring-1", eaten === c ? "bg-brand text-white ring-brand" : "bg-white text-ink ring-line hover:bg-wash")}>
+              <button key={c} type="button" aria-pressed={eaten === c} onClick={() => onEaten(c)} className={cn("min-h-11 rounded-full px-4 text-sm font-medium ring-1", eaten === c ? "bg-brand text-on-brand ring-brand" : "bg-white text-ink ring-line hover:bg-wash")}>
                 {L(lang, EATEN_TEXT[c])}
               </button>
             ))}

@@ -303,7 +303,7 @@ export function Board({
         </button>
       </div>
       {status && (
-        <p className="px-4 pt-1 text-sm text-amber-800" data-testid="board-status">
+        <p className="px-4 pt-1 text-sm text-warn-text" data-testid="board-status">
           {status}
         </p>
       )}
@@ -325,7 +325,7 @@ export function Board({
               onClick={() => choose(t)}
               className={cn(
                 "relative grid place-items-center overflow-hidden rounded-3xl text-center transition-[box-shadow,opacity] duration-150",
-                yes ? "bg-brand text-white" : "bg-white text-ink",
+                yes ? "bg-brand text-on-brand" : "bg-white text-ink",
                 on ? (yes ? "ring-[6px] ring-ink" : "ring-[6px] ring-brand") : yes ? "ring-1 ring-brand" : "ring-1 ring-line",
                 scan && !on && "opacity-55",
               )}
@@ -334,7 +334,7 @@ export function Board({
               <span aria-hidden="true" className={cn("absolute inset-x-0 bottom-0 origin-bottom transition-transform duration-100", yes ? "bg-white/30" : "bg-brand/20")} style={{ height: "100%", transform: "scaleY(var(--dwell))" }} />
               <span className="relative px-[2vmin]">
                 <span className="block text-[clamp(1.5rem,5vmin,3.5rem)] leading-tight font-semibold">{t.label}</span>
-                <span className={cn("mt-1 block text-[clamp(1rem,3vmin,1.75rem)]", yes ? "text-white/80" : "text-muted")}>{t.bn}</span>
+                <span className={cn("mt-1 block text-[clamp(1rem,3vmin,1.75rem)]", yes ? "text-on-brand/80" : "text-muted")}>{t.bn}</span>
                 {words.length > 3 && <span className="mt-2 block text-[clamp(0.875rem,2.4vmin,1.25rem)] text-muted">{words.join(" · ")}</span>}
               </span>
             </button>

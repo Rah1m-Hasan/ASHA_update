@@ -74,7 +74,7 @@ export function PlanEditor({ program, onChange, screening, readOnly }: { program
                   </label>
                 )}
                 {program.sequence.length > 1 && (
-                  <button type="button" onClick={() => remove(i)} className="h-10 rounded-lg px-3 text-sm font-medium text-red-700 hover:bg-red-50">
+                  <button type="button" onClick={() => remove(i)} className="h-10 rounded-lg px-3 text-sm font-medium text-danger-text hover:bg-danger-soft">
                     Remove
                   </button>
                 )}

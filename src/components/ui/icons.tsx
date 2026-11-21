@@ -77,3 +77,26 @@ export const ChevronIcon = (p: IconProps) => <Svg {...p}><path d="m9 6 6 6-6 6" 
 export const CopyIcon = (p: IconProps) => <Svg {...p}><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" /></Svg>;
 export const SendIcon = (p: IconProps) => <Svg {...p}><path d="M22 2 11 13M22 2l-7 20-4-9-9-4Z" /></Svg>;
 export const VolumeIcon = (p: IconProps) => <Svg {...p}><path d="M11 5 6 9H2v6h4l5 4ZM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14" /></Svg>;
+
+// --- Added for the landing page. The icons above are used across the app. ---
+export const ArrowRightIcon = (p: IconProps) => <Svg {...p}><path d="M4 12h15M13 6l6 6-6 6" /></Svg>;
+export const SignalIcon = (p: IconProps) => <Svg {...p}><path d="M12 12h.01M8.5 8.5a5 5 0 0 0 0 7M15.5 8.5a5 5 0 0 1 0 7M5.5 5.5a9 9 0 0 0 0 13M18.5 5.5a9 9 0 0 1 0 13" /></Svg>;
+export const GlobeIcon = (p: IconProps) => <Svg {...p}><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3a15 15 0 0 1 0 18M12 3a15 15 0 0 0 0 18" /></Svg>;
+export const BedIcon = (p: IconProps) => <Svg {...p}><path d="M3 18v-7h13a4 4 0 0 1 4 4v3M3 18h18M3 18v-9M7 11V7h5" /></Svg>;
+export const PlugIcon = (p: IconProps) => <Svg {...p}><path d="M9 3v6M15 3v6M6 9h12v3a6 6 0 0 1-12 0Z" /></Svg>;
+
+// The theme control. Both glyphs are always in the markup; CSS shows the one
+// that matches the current theme, so the server and the client agree.
+export const SunIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+  </Svg>
+);
+export const MoonIcon = (p: IconProps) => <Svg {...p}><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z" /></Svg>;
+export const DeviceIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <rect x="2" y="4" width="20" height="13" rx="2" />
+    <path d="M8 21h8M12 17v4" />
+  </Svg>
+);

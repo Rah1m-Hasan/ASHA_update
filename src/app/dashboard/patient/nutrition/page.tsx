@@ -553,12 +553,12 @@ export default function NutritionPage() {
 
       {(screen === "IDLE" || screen === "MODE_SELECTED") && (
         <div className="space-y-6">
-          {notice && <p className="rounded-xl bg-amber-50 px-4 py-3 text-amber-900 ring-1 ring-amber-200">{notice}</p>}
+          {notice && <p className="rounded-xl bg-warn-soft px-4 py-3 text-warn-text ring-1 ring-warn-line">{notice}</p>}
           <div className="grid gap-4 sm:grid-cols-2">
-            <button type="button" onClick={() => void startLive()} className="flex min-h-36 flex-col items-start gap-3 rounded-2xl bg-brand p-5 text-left text-white shadow-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-brand/40" data-testid="nutrition-scan">
+            <button type="button" onClick={() => void startLive()} className="flex min-h-36 flex-col items-start gap-3 rounded-2xl bg-brand p-5 text-left text-on-brand shadow-sm focus:outline-none focus-visible:ring-4 focus-visible:ring-brand/40" data-testid="nutrition-scan">
               <CameraIcon size={28} />
               <span className="text-xl font-semibold">{tx(lang, "Scan food live", "লাইভ স্ক্যান")}</span>
-              <span className="text-white/85">{tx(lang, "Point your camera at the plate. ASHA takes the photo when it's steady.", "প্লেটের দিকে ক্যামেরা ধরুন। স্থির হলে আশা ছবি তোলে।")}</span>
+              <span className="text-on-brand/85">{tx(lang, "Point your camera at the plate. ASHA takes the photo when it's steady.", "প্লেটের দিকে ক্যামেরা ধরুন। স্থির হলে আশা ছবি তোলে।")}</span>
             </button>
             <button type="button" onClick={startUpload} className="flex min-h-36 flex-col items-start gap-3 rounded-2xl bg-white p-5 text-left ring-1 ring-line shadow-sm hover:bg-wash focus:outline-none focus-visible:ring-4 focus-visible:ring-brand/40" data-testid="nutrition-upload">
               <NutritionIcon size={28} className="text-brand" />
@@ -604,7 +604,7 @@ export default function NutritionPage() {
                 {notice || scanMessage}
               </p>
               <div className="flex justify-center">
-                <button type="button" onClick={() => void freeze()} className="grid size-20 place-items-center rounded-full bg-brand text-white shadow-lg ring-4 ring-brand-soft focus:outline-none focus-visible:ring-brand/50" aria-label={tx(lang, "Capture photo now", "এখনই ছবি তুলুন")} data-testid="nutrition-shutter">
+                <button type="button" onClick={() => void freeze()} className="grid size-20 place-items-center rounded-full bg-brand text-on-brand shadow-lg ring-4 ring-brand-soft focus:outline-none focus-visible:ring-brand/50" aria-label={tx(lang, "Capture photo now", "এখনই ছবি তুলুন")} data-testid="nutrition-shutter">
                   <CameraIcon size={30} />
                 </button>
               </div>
@@ -879,20 +879,20 @@ function StillFindings({ still, lang }: { still: { suggestions: Suggestion[]; re
         <p className="text-lg text-ink">
           {tx(lang, "ASHA's camera suggests: ", "আশার ক্যামেরার পরামর্শ: ")}
           <strong>{still.suggestions.map((s) => L(lang, DISH[s.dishId])).join(", ")}</strong>
-          <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">{tx(lang, "experimental, check it", "পরীক্ষামূলক, যাচাই করুন")}</span>
+          <span className="ml-2 rounded-full bg-warn-soft px-2 py-0.5 text-xs font-semibold text-warn-text">{tx(lang, "experimental, check it", "পরীক্ষামূলক, যাচাই করুন")}</span>
         </p>
       ) : still.recognised?.length && still.recognised[0].score >= FOOD_VISION.minScore ? (
         <p className="text-lg text-ink" data-testid="nutrition-recognised">
           {tx(lang, "Looks like: ", "দেখে মনে হচ্ছে: ")}
           <strong>{visionLabel(still.recognised[0].label, lang)}</strong>
-          <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">{tx(lang, "experimental, check it", "পরীক্ষামূলক, যাচাই করুন")}</span>
+          <span className="ml-2 rounded-full bg-warn-soft px-2 py-0.5 text-xs font-semibold text-warn-text">{tx(lang, "experimental, check it", "পরীক্ষামূলক, যাচাই করুন")}</span>
           <span className="mt-1 block text-sm text-muted">{tx(lang, "ASHA doesn't have nutrition numbers for this food yet, so it isn't added for you. Choose what you ate below.", "এই খাবারের পুষ্টির হিসাব আশার কাছে এখনো নেই, তাই নিজে থেকে যোগ হয়নি। নিচে যা খেয়েছেন তা বাছুন।")}</span>
         </p>
       ) : (
         <p className="text-lg text-ink">{v?.unavailable || v?.timeout || v?.error ? tx(lang, "No camera suggestion this time. You'll choose the foods next.", "এবার ক্যামেরার পরামর্শ নেই। এরপর আপনি খাবার বাছবেন।") : tx(lang, "ASHA's camera didn't recognise a food it knows. You'll choose the foods next.", "আশার ক্যামেরা চেনা কোনো খাবার পায়নি। এরপর আপনি খাবার বাছবেন।")}</p>
       )}
       {warn.map((w) => (
-        <p key={w} className="mt-1 text-sm text-amber-900">
+        <p key={w} className="mt-1 text-sm text-warn-text">
           {w}
         </p>
       ))}
@@ -971,7 +971,7 @@ function MealHistory({ log, lang }: { log: MealLog[]; lang: string }) {
               {tx(lang, "Export", "এক্সপোর্ট")}
             </Button>
             {confirmClear ? (
-              <Button size="sm" variant="ghost" className="text-red-700" onClick={() => {
+              <Button size="sm" variant="ghost" className="text-danger-text" onClick={() => {
                 nutritionStore.clear();
                 setConfirmClear(false);
               }}>

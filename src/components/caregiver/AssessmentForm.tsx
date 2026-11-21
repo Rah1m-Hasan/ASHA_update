@@ -31,7 +31,7 @@ export function AssessmentFields({ value, onChange }: { value: Assessment; onCha
                       onClick={() => onChange({ ...value, [f.key]: l.value })}
                       className={cn(
                         "h-8 rounded-md px-3 text-sm font-medium",
-                        value[f.key] === l.value ? "bg-brand text-white" : "text-muted hover:text-ink",
+                        value[f.key] === l.value ? "bg-brand text-on-brand" : "text-muted hover:text-ink",
                       )}
                     >
                       {l.label}
@@ -74,7 +74,7 @@ export function SupportFields({ value, onChange }: { value: SupportContext; onCh
               key={id}
               aria-pressed={value.categories.includes(id)}
               onClick={() => onChange({ ...value, categories: toggle(value.categories, id) })}
-              className={cn("rounded-full px-3 py-1.5 text-sm ring-1", value.categories.includes(id) ? "bg-brand text-white ring-brand" : "text-ink ring-line hover:bg-wash")}
+              className={cn("rounded-full px-3 py-1.5 text-sm ring-1", value.categories.includes(id) ? "bg-brand text-on-brand ring-brand" : "text-ink ring-line hover:bg-wash")}
             >
               {label}
             </button>
@@ -90,7 +90,7 @@ export function SupportFields({ value, onChange }: { value: SupportContext; onCh
               key={id}
               aria-pressed={value.goals.includes(id)}
               onClick={() => onChange({ ...value, goals: toggle(value.goals, id) })}
-              className={cn("rounded-full px-3 py-1.5 text-sm ring-1", value.goals.includes(id) ? "bg-brand text-white ring-brand" : "text-ink ring-line hover:bg-wash")}
+              className={cn("rounded-full px-3 py-1.5 text-sm ring-1", value.goals.includes(id) ? "bg-brand text-on-brand ring-brand" : "text-ink ring-line hover:bg-wash")}
             >
               {label}
             </button>

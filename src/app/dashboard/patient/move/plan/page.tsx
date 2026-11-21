@@ -105,7 +105,7 @@ export default function MyPlan() {
               <div className="rounded-2xl bg-white p-5 ring-1 ring-line">
                 <PlanEditor program={draft ?? plan} onChange={setDraft} />
                 {error && (
-                  <p role="alert" className="mt-3 text-sm text-red-700">
+                  <p role="alert" className="mt-3 text-sm text-danger-text">
                     {error}
                   </p>
                 )}

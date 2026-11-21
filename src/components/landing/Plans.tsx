@@ -9,55 +9,66 @@ import { cn } from "@/lib/cn";
 
 export function Plans() {
   return (
-    <Section id="plans" tone="wash">
-      <Container width="text">
+    <Section id="plans">
+      <Container width="page">
         <Reveal>
           <SectionHeading
+            layout="split"
             eyebrow="A simple start · planned launch pricing"
             title="From home to the bedside."
             lead="Explore the demo today without purchasing a plan or kit. Subscriptions and hardware are proposed launch offers."
           />
         </Reveal>
-      </Container>
-      <Container width="content" className="mt-14">
-        <div className="grid gap-5 md:grid-cols-3">
+
+        <div className="mt-14 grid gap-8 sm:mt-16 lg:grid-cols-3 lg:gap-7">
           {plans.map((p, i) => {
             const featured = "featured" in p && p.featured;
             return (
-              <Reveal key={p.name}>
+              <Reveal key={p.name} stagger={(i + 1) as 1 | 2 | 3} className="h-full">
                 <article
                   className={cn(
-                    "flex h-full flex-col rounded-[28px] bg-white p-7",
-                    featured ? "shadow-float ring-2 ring-brand" : "ring-1 ring-line",
+                    "flex h-full flex-col rounded-[24px] p-7 sm:p-8",
+                    featured
+                      ? "bg-brand-soft ring-2 ring-brand shadow-panel"
+                      : "border border-line bg-surface shadow-card",
                   )}
                 >
-                  <p className="text-xs font-semibold tracking-wide text-muted uppercase">{p.audience}</p>
-                  <h3 className="mt-3 text-2xl font-medium text-ink">{p.name}</h3>
-                  <p className="mt-3">
-                    <span className="text-4xl font-medium text-ink">{p.price}</span>
-                    <span className="text-muted"> {p.period}</span>
+                  <p className="text-[12px] font-semibold tracking-[0.14em] text-accent-deep uppercase">{p.audience}</p>
+                  <h3 className="mt-3 text-[clamp(1.625rem,2.4vw,2rem)] leading-[1.2] font-medium text-heading">
+                    {p.name}
+                  </h3>
+                  <p className="mt-5 flex items-baseline gap-2">
+                    <span className="text-[clamp(2.5rem,4.2vw,3.5rem)] leading-none font-semibold text-heading">
+                      {p.price}
+                    </span>
+                    <span className="text-[15px] text-body">{p.period}</span>
                   </p>
-                  <p className="mt-3 text-muted">{p.summary}</p>
-                  <ul className="mt-6 space-y-3 text-sm text-ink">
+                  <p className="mt-4 text-[15px] leading-[1.65] text-body">{p.summary}</p>
+                  <ul className="mt-7 space-y-3 text-[15px] leading-[1.55] text-ink">
                     {p.features.map((f) => (
-                      <li key={f} className="flex gap-2">
-                        <CheckIcon size={18} className="shrink-0 text-brand" />
+                      <li key={f} className="flex gap-2.5">
+                        <CheckIcon size={17} className="mt-0.5 shrink-0 text-brand" />
                         {f}
                       </li>
                     ))}
                   </ul>
-                  <div className="mt-auto pt-8">
-                    <InterestLink interest={p.interest} variant={featured ? "primary" : "secondary"} className="w-full">
+                  <div className="mt-auto pt-9">
+                    <InterestLink
+                      interest={p.interest}
+                      variant={featured ? "primary" : "outline"}
+                      className="w-full"
+                    >
                       {p.cta}
                     </InterestLink>
-                    <p className="mt-3 text-center text-xs text-muted">{p.note}</p>
+                    <p className="mt-3 text-center text-[13px] text-body">{p.note}</p>
                   </div>
                 </article>
               </Reveal>
             );
           })}
         </div>
-        <p className="mx-auto mt-8 max-w-[664px] text-center text-sm text-muted">{plansNote}</p>
+
+        <p className="mx-auto mt-12 max-w-[68ch] text-center text-[15px] leading-[1.6] text-body">{plansNote}</p>
       </Container>
     </Section>
   );

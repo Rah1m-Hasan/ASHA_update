@@ -290,7 +290,7 @@ export function EyeCursor() {
           <div ref={flash} className="fixed rounded-2xl bg-brand/25 opacity-0 ring-4 ring-brand" />
           <div ref={ring} data-testid="eye-cursor" className="fixed top-0 left-0 -mt-5 -ml-5 size-10 opacity-0">
             <svg viewBox="0 0 40 40" className="size-10 -rotate-90 drop-shadow">
-              <circle cx="20" cy="20" r="15" pathLength="100" className="fill-brand/15 stroke-white" strokeWidth="7" />
+              <circle cx="20" cy="20" r="15" pathLength="100" className="fill-brand/15 stroke-paper" strokeWidth="7" />
               <circle cx="20" cy="20" r="15" pathLength="100" className="fill-none stroke-brand/70" strokeWidth="4" />
               <circle ref={arc} cx="20" cy="20" r="15" pathLength="100" strokeDasharray="100" strokeDashoffset="100" className="fill-none stroke-brand" strokeWidth="4" />
             </svg>
@@ -310,7 +310,7 @@ export function EyeCursor() {
               Scroll down
             </button>
             {es.cursorPaused ? (
-              <button className={`${bar} bg-brand text-white ring-brand`} data-gaze-resume onClick={() => eyeSpeakStore.set({ cursorPaused: false })}>
+              <button className={`${bar} bg-brand text-on-brand ring-brand`} data-gaze-resume onClick={() => eyeSpeakStore.set({ cursorPaused: false })}>
                 Resume
               </button>
             ) : (

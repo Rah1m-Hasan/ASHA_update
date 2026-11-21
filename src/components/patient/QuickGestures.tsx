@@ -124,7 +124,7 @@ export function QuickGestures() {
               </span>
               <button
                 onClick={() => remove(p)}
-                className="text-sm font-medium text-muted hover:text-red-600"
+                className="text-sm font-medium text-muted hover:text-danger-text"
               >
                 Remove
               </button>

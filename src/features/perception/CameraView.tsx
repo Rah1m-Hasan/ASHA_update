@@ -18,11 +18,11 @@ export function CameraView({ className, compact = false, children, offMessage }:
       <div ref={host} className="absolute inset-0" />
       {state === "on" && children}
       {state !== "on" && (
-        <div className="absolute inset-0 grid place-items-center bg-heading p-4 text-center text-white">
+        <div className="absolute inset-0 grid place-items-center bg-heading p-4 text-center text-canvas">
           <div className="max-w-xs">
-            <CameraIcon size={compact ? 20 : 28} className="mx-auto text-white/70" />
+            <CameraIcon size={compact ? 20 : 28} className="mx-auto text-canvas/70" />
             {!compact && (
-              <p className="mt-3 text-sm text-white/80">
+              <p className="mt-3 text-sm text-canvas/80">
                 {state === "error" ? status : offMessage ?? "The camera stays off until you start it. Video never leaves this device."}
               </p>
             )}

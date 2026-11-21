@@ -119,7 +119,7 @@ export default function SenseAssistPage() {
           {!result ? (
             <p className="py-10 text-center text-sm text-muted">Asha’s suggestion appears here.</p>
           ) : result.safety?.level === "emergency" ? (
-            <p className="rounded-xl bg-red-50 p-4 text-lg text-danger" role="alert">{result.question}</p>
+            <p className="rounded-xl bg-danger-soft p-4 text-lg text-danger" role="alert">{result.question}</p>
           ) : (
             <>
               <p className="text-sm text-muted">{result.question}</p>

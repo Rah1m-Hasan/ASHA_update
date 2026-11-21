@@ -13,7 +13,7 @@ const signals = [
 /** Left half of the auth screens: a product illustration built from Asha's own UI pieces. */
 export function AuthShowcase({ copy }: { copy: ShowcaseCopy }) {
   return (
-    <aside className="relative hidden overflow-hidden bg-brand text-white lg:flex lg:flex-col">
+    <aside className="relative hidden overflow-hidden bg-brand-strong text-on-brand lg:flex lg:flex-col">
       {/* Soft light + grid backdrop */}
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(90%_60%_at_20%_0%,#60a5fa_0%,transparent_60%),radial-gradient(70%_50%_at_100%_100%,#1d4ed8_0%,transparent_70%)]" />
       <div className="pointer-events-none absolute inset-0 [background-image:linear-gradient(#ffffff10_1px,transparent_1px),linear-gradient(90deg,#ffffff10_1px,transparent_1px)] [background-size:44px_44px] [mask-image:radial-gradient(70%_60%_at_50%_45%,#000,transparent)]" />
@@ -22,7 +22,7 @@ export function AuthShowcase({ copy }: { copy: ShowcaseCopy }) {
         <Link
           href="/"
           aria-label="Asha home"
-          className="inline-flex w-fit rounded-xl bg-white px-3 py-2"
+          className="inline-flex w-fit rounded-xl bg-paper px-3 py-2"
         >
           <Image
             src="/assets/brand/asha-wordmark-light.png" style={{ width: "auto" }}
@@ -37,13 +37,13 @@ export function AuthShowcase({ copy }: { copy: ShowcaseCopy }) {
         <ShowcaseScene />
 
         <div className="max-w-md">
-          <p className="text-sm font-semibold tracking-wide text-white/70 uppercase">
+          <p className="text-sm font-semibold tracking-wide text-paper/70 uppercase">
             {copy.eyebrow}
           </p>
           <h2 className="mt-3 text-4xl leading-[1.1] font-medium tracking-tight text-balance">
             {copy.title}
           </h2>
-          <p className="mt-4 text-lg leading-7 text-white/80">{copy.text}</p>
+          <p className="mt-4 text-lg leading-7 text-paper/80">{copy.text}</p>
         </div>
       </div>
     </aside>
@@ -58,22 +58,22 @@ function ShowcaseScene() {
     >
       {/* Signal rings around the companion */}
       <div className="relative mx-auto grid size-64 place-items-center">
-        <span className="absolute inset-0 rounded-full border border-white/20" />
-        <span className="absolute inset-6 rounded-full border border-white/25" />
-        <span className="absolute inset-12 rounded-full bg-white/10" />
+        <span className="absolute inset-0 rounded-full border border-paper/20" />
+        <span className="absolute inset-6 rounded-full border border-paper/25" />
+        <span className="absolute inset-12 rounded-full bg-paper/10" />
         <Image
           src="/assets/assets/images/asha-avatar.png"
           alt=""
           width={144}
           height={144}
-          className="relative size-32 rounded-full object-cover ring-8 ring-white/90"
+          className="relative size-32 rounded-full object-cover ring-8 ring-paper/90"
         />
         {/* Input signals orbiting */}
         {signals.map(({ icon: Icon, label }, i) => (
           <span
             key={label}
             className={[
-              "absolute flex items-center gap-2 rounded-full bg-white py-1.5 pr-3 pl-1.5 text-sm font-medium text-ink shadow-float",
+              "absolute flex items-center gap-2 rounded-full bg-surface py-1.5 pr-3 pl-1.5 text-sm font-medium text-ink shadow-float",
               [
                 "-top-1 -left-10",
                 "top-1/2 -right-16 -translate-y-1/2",
@@ -89,12 +89,12 @@ function ShowcaseScene() {
         ))}
       </div>
 
-      <p className="mt-8 text-center text-xs font-medium text-white/75">
+      <p className="mt-8 text-center text-xs font-medium text-paper/75">
         Example care conversation
       </p>
       {/* Request → acknowledgement */}
       <div className="mt-10 space-y-3">
-        <div className="ml-auto w-fit max-w-[300px] rounded-2xl rounded-br-md bg-white px-4 py-3 text-ink shadow-float">
+        <div className="ml-auto w-fit max-w-[300px] rounded-2xl rounded-br-md bg-surface px-4 py-3 text-ink shadow-float">
           <p className="text-xs font-semibold text-brand uppercase">
             Patient · confirmed
           </p>
@@ -103,20 +103,20 @@ function ShowcaseScene() {
             আমি পানি চাই
           </p>
         </div>
-        <div className="flex w-fit max-w-[300px] items-center gap-3 rounded-2xl rounded-bl-md bg-white/15 px-4 py-3 ring-1 ring-white/25 backdrop-blur-md">
-          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-white text-brand">
+        <div className="flex w-fit max-w-[300px] items-center gap-3 rounded-2xl rounded-bl-md bg-paper/15 px-4 py-3 ring-1 ring-paper/25 backdrop-blur-md">
+          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-on-brand text-brand">
             <CheckIcon size={16} />
           </span>
           <span className="text-sm">
             <span className="block font-medium">“I’m on my way.”</span>
-            <span className="text-white/75">Caregiver acknowledged</span>
+            <span className="text-paper/75">Caregiver acknowledged</span>
           </span>
         </div>
       </div>
 
       {/* Signal waveform */}
       <svg
-        className="mt-8 h-12 w-full text-white/60"
+        className="mt-8 h-12 w-full text-paper/60"
         viewBox="0 0 460 48"
         fill="none"
         preserveAspectRatio="none"

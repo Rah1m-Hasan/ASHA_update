@@ -10,7 +10,7 @@ export function InterestLink({
   children,
 }: {
   interest: string;
-  variant?: "primary" | "secondary";
+  variant?: "primary" | "secondary" | "outline" | "inverse" | "onBlue";
   className?: string;
   children: React.ReactNode;
 }) {

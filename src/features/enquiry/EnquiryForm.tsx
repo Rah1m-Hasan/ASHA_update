@@ -6,7 +6,7 @@ import { buildEnquiryDraft, INTERESTS } from "./enquiry.js";
 import { INTEREST_EVENT } from "./interest";
 
 const field =
-  "mt-2 block w-full rounded-xl border border-line bg-white px-4 py-3 text-base text-ink placeholder:text-muted/70 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20";
+  "mt-2 block w-full rounded-[14px] border border-line-strong bg-input px-4 py-3 text-base text-ink placeholder:text-muted transition-colors hover:border-brand/50 focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand/15";
 
 type Draft = { emailUrl: string; whatsappUrl: string };
 
@@ -48,30 +48,37 @@ export function EnquiryForm() {
 
   return (
     <form
-      className="rounded-[28px] bg-white p-6 ring-1 ring-line sm:p-8"
+      className="rounded-[28px] border border-line bg-surface p-6 shadow-panel sm:p-8"
       noValidate
       onSubmit={(e) => {
         e.preventDefault();
         const d = prepare(e.currentTarget);
         if (d) window.location.href = d.emailUrl;
       }}
-      onChange={() => draft && setDraft(null)}
+      onChange={() => {
+        if (draft) setDraft(null);
+        // Clear the validation message as soon as the person edits a field.
+        if (error) setError("");
+      }}
     >
-      <h3 className="text-2xl font-medium text-ink">How can we help?</h3>
-      <div className="mt-6 grid gap-5 sm:grid-cols-2">
-        <label className="text-sm font-medium text-ink">
+      <h3 className="text-[clamp(1.5rem,2.2vw,1.875rem)] leading-[1.2] font-medium text-heading">How can we help?</h3>
+      <p className="mt-2 text-[15px] leading-[1.6] text-body">
+        Tell us what you want to explore and we’ll come back with a time.
+      </p>
+      <div className="mt-7 grid gap-5 sm:grid-cols-2">
+        <label className="text-[15px] font-medium text-ink">
           Your name
           <input name="name" required maxLength={100} autoComplete="name" className={field} />
         </label>
-        <label className="text-sm font-medium text-ink">
+        <label className="text-[15px] font-medium text-ink">
           Reply email
           <input name="email" type="email" required maxLength={160} autoComplete="email" className={field} />
         </label>
-        <label className="text-sm font-medium text-ink">
+        <label className="text-[15px] font-medium text-ink">
           Organisation <span className="font-normal text-muted">(optional)</span>
           <input name="organisation" maxLength={120} autoComplete="organization" className={field} />
         </label>
-        <label className="text-sm font-medium text-ink">
+        <label className="text-[15px] font-medium text-ink">
           I’m interested in
           <select name="interest" value={interest} onChange={(e) => setInterest(e.target.value)} className={field}>
             {Object.entries(INTERESTS as Record<string, string>).map(([key, label]) => (
@@ -81,25 +88,25 @@ export function EnquiryForm() {
             ))}
           </select>
         </label>
-        <label className="text-sm font-medium text-ink sm:col-span-2">
+        <label className="text-[15px] font-medium text-ink sm:col-span-2">
           What would you like to explore?
           <textarea name="message" required rows={4} maxLength={1000} className={field} />
         </label>
       </div>
-      <label className="mt-5 flex items-start gap-3 text-sm text-ink">
-        <input name="consent" type="checkbox" className="mt-0.5 size-4 accent-brand" />
+      <label className="mt-6 flex items-start gap-3 text-[15px] leading-[1.5] text-ink">
+        <input name="consent" type="checkbox" className="mt-0 size-6 shrink-0 accent-brand" />
         I agree to be contacted about this enquiry.
       </label>
       {error && (
-        <p role="alert" className="mt-4 text-sm text-danger">
+        <p role="alert" className="mt-4 rounded-[12px] border border-danger/25 bg-danger/5 px-4 py-3 text-[15px] text-danger">
           {error}
         </p>
       )}
-      <div className="mt-6 flex flex-wrap gap-3">
+      <div className="mt-7 flex flex-wrap gap-3">
         <Button type="submit">Prepare email enquiry</Button>
         <button
           type="button"
-          className={buttonClass("secondary")}
+          className={buttonClass("outline")}
           onClick={(e) => {
             const d = prepare(e.currentTarget.form!);
             if (d) window.open(d.whatsappUrl, "_blank", "noopener");
@@ -108,7 +115,7 @@ export function EnquiryForm() {
           Use WhatsApp
         </button>
       </div>
-      <p className="mt-4 text-xs text-muted">
+      <p className="mt-4 text-[13px] leading-[1.6] text-body">
         Opens an email or WhatsApp draft. Nothing is sent automatically; your booking is not confirmed until the team replies.
       </p>
     </form>

@@ -57,7 +57,7 @@ export function EmbeddedTool({ route, title }: { route: Route; title: string }) 
       ) : (
         <div style={{ height }} aria-hidden="true" />
       )}
-      <p role="status" aria-live="polite" className={notice ? "fixed inset-x-4 bottom-4 z-40 mx-auto w-fit max-w-[min(92vw,480px)] rounded-full bg-heading px-4 py-2 text-center text-sm text-white shadow-float" : "sr-only"}>
+      <p role="status" aria-live="polite" className={notice ? "fixed inset-x-4 bottom-4 z-40 mx-auto w-fit max-w-[min(92vw,480px)] rounded-full bg-heading px-4 py-2 text-center text-sm text-canvas shadow-float" : "sr-only"}>
         {notice}
       </p>
     </>

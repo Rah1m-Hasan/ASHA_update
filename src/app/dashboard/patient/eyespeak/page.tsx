@@ -125,7 +125,7 @@ export default function EyeSpeakPage() {
             <span>
               {camera !== "on" ? "Camera off" : !live ? "Looking for your face…" : live.valid ? "Both eyes and irises tracked" : live.reason}
               {camera === "on" && live && fps > 0 && (
-                <span className={fps < 5 ? "text-amber-700" : "text-muted"} data-testid="eye-rate" data-fps={fps}>
+                <span className={fps < 5 ? "text-warn-text" : "text-muted"} data-testid="eye-rate" data-fps={fps}>
                   {" "}· {fps} per second{fps < 5 ? ". Slow: close other apps for steadier selection." : ""}
                 </span>
               )}
@@ -146,14 +146,14 @@ export default function EyeSpeakPage() {
         </h2>
         <p className="mt-0.5 mb-3 text-sm text-muted">Look at 12 dots, one at a time, for about 25 seconds. The last 3 dots measure how accurate gaze is for you, on this screen.</p>
         {problem && (
-          <p className="mb-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800 ring-1 ring-amber-200" role="alert">
+          <p className="mb-3 rounded-xl bg-warn-soft px-4 py-3 text-sm text-warn-text ring-1 ring-warn-line" role="alert">
             Calibration stopped: {problem}
           </p>
         )}
         {es.model && !es.checked && (
           <p className="mb-3 text-sm text-ink">A calibration from an earlier visit is saved on this device. Run the 3-dot check before using it.</p>
         )}
-        {screenChanged && <p className="mb-3 text-sm text-amber-700">The window size changed since calibrating. Calibrate again for accurate selection.</p>}
+        {screenChanged && <p className="mb-3 text-sm text-warn-text">The window size changed since calibrating. Calibrate again for accurate selection.</p>}
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => setOverlay("full")} disabled={!tracking} className={DIM}>
             {es.model ? "Calibrate again" : "Start calibration"}

@@ -4,6 +4,7 @@ const widths = {
   text: "max-w-[664px]", // reading column
   content: "max-w-[1080px]",
   wide: "max-w-[1300px]",
+  page: "max-w-[1320px]", // the full editorial grid
 };
 
 export function Container({
@@ -15,5 +16,5 @@ export function Container({
   className?: string;
   children: React.ReactNode;
 }) {
-  return <div className={cn("mx-auto w-full px-4 sm:px-8", widths[width], className)}>{children}</div>;
+  return <div className={cn("mx-auto w-full px-5 sm:px-8", widths[width], className)}>{children}</div>;
 }

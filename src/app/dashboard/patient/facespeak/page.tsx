@@ -120,7 +120,7 @@ export default function FaceSpeakPage() {
             </Button>
             <Link
               href="/dashboard/patient/calibration"
-              className="inline-flex h-9 items-center rounded-full bg-brand px-3 text-sm font-medium text-white hover:bg-brand-hover"
+              className="inline-flex h-9 items-center rounded-full bg-brand px-3 text-sm font-medium text-on-brand hover:bg-brand-hover"
             >
               {trained ? "Recalibrate" : "Calibrate"}
             </Link>

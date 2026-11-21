@@ -15,9 +15,10 @@ import { Plans } from "@/components/landing/Plans";
 import { Principles } from "@/components/landing/Principles";
 import { Story } from "@/components/landing/Story";
 import { Team } from "@/components/landing/Team";
+import { hero } from "@/content/landing";
 
 export const metadata: Metadata = {
-  title: "Asha — A little support. A lot more independence.",
+  title: `Asha — ${hero.title}`,
   description: "Asha helps people communicate their needs, move, eat well and stay connected with the people who care for them.",
   manifest: "/app.webmanifest",
 };
@@ -25,7 +26,9 @@ export const metadata: Metadata = {
 // The one page about Asha. "Try Asha" opens the app home, where people choose what they want to use.
 export default function HomePage() {
   return (
-    <>
+    // The dark theme re-declares the colour tokens on :root, so this page and
+    // the dashboard behind "Try Asha" both follow the same switch.
+    <div className="min-h-screen bg-canvas">
       {/* Old private links (#token=…, ?module=…) still open the original assistive app. */}
       <LegacyEntry />
       <Navbar />
@@ -45,6 +48,6 @@ export default function HomePage() {
         <Closing />
       </main>
       <Footer />
-    </>
+    </div>
   );
 }
